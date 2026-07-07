@@ -26,6 +26,7 @@
   <symbol id="i-play" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3"/></symbol>
   <symbol id="i-chev-d" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></symbol>
   <symbol id="i-chev-r" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></symbol>
+  <symbol id="i-chev-l" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></symbol>
   <symbol id="i-tool" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.6 5.6L3 18v3h3l6.1-6.1a4 4 0 0 0 5.6-5.6l-2.5 2.5-2-2 2.5-2.5z"/></symbol>
   <symbol id="i-templates" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></symbol>
   <symbol id="i-stop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></symbol>
@@ -79,10 +80,12 @@
       <div class="proj" id="projName">SIN PROYECTO</div>
       <div id="tree"><div class="tree-empty">Abre una carpeta con el ícono de carpeta de arriba</div></div>
     </aside>
+    <div class="splitter col" id="splitTree" title="Arrastrá para ajustar el ancho del explorador"></div>
 
     <main class="editor">
       <div class="tabs" id="tabs"></div>
       <div class="cmwrap" id="cmwrap"></div>
+      <div class="splitter row" id="splitTerm" title="Arrastrá para ajustar la altura del terminal"></div>
       <div class="term" id="term">
         <div class="term-h">
           <span class="term-t">Terminal</span>
@@ -94,6 +97,7 @@
       </div>
     </main>
 
+    <div class="splitter col" id="splitAgent" title="Arrastrá para ajustar el ancho del agente"></div>
     <!-- ══ Panel del agente ══ -->
     <aside class="agent" id="agentPanel">
       <div class="ag-h">
@@ -104,7 +108,11 @@
         <button class="gbtn" id="btnHist" title="Historial"><svg class="ico"><use href="#i-history"/></svg></button>
         <button class="gbtn" id="btnNew" title="Nueva conversación"><svg class="ico"><use href="#i-plus"/></svg></button>
       </div>
-      <div class="chat-tabs" id="chatTabs"></div>
+      <div class="chat-tabs-wrap" id="chatTabsWrap" hidden>
+        <button class="ctab-nav" id="ctabLeft" title="Anteriores" hidden><svg class="ico"><use href="#i-chev-l"/></svg></button>
+        <div class="chat-tabs" id="chatTabs"></div>
+        <button class="ctab-nav" id="ctabRight" title="Siguientes" hidden><svg class="ico"><use href="#i-chev-r"/></svg></button>
+      </div>
       <div class="msgs" id="msgs"></div>
       <div class="inz">
         <div class="chips">

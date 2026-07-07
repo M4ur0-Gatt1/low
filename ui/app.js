@@ -12,6 +12,29 @@ const MODE_BY_EXT = {
 const extOf = p => { const m = /\.[^.\\/]+$/.exec(p || ""); return m ? m[0].toLowerCase() : ""; };
 const esHtml = t => (t && t.path && /\.html?$/i.test(t.path)) ||
                     /^\s*(<!doctype html|<html)/i.test(cm ? cm.getValue() : "");
+// lenguaje del RUNNER por extensión (para ▶ Ejecutar en modo "auto")
+const RUN_LANG_BY_EXT = {
+  ".py": "python", ".js": "javascript", ".mjs": "javascript", ".ts": "typescript",
+  ".sh": "bash", ".bash": "bash", ".ps1": "powershell", ".go": "go", ".rb": "ruby",
+  ".php": "php", ".pl": "perl", ".lua": "lua", ".r": "r",
+};
+// idioma efectivo: si el usuario forzó uno lo respeta; si está en "auto",
+// lo deduce de la extensión del archivo abierto (default python)
+function effectiveLang() {
+  const sel = $("#selLang") ? $("#selLang").value : "auto";
+  if (sel && sel !== "auto") return sel;
+  const t = curTab();
+  return RUN_LANG_BY_EXT[extOf(t && t.path)] || "python";
+}
+// modo de resaltado del editor según selección/archivo
+function applyEditorMode() {
+  const sel = $("#selLang") ? $("#selLang").value : "auto";
+  const t = curTab();
+  const mode = (sel && sel !== "auto")
+    ? (CM_MODE[sel] || "python")
+    : (MODE_BY_EXT[extOf(t && t.path)] || "python");
+  cm && cm.setOption("mode", mode);
+}
 
 let api = null;
 let cm = null;
@@ -135,6 +158,8 @@ async function init() {
   newTab();
   loadChatTabs().catch(() => {});
   bind();
+  restorePanelSizes();
+  initSplitters();
   sysMsg("Fidel v" + (S.version || "?") + " — listo.\n" +
          "⚙ API keys · 📁 proyecto · barra izquierda: 🧊 Artefactos (vista previa en vivo), " +
          "⟳ Rutinas, 🔧 Herramientas, ⟲ Historial, ▦ Ranking.\n" +
@@ -200,7 +225,7 @@ function applyState(st) {
   $("#btnTheme").innerHTML = icoUse(st.theme === "dark" ? "i-sun" : "i-moon");
   fillSelect($("#selProv"), st.providers.map(p => p.name), st.provider);
   fillSelect($("#selModel"), st.models, st.model);
-  fillSelect($("#selLang"), st.langs, "python");
+  fillSelect($("#selLang"), ["auto", ...(st.langs || [])], "auto");
   S.tree = st.tree || [];
   $("#projName").textContent = st.ws ? st.ws.split(/[\\/]/).pop().toUpperCase() : "SIN PROYECTO";
   $("#branch").textContent = st.branch ? "⑂ " + st.branch : "";
@@ -256,13 +281,19 @@ function bind() {
   $("#termTog").onclick = () => {
     const t = $("#term");
     t.classList.toggle("closed");
+    $("#splitTerm").hidden = t.classList.contains("closed");
     $("#termTog").innerHTML = icoUse(t.classList.contains("closed") ? "i-chev-r" : "i-chev-d");
   };
   $("#abExplorer").onclick = () => {
     const w = $("#treewrap");
     w.style.display = w.style.display === "none" ? "" : "none";
+    $("#splitTree").hidden = w.style.display === "none";
     $("#abExplorer").classList.toggle("active", w.style.display !== "none");
   };
+  $("#ctabLeft").onclick = () => { $("#chatTabs").scrollBy({ left: -160, behavior: "smooth" }); setTimeout(updateChatNav, 260); };
+  $("#ctabRight").onclick = () => { $("#chatTabs").scrollBy({ left: 160, behavior: "smooth" }); setTimeout(updateChatNav, 260); };
+  $("#chatTabs").addEventListener("scroll", updateChatNav);
+  window.addEventListener("resize", updateChatNav);
   $("#abSearch").onclick = () => $("#q").focus();
   $("#abGit").onclick = () => {
     const b = $("#branch").textContent;
@@ -271,6 +302,7 @@ function bind() {
   $("#abAgent").onclick = () => {
     const a = $("#agentPanel");
     a.style.display = a.style.display === "none" ? "" : "none";
+    $("#splitAgent").hidden = a.style.display === "none";
     $("#abAgent").classList.toggle("active", a.style.display !== "none");
   };
   $("#abArtifacts").onclick = showArtifacts;
@@ -305,7 +337,7 @@ function bind() {
     }
     if (e.key === "Escape") cm.focus();
   });
-  $("#selLang").onchange = () => cm.setOption("mode", CM_MODE[$("#selLang").value] || "python");
+  $("#selLang").onchange = applyEditorMode;
   document.addEventListener("keydown", e => {
     if (e.ctrlKey && e.key.toLowerCase() === "k") { e.preventDefault(); $("#q").focus(); }
     if (e.ctrlKey && e.key.toLowerCase() === "s") { e.preventDefault(); save(); }
@@ -345,9 +377,7 @@ function switchTab(id) {
   S.loading = true;
   cm.swapDoc(t.doc);
   S.loading = false;
-  if (t.lang) $("#selLang").value = t.lang;
-  const ext = extOf(t.path);
-  cm.setOption("mode", MODE_BY_EXT[ext] || CM_MODE[t.lang] || "python");
+  applyEditorMode();   // respeta el idioma forzado; en "auto" detecta por extensión
   document.title = "Fidel — " + t.name;
   renderTabs(); renderTree(); updateLnCol();
   cm.focus();
@@ -475,7 +505,7 @@ async function run() {
       setStatus("🎨 Vista previa en vivo");
       return;
     }
-    const lang = $("#selLang").value;
+    const lang = effectiveLang();
     termLine("➜ run " + lang, "t-ok");
     setStatus("⚡ Ejecutando…");
     const t0 = performance.now();
@@ -618,7 +648,7 @@ async function send() {
   setBusy(true);
   S.plan = null;
   try {
-    const r = await api.send_chat(msg, cm.getValue(), $("#selLang").value);
+    const r = await api.send_chat(msg, cm.getValue(), effectiveLang());
     stopThinking();
     planDone();
     // si vino por streaming, la burbuja ya se armó con los eventos agent_*
@@ -716,7 +746,10 @@ function renderChatTabs() {
   const items = (S.chats || []).slice();
   if (S.chatId && !items.some(c => c.id === S.chatId))
     items.unshift({ id: S.chatId, first: "Nueva conversación", n: 0 });
+  const wrap = $("#chatTabsWrap");
+  if (wrap) wrap.hidden = items.length === 0;
   bar.innerHTML = "";
+  let activeEl = null;
   for (const c of items) {
     const el = document.createElement("div");
     el.className = "ctab" + (c.id === S.chatId ? " active" : "");
@@ -724,16 +757,88 @@ function renderChatTabs() {
     el.title = label + (c.n ? `  ·  ${c.n} msgs` : "");
     const t = document.createElement("span");
     t.className = "ctab-t";
-    t.textContent = label.length > 24 ? label.slice(0, 24) + "…" : label;
+    t.textContent = label;   // el ancho lo maneja el CSS (se encoge + ellipsis)
     el.appendChild(t);
     el.onclick = () => switchChat(c.id);
     bar.appendChild(el);
+    if (c.id === S.chatId) activeEl = el;
+  }
+  if (activeEl) activeEl.scrollIntoView({ inline: "nearest", block: "nearest" });
+  updateChatNav();
+}
+
+/* flechas ‹ ›: solo cuando las solapas no entran ni encogidas */
+function updateChatNav() {
+  const strip = $("#chatTabs"), l = $("#ctabLeft"), r = $("#ctabRight");
+  if (!strip || !l || !r) return;
+  const overflow = strip.scrollWidth > strip.clientWidth + 2;
+  l.hidden = r.hidden = !overflow;
+  if (overflow) {
+    l.disabled = strip.scrollLeft <= 1;
+    r.disabled = strip.scrollLeft + strip.clientWidth >= strip.scrollWidth - 1;
   }
 }
 
 async function switchChat(id) {
   if (!id || id === S.chatId) return;
   await resume(id);
+}
+
+/* ── manejadores de tamaño: arrastrar para agrandar/achicar paneles ── */
+function makeColSplitter(el, target, side, key) {
+  if (!el || !target) return;
+  el.addEventListener("mousedown", e => {
+    e.preventDefault();
+    const x0 = e.clientX, w0 = target.getBoundingClientRect().width;
+    el.classList.add("dragging"); document.body.style.cursor = "col-resize";
+    const move = ev => {
+      const w = side === "left" ? w0 + (ev.clientX - x0) : w0 - (ev.clientX - x0);
+      target.style.width = Math.max(140, Math.min(760, w)) + "px";
+      cm && cm.refresh();
+    };
+    const up = () => {
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
+      el.classList.remove("dragging"); document.body.style.cursor = "";
+      try { localStorage.setItem(key, target.style.width); } catch (e) { /* */ }
+      updateChatNav();
+    };
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+  });
+}
+function makeRowSplitter(el, target, key) {
+  if (!el || !target) return;
+  el.addEventListener("mousedown", e => {
+    e.preventDefault();
+    const y0 = e.clientY, h0 = target.getBoundingClientRect().height;
+    el.classList.add("dragging"); document.body.style.cursor = "row-resize";
+    const move = ev => {
+      const h = h0 - (ev.clientY - y0);   // el terminal está abajo: arrastrar arriba agranda
+      target.style.height = Math.max(40, Math.min(560, h)) + "px";
+      cm && cm.refresh();
+    };
+    const up = () => {
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
+      el.classList.remove("dragging"); document.body.style.cursor = "";
+      try { localStorage.setItem(key, target.style.height); } catch (e) { /* */ }
+    };
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+  });
+}
+function restorePanelSizes() {
+  try {
+    const tw = localStorage.getItem("fidel.tree.w"); if (tw) $("#treewrap").style.width = tw;
+    const aw = localStorage.getItem("fidel.agent.w"); if (aw) $("#agentPanel").style.width = aw;
+    const th = localStorage.getItem("fidel.term.h"); if (th) $("#termOut").style.height = th;
+  } catch (e) { /* */ }
+}
+function initSplitters() {
+  makeColSplitter($("#splitTree"), $("#treewrap"), "left", "fidel.tree.w");
+  makeColSplitter($("#splitAgent"), $("#agentPanel"), "right", "fidel.agent.w");
+  makeRowSplitter($("#splitTerm"), $("#termOut"), "fidel.term.h");
 }
 
 /* ── tabla de posiciones histórica de los desafíos ── */

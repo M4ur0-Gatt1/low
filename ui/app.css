@@ -227,26 +227,47 @@ header {
 .gbtn .ico { width: 14px; height: 14px; }
 .gbtn:hover { color: var(--txt); }
 
-/* solapas de conversaciones: navegar entre chats como pestañas */
-.chat-tabs {
-  display: flex; gap: 4px; padding: 6px 8px 0; overflow-x: auto;
-  border-bottom: 1px solid var(--line); scrollbar-width: thin; flex: none;
+/* solapas de conversaciones estilo navegador: se encogen para entrar;
+   si aun así no entran, aparecen flechas ‹ › para desplazarse */
+.chat-tabs-wrap {
+  display: flex; align-items: stretch; flex: none;
+  border-bottom: 1px solid var(--line); background: var(--panel);
 }
-.chat-tabs:empty { display: none; }
+.chat-tabs {
+  flex: 1; min-width: 0; display: flex; gap: 3px; padding: 6px 6px 0;
+  overflow-x: hidden; scroll-behavior: smooth;
+}
 .ctab {
-  display: flex; align-items: center; gap: 6px; padding: 6px 10px; flex: none;
-  max-width: 160px; font-size: 12px; color: var(--mut); cursor: pointer;
+  display: flex; align-items: center; gap: 6px; padding: 6px 10px;
+  flex: 1 1 0; min-width: 42px; max-width: 150px;
+  font-size: 12px; color: var(--mut); cursor: pointer;
   border-radius: 8px 8px 0 0; border: 1px solid transparent; border-bottom: none;
-  white-space: nowrap;
+  white-space: nowrap; overflow: hidden;
 }
 .ctab:hover { color: var(--txt); background: var(--panel2); }
 .ctab.active {
   background: var(--panel2); border-color: var(--line); color: var(--txt);
   font-weight: 500;
 }
-.ctab-t { overflow: hidden; text-overflow: ellipsis; }
-.ctab .cx { color: var(--faint); font-size: 13px; line-height: 1; }
+.ctab-t { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.ctab .cx { color: var(--faint); font-size: 13px; line-height: 1; flex: none; }
 .ctab .cx:hover { color: var(--red); }
+.ctab-nav {
+  flex: none; width: 24px; border: none; background: var(--panel);
+  color: var(--mut); cursor: pointer; display: flex; align-items: center;
+  justify-content: center;
+}
+.ctab-nav .ico { width: 14px; height: 14px; }
+.ctab-nav:hover:not(:disabled) { color: var(--txt); background: var(--panel2); }
+.ctab-nav:disabled { opacity: .3; cursor: default; }
+.ctab-nav[hidden] { display: none; }
+
+/* manejadores para redimensionar paneles (arrastrar) */
+.splitter { flex: none; background: transparent; z-index: 6; transition: background .12s; }
+.splitter.col { width: 5px; cursor: col-resize; }
+.splitter.row { height: 5px; cursor: row-resize; }
+.splitter:hover, .splitter.dragging { background: var(--green); }
+.splitter[hidden] { display: none; }
 
 .msgs {
   flex: 1; overflow-y: auto; overflow-x: hidden; padding: 14px;
