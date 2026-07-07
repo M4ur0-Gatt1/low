@@ -835,6 +835,11 @@ function renderChatTabs() {
     t.textContent = label;   // el ancho lo maneja el CSS (se encoge + ellipsis)
     el.appendChild(t);
     el.onclick = () => switchChat(c.id);
+    // botón cerrar (✕) — no dispara el switchChat del contenedor
+    const cx = document.createElement("span");
+    cx.className = "cx"; cx.textContent = "✕"; cx.title = "Cerrar conversación";
+    cx.onclick = (e) => { e.stopPropagation(); closeChat(c.id, label); };
+    el.appendChild(cx);
     bar.appendChild(el);
     if (c.id === S.chatId) activeEl = el;
   }
@@ -857,6 +862,20 @@ function updateChatNav() {
 async function switchChat(id) {
   if (!id || id === S.chatId) return;
   await resume(id);
+}
+
+async function closeChat(id, label) {
+  if (!id) return;
+  const r = await api.delete_session(id);
+  if (r && r.error) return sysMsg("❌ No pude cerrar la conversación: " + r.error);
+  S.chats = (r && r.chats) || [];
+  // si cerré la que estaba abierta, el backend arrancó una nueva → limpiar chat
+  if (r && r.was_active) {
+    S.chatId = r.session_id;
+    $("#msgs").innerHTML = "";
+    sysMsg(`Cerré «${label || id}». Conversación nueva.`);
+  }
+  renderChatTabs();
 }
 
 /* ── manejadores de tamaño: arrastrar para agrandar/achicar paneles ── */
@@ -1070,6 +1089,8 @@ function modalKeys() {
       <input id="agConts" type="number" min="1" spellcheck="false"></div>
     <div class="agrow"><label>Turnos que recuerda</label>
       <input id="agMem" type="number" min="1" spellcheck="false"></div>
+    <div class="agrow"><label>Verificar ejecución</label>
+      <label class="agchk"><input id="agVerify" type="checkbox"> corre el código y, si falla en runtime, pide corrección (no solo que compile)</label></div>
     <div class="m-actions">
       <button class="ghost" id="mCancel">Cancelar</button>
       <button class="primary" id="mSave">Guardar</button>
@@ -1080,13 +1101,14 @@ function modalKeys() {
   $("#agSteps").value = S.agent.max_steps ?? 40;
   $("#agConts").value = S.agent.max_continuations ?? 25;
   $("#agMem").value = S.agent.memory_turns ?? 24;
+  $("#agVerify").checked = S.agent.verify_runtime !== false;   // default: activado
   $("#mCancel").onclick = closeModal;
   $("#mSave").onclick = async () => {
     const keys = {};
     document.querySelectorAll('#modal input[type="password"]').forEach(i => { keys[i.dataset.p] = i.value.trim(); });
     S.sysPrompt = $("#sysP").value.trim();
     await api.save_system_prompt(S.sysPrompt);
-    S.agent = await api.save_agent_config($("#agSteps").value, $("#agConts").value, $("#agMem").value);
+    S.agent = await api.save_agent_config($("#agSteps").value, $("#agConts").value, $("#agMem").value, $("#agVerify").checked);
     const st = await api.save_keys(keys);
     S.providers = st.providers;
     updApis(st);

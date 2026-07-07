@@ -35,7 +35,7 @@ CODE_EXT = {".py", ".js", ".ts", ".tsx", ".jsx", ".md", ".txt", ".json",
 LANG_BY_EXT = {".py": "python", ".js": "javascript", ".ts": "javascript",
                ".sh": "bash", ".ps1": "powershell"}
 
-FIDEL_VERSION = "2.0.26"
+FIDEL_VERSION = "2.0.27"
 
 # Desafío por defecto del comparador: verificable automáticamente
 DEFAULT_TASK = ("Escribe un programa Python que imprima los primeros 10 numeros "
@@ -259,7 +259,7 @@ class Api:
         s.cfg.data["system_prompt"] = (text or "").strip()
         s.cfg.save()
 
-    def save_agent_config(s, steps, conts, mem):
+    def save_agent_config(s, steps, conts, mem, verify_runtime=None):
         """Guarda los límites del agente (⚙). Fidel no le pone techo al trabajo
         salvo el que elijas acá y el de la API."""
         a = s.cfg.data.setdefault("agent", {})
@@ -272,8 +272,17 @@ class Api:
         a["max_steps"] = _int(steps, 40)
         a["max_continuations"] = _int(conts, 25)
         a["memory_turns"] = _int(mem, 24)
+        if verify_runtime is not None:
+            a["verify_runtime"] = bool(verify_runtime)
         s.cfg.save()
         return a
+
+    def set_verify_runtime(s, on):
+        """Activa/desactiva la verificación de ejecución (correr el código para
+        confirmar que no revienta en runtime, no solo que compila)."""
+        s.cfg.data.setdefault("agent", {})["verify_runtime"] = bool(on)
+        s.cfg.save()
+        return {"verify_runtime": bool(on)}
 
     def current_session(s):
         """Id de la conversación activa — el frontend lo usa para marcar la solapa."""
@@ -897,6 +906,69 @@ class Api:
                 pass
         return "\n".join(errs)
 
+    def _pick_entry(s):
+        """Elige UN archivo .py de los escritos este turno para el smoke test.
+        Prioriza puntos de entrada obvios; si no, uno con bloque __main__.
+        Devuelve la ruta o None si no hay un candidato claro y seguro."""
+        pys = [p for p in dict.fromkeys(s._written) if p.endswith(".py")]
+        if not pys:
+            return None
+        names = {"main.py", "app.py", "__main__.py", "run.py", "manage.py",
+                 "cli.py", "start.py"}
+        for p in pys:
+            if os.path.basename(p).lower() in names:
+                return p
+        for p in pys:
+            try:
+                if "__main__" in Path(p).read_text(encoding="utf-8", errors="replace"):
+                    return p
+            except OSError:
+                pass
+        # un único archivo suelto → probablemente es el que hay que correr
+        return pys[0] if len(pys) == 1 else None
+
+    def _check_runtime(s):
+        """Verificación de EJECUCIÓN (no solo sintaxis): corre el punto de entrada
+        .py escrito este turno con un timeout y, si revienta con un traceback,
+        devuelve el error para que el modelo lo corrija. Desactivable con
+        config agent.verify_runtime=false. Salta apps con ventana (pygame/tkinter…),
+        que no se pueden correr capturadas, y trata el timeout como 'probablemente
+        un server/loop, no lo marco como error'."""
+        if not s.cfg.data.get("agent", {}).get("verify_runtime", True):
+            return ""
+        entry = s._pick_entry()
+        if not entry:
+            return ""
+        try:
+            src = Path(entry).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return ""
+        if s.GUI_LIBS.search(src):
+            return ""   # app con ventana: no se puede smoke-testear con timeout
+        import shutil
+        exe = shutil.which("python") or shutil.which("python3")
+        if not exe:
+            return ""
+        base = os.path.basename(entry)
+        try:
+            s._push("sys", f"▶ Verificando que {base} corra sin errores…")
+            r = subprocess.run([exe, entry], capture_output=True, text=True,
+                               timeout=12, cwd=str(s._base()),
+                               env={**os.environ, "PYTHONIOENCODING": "utf-8"})
+        except subprocess.TimeoutExpired:
+            # no terminó en 12s: server, loop o input() → no lo tomo como falla
+            return ""
+        except (OSError, subprocess.SubprocessError):
+            return ""
+        if r.returncode == 0:
+            return ""
+        err = (r.stderr or r.stdout or "").strip()
+        if "Traceback" not in err and "Error" not in err:
+            return ""   # exit != 0 sin traceback claro (ej. sys.exit(1) intencional)
+        # quedarse con la parte útil del traceback (las últimas líneas)
+        tail = "\n".join(err.splitlines()[-12:])
+        return f"{base} falla al ejecutarse:\n{tail}"
+
     def _run_model(s, ms, sp, temperature, max_tok, use_tools):
         """Llama al modelo con STREAMING real: empuja content y reasoning
         ('pensamiento') a la UI a medida que llegan. Devuelve el AIResponse final.
@@ -972,6 +1044,7 @@ class Api:
             use_tools = True
             flubs = 0
             fixes = 0
+            rt_fixes = 0      # correcciones pedidas por errores de EJECUCIÓN (runtime)
             max_tok = 8192   # se ajusta solo (413 lo baja, archivo cortado lo sube)
             seen_calls = {}   # (tool, args) -> veces repetida en este turno → detectar bucles
             stall = 0         # llamadas repetidas seguidas sin avance
@@ -1081,6 +1154,25 @@ class Api:
                         if errs:
                             s._push("sys", f"⚠ Quedaron errores de sintaxis sin resolver:\n{errs}")
                             s._reflect_and_learn(msg, f"dejaste código con errores de sintaxis: {errs[:200]}")
+                            break
+                        # sintaxis OK → verificación de EJECUCIÓN: correr el punto de
+                        # entrada y, si revienta en runtime, pedir corrección con el
+                        # traceback (no alcanza con que compile: tiene que ANDAR)
+                        rt = s._check_runtime()
+                        if rt and use_tools and rt_fixes < 2:
+                            rt_fixes += 1
+                            s._push("sys", f"⚠ Compila pero falla al ejecutarse — pidiendo corrección ({rt_fixes}/2)…")
+                            ms.append({"role": "assistant", "content": text})
+                            ms.append({"role": "user", "content":
+                                       "Verifiqué ejecutando el código y falla en tiempo de ejecución:\n"
+                                       + rt +
+                                       "\nCorregí la causa real del error (leé el traceback) y dejalo "
+                                       "andando. Usá edit_file para el cambio puntual. Confirmá en una línea."})
+                            text = ""
+                            continue
+                        if rt:
+                            s._push("sys", f"⚠ Quedó un error de ejecución sin resolver:\n{rt}")
+                            s._reflect_and_learn(msg, f"dejaste código que compila pero falla al correr: {rt[:200]}")
                         break
                     asst = {"role": "assistant",
                             "content": msg_resp.get("content", ""), "tool_calls": tcs}
@@ -1337,6 +1429,23 @@ class Api:
         s._mem = []          # olvidar el contexto de conversación
         s._checkpoint = {}
         return s.ses_id
+
+    def delete_session(s, sid):
+        """Borra una conversación del historial (cerrar la solapa). Si es la
+        activa, arranca una sesión nueva vacía. Devuelve el nuevo estado de
+        solapas para que el frontend re-renderice."""
+        try:
+            f = s.ses_dir / f"{sid}.json"
+            if f.exists():
+                f.unlink()
+        except OSError as e:
+            log(f"delete_session({sid}) fallo: {e}")
+            return {"error": str(e)}
+        was_active = (sid == s.ses_id)
+        if was_active:
+            s.new_session()
+        return {"deleted": sid, "was_active": was_active,
+                "session_id": s.ses_id, "chats": s.history()}
 
     def leaderboard(s):
         """Ranking histórico agregando todas las comparativas guardadas."""

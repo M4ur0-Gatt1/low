@@ -250,8 +250,14 @@ header {
   font-weight: 500;
 }
 .ctab-t { flex: 1; overflow: hidden; text-overflow: ellipsis; }
-.ctab .cx { color: var(--faint); font-size: 13px; line-height: 1; flex: none; }
-.ctab .cx:hover { color: var(--red); }
+/* el ✕ solo aparece al pasar el mouse por la solapa o cuando está activa,
+   para no ensuciar la barra cuando hay muchas conversaciones */
+.ctab .cx {
+  color: var(--faint); font-size: 13px; line-height: 1; flex: none;
+  opacity: 0; transition: opacity .12s; padding: 0 2px; border-radius: 4px;
+}
+.ctab:hover .cx, .ctab.active .cx { opacity: 1; }
+.ctab .cx:hover { color: var(--red); background: var(--line); }
 .ctab-nav {
   flex: none; width: 24px; border: none; background: var(--panel);
   color: var(--mut); cursor: pointer; display: flex; align-items: center;
@@ -453,6 +459,12 @@ footer {
   padding: 7px 10px; color: var(--txt); font: 400 12px 'Figtree', sans-serif; outline: none;
 }
 .agrow input:focus { border-color: var(--mut); }
+/* fila de checkbox (verificar ejecución): el label describe, no ocupa 90px fijos */
+.agrow .agchk {
+  flex: 2; display: flex; align-items: center; gap: 7px; cursor: pointer;
+  font: 400 11px 'Figtree', sans-serif; color: var(--mut); text-transform: none;
+}
+.agrow .agchk input { width: auto; accent-color: var(--green); flex: none; }
 .srv-row { display: flex; gap: 6px; margin-bottom: 6px; align-items: center; }
 .srv-row input {
   flex: 1; min-width: 0; background: var(--panel2); border: 1px solid var(--line);
