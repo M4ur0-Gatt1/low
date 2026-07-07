@@ -34,7 +34,7 @@ CODE_EXT = {".py", ".js", ".ts", ".tsx", ".jsx", ".md", ".txt", ".json",
 LANG_BY_EXT = {".py": "python", ".js": "javascript", ".ts": "javascript",
                ".sh": "bash", ".ps1": "powershell"}
 
-FIDEL_VERSION = "2.0.24"
+FIDEL_VERSION = "2.0.25"
 
 # Desafío por defecto del comparador: verificable automáticamente
 DEFAULT_TASK = ("Escribe un programa Python que imprima los primeros 10 numeros "
@@ -54,10 +54,14 @@ DEFAULT_SP = ("Eres Fidel, programador senior. Tienes HERRAMIENTAS: read_file, "
               "para cada tarea. Para SUBIR A GITHUB usa la herramienta git: 'add -A', "
               "'commit -m \"mensaje\"', 'push' (gh CLI esta autenticado para crear repos). "
               "Para servidores usa ssh_exec (podes pasar un alias guardado o usuario@ip) "
-              "y scp_upload para subir archivos. Al escribir codigo: sintaxis valida. No "
-              "repitas la misma llamada a herramienta si ya te devolvio resultado — si "
-              "algo no funciona, cambia de enfoque. No crees entornos virtuales salvo "
-              "pedido explicito. Responde en espanol, breve.")
+              "y scp_upload para subir archivos. REGLA CLAVE: si una herramienta devuelve "
+              "un error (empieza con ❌), NO repitas la misma llamada — LEE el mensaje, "
+              "corregi los argumentos (ej: si falta 'path', agregalo) o cambia de enfoque. "
+              "Repetir la misma llamada da el mismo error. Al escribir codigo: sintaxis "
+              "valida y COMPLETO, sin funciones a medias, TODOs ni placeholders — tiene que "
+              "andar. Elegi el lenguaje mas adecuado. Cuando termines de verdad, decilo "
+              "claro. No crees entornos virtuales salvo pedido explicito. Responde en "
+              "espanol, breve.")
 
 
 LOG_PATH = data_dir() / 'fidel.log'
@@ -100,6 +104,58 @@ class Api:
             return max(2, int(s.cfg.data.get("agent", {}).get("memory_turns", 24))) * 2
         except (TypeError, ValueError):
             return 48
+
+    # ── Reflexion: aprende de sus errores y los recuerda ──────
+    def _lessons_path(s):
+        return data_dir() / 'lecciones.json'
+
+    def _load_lessons(s):
+        try:
+            data = json.loads(s._lessons_path().read_text(encoding="utf-8"))
+            return data if isinstance(data, list) else []
+        except (OSError, ValueError):
+            return []
+
+    def _save_lesson(s, txt):
+        txt = (txt or "").strip().strip('"').strip()
+        # descartar respuestas vacías o que no son una regla (el modelo a veces divaga)
+        if not txt or len(txt) < 8:
+            return
+        ls = s._load_lessons()
+        if any(txt.lower() == x.get("txt", "").lower() for x in ls):
+            return                      # ya la aprendió
+        ls.append({"txt": txt[:400],
+                   "ts": datetime.datetime.now().isoformat()})
+        ls = ls[-40:]                   # no acumular infinito
+        try:
+            s._lessons_path().write_text(json.dumps(ls, ensure_ascii=False, indent=2),
+                                         encoding="utf-8")
+        except OSError as e:
+            log(f"no pude guardar lección: {e}")
+
+    def _reflect_and_learn(s, task, reason):
+        """Tras un fallo, pide al modelo UNA regla concreta para no repetirlo y la
+        guarda (patrón Reflexion). Desactivable con config agent.learn=false."""
+        if not s.cfg.data.get("agent", {}).get("learn", True):
+            return
+        if not s.prov:
+            return
+        try:
+            r = s.prov.chat(
+                [{"role": "user", "content":
+                  f"Estabas resolviendo esta tarea: «{(task or '')[:300]}».\n"
+                  f"Fallaste asi: {reason}.\n"
+                  "En UNA sola frase corta y accionable, escribi la REGLA que seguirias "
+                  "la proxima vez para NO repetir este error (empezando con un verbo). "
+                  "Solo la regla, sin preambulo ni comillas."}],
+                system_prompt="Sos un ingeniero senior que aprende de sus errores. Respondes con UNA regla breve y concreta.",
+                temperature=0.3, max_tokens=120)
+            lesson = re.sub(r"<think>.*?</think>", "", r.content or "", flags=re.DOTALL).strip()
+            if lesson:
+                s._save_lesson(lesson)
+                s._push("sys", f"🧠 Aprendí: {lesson[:180]}")
+        except Exception as e:
+            log(f"reflect fallo: {e}")
 
     # ── infraestructura ───────────────────────────────────
     def _push(s, event, data):
@@ -189,6 +245,7 @@ class Api:
             "agent": s.cfg.data.get("agent", {}),
             "session_id": s.ses_id,
             "ssh_hosts": s.cfg.data.get("ssh_hosts", []),
+            "lessons": len(s._load_lessons()),
         }
         st.update(s._apis_state())
         return st
@@ -446,7 +503,7 @@ class Api:
     FAST_MODEL = {
         "groq": "openai/gpt-oss-120b",
         "nvidia": "meta/llama-3.3-70b-instruct",
-        "deepseek": "deepseek-chat",
+        "deepseek": "deepseek-v4-flash",
         "siliconflow": "deepseek-ai/DeepSeek-V3",
         "openai": "gpt-4o-mini",
         "qwen": "qwen-plus",
@@ -488,6 +545,16 @@ class Api:
         if d.get("base_url"):
             kw["base_url"] = d["base_url"]
         return get_provider(name, api_key=d.get("api_key", ""), **kw)
+
+    @staticmethod
+    def _arg_path(args):
+        """Ruta desde los args de una tool, tolerando alias comunes que el modelo
+        a veces usa (file/filename/filepath) en vez de 'path'."""
+        for k in ("path", "file", "filename", "filepath", "file_path"):
+            v = args.get(k)
+            if v:
+                return str(v).strip()
+        return ""
 
     # ── servidores SSH guardados ──────────────────────────
     def _resolve_ssh(s, alias_or_target):
@@ -547,10 +614,13 @@ class Api:
     def _exec_tool(s, name, args, code, lang):
         try:
             if name == "read_file":
-                rel = args.get("path", "")
+                rel = s._arg_path(args)
+                if not rel:
+                    return ("❌ Falta 'path'. Llamá read_file con {\"path\": \"archivo.js\"} "
+                            "(opcional start_line/max_lines). No repitas sin el path.")
                 p = Path(rel) if os.path.isabs(rel) else s._base() / rel
                 if not p.exists():
-                    return "❌ No existe"
+                    return f"❌ No existe: {rel}. Usá list_files para ver los nombres exactos."
                 if p.is_dir():
                     return "❌ Es un directorio — usá list_files"
                 try:
@@ -571,7 +641,18 @@ class Api:
                             f"Seguí con start_line={end + 1})")
                 return seg or "(archivo vacío)"
             if name == "write_file":
-                p = s._base() / args["path"]
+                rel = s._arg_path(args)
+                if not rel:
+                    return ("❌ Falta 'path'. Llamá write_file con "
+                            "{\"path\": \"archivo.py\", \"content\": \"...\"}. "
+                            "No repitas la llamada sin el path — corregila.")
+                if "content" not in args and "text" not in args:
+                    return ("❌ Falta 'content' — write_file necesita {path, content} con el "
+                            "contenido COMPLETO del archivo. Si querés cambiar solo una parte, usá edit_file.")
+                content = args.get("content")
+                if content is None:
+                    content = args.get("text") or ""
+                p = s._base() / rel
                 p.parent.mkdir(parents=True, exist_ok=True)
                 # checkpoint: guardar el contenido previo (o None si es nuevo) una
                 # sola vez por turno, para poder deshacer todo el turno con /undo
@@ -579,17 +660,21 @@ class Api:
                 if key not in s._checkpoint:
                     s._checkpoint[key] = p.read_text(encoding="utf-8",
                                                      errors="replace") if p.exists() else None
-                p.write_text(args["content"], encoding="utf-8")
+                p.write_text(content, encoding="utf-8")
                 s._written.append(str(p))
                 s._push("wrote", {"path": str(p)})
-                return f"✅ Escrito ({len(args['content'])}c)"
+                return f"✅ Escrito {rel} ({len(content)}c)"
             if name == "edit_file":
-                p = s._base() / args["path"]
+                rel = s._arg_path(args)
+                if not rel:
+                    return ("❌ Falta 'path'. Llamá edit_file con "
+                            "{path, old_text, new_text}. No repitas sin el path.")
+                p = s._base() / rel
                 if not p.exists():
-                    return "❌ No existe — usa write_file para crear un archivo nuevo"
+                    return f"❌ No existe {rel} — usa write_file para crear un archivo nuevo"
                 old, new = args.get("old_text", ""), args.get("new_text", "")
                 if not old:
-                    return "❌ old_text vacio — copia el fragmento exacto a reemplazar"
+                    return "❌ old_text vacio — copia el fragmento exacto a reemplazar (de un read_file previo)"
                 try:
                     src = p.read_text(encoding="utf-8", errors="replace")
                 except OSError as e:
@@ -608,7 +693,10 @@ class Api:
                 s._push("wrote", {"path": str(p)})
                 return f"✅ Editado ({len(new)}c)"
             if name == "exec_cmd":
-                r = subprocess.run(args["command"], shell=True, capture_output=True,
+                cmd = args.get("command") or args.get("cmd") or ""
+                if not cmd:
+                    return "❌ Falta 'command'. Llamá exec_cmd con {\"command\": \"...\"}."
+                r = subprocess.run(cmd, shell=True, capture_output=True,
                                    text=True, timeout=30, cwd=str(s._base()))
                 return f"⚡ exit={r.returncode}\n" + ((r.stdout + "\n" + r.stderr).strip()[:3000])
             if name == "git":
@@ -682,20 +770,33 @@ class Api:
             return f"❌ {e}"
 
     def _check_written(s):
-        """Verifica la sintaxis de los .py escritos por el agente en este turno.
-        El harness no confía en que el modelo escriba código válido."""
+        """Verifica la sintaxis de los archivos escritos por el agente en este turno.
+        El harness NO confía en que el modelo escriba código válido: .py se compila,
+        .js/.mjs/.cjs se chequean con `node --check` (si hay node), .json se parsea."""
+        import shutil
+        node = shutil.which("node")
         errs = []
         for p in dict.fromkeys(s._written):
-            if not p.endswith(".py"):
-                continue
+            base = os.path.basename(p)
             try:
-                src = Path(p).read_text(encoding="utf-8", errors="replace")
-                compile(src, p, "exec")
+                if p.endswith(".py"):
+                    src = Path(p).read_text(encoding="utf-8", errors="replace")
+                    compile(src, p, "exec")
+                elif p.endswith((".js", ".mjs", ".cjs")) and node:
+                    r = subprocess.run([node, "--check", p], capture_output=True,
+                                       text=True, timeout=15)
+                    if r.returncode != 0:
+                        det = (r.stderr or r.stdout).strip().splitlines()
+                        errs.append(f"{base}: " + (det[0] if det else "error de sintaxis JS"))
+                elif p.endswith(".json"):
+                    json.loads(Path(p).read_text(encoding="utf-8", errors="replace"))
             except SyntaxError as e:
                 linea = (e.text or "").strip()
-                errs.append(f"{os.path.basename(p)} línea {e.lineno}: {e.msg}"
+                errs.append(f"{base} línea {e.lineno}: {e.msg}"
                             + (f"\n  {linea}" if linea else ""))
-            except OSError:
+            except json.JSONDecodeError as e:
+                errs.append(f"{base}: JSON inválido — {e.msg} (línea {e.lineno})")
+            except (OSError, subprocess.SubprocessError):
                 pass
         return "\n".join(errs)
 
@@ -750,6 +851,11 @@ class Api:
                     ctx += "Proyecto:\n" + "\n".join(
                         f"  {f.relative_to(s.ws)}" for f in cf[:12]) + "\n"
             sp = (s.cfg.data.get("system_prompt") or "").strip() or DEFAULT_SP
+            # Reflexion: re-inyectar las lecciones aprendidas de errores previos
+            lessons = s._load_lessons()
+            if lessons:
+                sp += ("\n\nLECCIONES APRENDIDAS de errores previos (RESPETALAS estrictamente):\n"
+                       + "\n".join(f"- {x['txt']}" for x in lessons[-12:]))
             # memoria: incluir los últimos turnos para que el agente tenga contexto
             ms = list(s._mem[-s._mem_limit():]) + [{"role": "user", "content": ctx + msg}]
             text = ""
@@ -864,9 +970,17 @@ class Api:
                             continue
                         if errs:
                             s._push("sys", f"⚠ Quedaron errores de sintaxis sin resolver:\n{errs}")
+                            s._reflect_and_learn(msg, f"dejaste código con errores de sintaxis: {errs[:200]}")
                         break
-                    ms.append({"role": "assistant",
-                               "content": msg_resp.get("content", ""), "tool_calls": tcs})
+                    asst = {"role": "assistant",
+                            "content": msg_resp.get("content", ""), "tool_calls": tcs}
+                    # Los modelos "thinking" de DeepSeek EXIGEN que se les devuelva su
+                    # reasoning_content junto al mensaje con tool_calls, o responden
+                    # 400 "The reasoning_content in the thinking mode must be passed
+                    # back". El transport ya lo captura en raw → lo reinyectamos.
+                    if msg_resp.get("reasoning_content"):
+                        asst["reasoning_content"] = msg_resp["reasoning_content"]
+                    ms.append(asst)
                     progressed = False
                     for tc in tcs:
                         fn = tc["function"]["name"]
@@ -943,6 +1057,8 @@ class Api:
                         (f" (llegó a escribir {n_esc} archivo(s) antes de trabarse)."
                          if n_esc else ".") +
                         " Probá pedir algo más chico y específico, o dividir la tarea en pasos.")
+                s._reflect_and_learn(msg, "repetiste la misma llamada a herramienta ante un "
+                                          "error en vez de corregir los argumentos o cambiar de enfoque")
             elif not text and hit_cap:
                 n_esc = len(dict.fromkeys(s._written))
                 toque = f" (toqué {n_esc} archivo(s))" if n_esc else ""
@@ -950,6 +1066,7 @@ class Api:
                     text = ("⏸ Paré porque el agente dejó de avanzar (repetía sin progreso)"
                             + toque + ". Escribí «segui» para reintentar, cambiá de modelo, "
                             "o dividí un poco el pedido.")
+                    s._reflect_and_learn(msg, "dejaste de avanzar repitiendo acciones sin progreso")
                 else:
                     text = ("↻ Vengo trabajando la tarea en varios tramos" + toque +
                             f" y llegué al tope de {continuations} tramos automáticos "
@@ -1243,6 +1360,19 @@ class Api:
                 r = subprocess.run(arg, shell=True, capture_output=True, text=True,
                                    timeout=30, cwd=s.ws)
                 return msgs(f"$ {arg}\n{(r.stdout + r.stderr)[:2000]}")
+            if cmd in ("lecciones", "lessons"):
+                if arg.strip() in ("borrar", "clear", "reset", "olvidar"):
+                    try:
+                        s._lessons_path().unlink()
+                    except OSError:
+                        pass
+                    return msgs("🧠 Lecciones borradas.")
+                ls = s._load_lessons()
+                if not ls:
+                    return msgs("🧠 Todavía no aprendí lecciones — aparecen cuando algo falla. "
+                                "(/lecciones borrar para reiniciar)")
+                return msgs("🧠 Lecciones aprendidas (se le re-inyectan al agente):\n"
+                            + "\n".join(f"• {x['txt']}" for x in ls[-20:]))
             if cmd == "git" and arg:
                 return msgs(s._exec_tool("git", {"args": arg}, "", "python"))
             if cmd == "commit":
