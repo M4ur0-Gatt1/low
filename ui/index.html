@@ -164,6 +164,24 @@
   <iframe id="artFrame" sandbox="allow-scripts allow-forms allow-modals allow-popups"></iframe>
 </div>
 
+<!-- Entorno de diseño: SVG vivo + inspector por elemento (vectores + tipografía) -->
+<div id="designView" hidden>
+  <div class="art-bar">
+    <span class="art-title" id="dzTitle">Diseño</span>
+    <div class="flex1"></div>
+    <button class="ibtn" id="dzSave" title="Guardar cambios al .svg"><svg class="ico"><use href="#i-save"/></svg></button>
+    <button class="ibtn" id="dzExt" title="Abrir en el navegador"><svg class="ico"><use href="#i-ext"/></svg></button>
+    <button class="ibtn" id="dzClose" title="Cerrar (Esc)"><svg class="ico"><use href="#i-x"/></svg></button>
+  </div>
+  <div class="dz-body">
+    <div class="dz-canvas" id="dzCanvas"></div>
+    <div class="dz-inspector" id="dzInspector">
+      <div class="dz-empty" id="dzEmpty">Hacé clic en un elemento del diseño para editarlo.</div>
+      <div id="dzProps" hidden></div>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="overlay" hidden><div class="modal" id="modal"></div></div>
 
 <script src="vendor/codemirror.min.js"></script>

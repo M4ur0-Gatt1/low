@@ -192,14 +192,18 @@ function setWs(d) {
   sysMsg("📁 Workspace: " + d.ws);
 }
 
-const IMG_RE = /\.(png|jpe?g|gif|webp|bmp|svg)$/i;
+const SVG_RE = /\.svg$/i;
+const IMG_RE = /\.(png|jpe?g|gif|webp|bmp)$/i;
 
 async function onWrote(path, range) {
   const r = await api.refresh_tree();
   S.tree = r.tree;
   renderTree();
-  if (IMG_RE.test(path)) {
-    // imagen generada por el agente → verla en el visor + miniatura en el chat
+  if (SVG_RE.test(path)) {          // vectores → entorno de diseño interactivo
+    await openDesign(path);
+    return;
+  }
+  if (IMG_RE.test(path)) {          // raster → visor + miniatura en el chat
     await openImage(path, true);
     return;
   }
@@ -337,6 +341,11 @@ function bind() {
     const a = (S.artifacts || [])[S.artIdx];
     if (a) await api.preview_html(a.path || "", a.html);
   };
+  // entorno de diseño
+  $("#dzClose").onclick = closeDesign;
+  $("#dzSave").onclick = dzSave;
+  $("#dzCanvas").addEventListener("click", dzOnCanvasClick);
+  $("#dzExt").onclick = () => { if (DZ.path) api.preview_html(DZ.path, $("#dzCanvas").innerHTML); };
   document.querySelectorAll(".chip").forEach(c => {
     c.onclick = () => {
       const cmd = c.dataset.chip;
@@ -366,8 +375,9 @@ function bind() {
     if (e.ctrlKey && e.key === "0") { e.preventDefault(); applyZoom(1.0); }
     if (e.key === "Escape") {
       if (!$("#overlay").hidden) closeModal();         // 1º cierra modal abierto
-      else if (!$("#artView").hidden) closeArtifacts(); // 2º cierra el visor de artefactos
-      else if (S.busy) cancelRequest();                // 3º detiene consulta en curso
+      else if (!$("#designView").hidden) closeDesign(); // 2º cierra el entorno de diseño
+      else if (!$("#artView").hidden) closeArtifacts(); // 3º cierra el visor de artefactos
+      else if (S.busy) cancelRequest();                // 4º detiene consulta en curso
     }
   });
   $("#overlay").onclick = e => { if (e.target === $("#overlay")) closeModal(); };
@@ -481,6 +491,7 @@ async function pickWs() {
 }
 
 async function openFile(path, range) {
+  if (SVG_RE.test(path)) return openDesign(path);  // vectores → entorno de diseño
   if (IMG_RE.test(path)) return openImage(path);   // imágenes → visor, no al editor
   const r = await api.open_file(path);
   if (r.error) return sysMsg("❌ " + r.error);
@@ -1217,6 +1228,150 @@ function showArtifacts() {
   paintArtifact();
 }
 function closeArtifacts() { $("#artView").hidden = true; }
+
+/* ══ Entorno de diseño: SVG vivo + inspector por elemento ══ */
+const DZ = { path: null, sel: null };
+const DZ_FONTS = ["Figtree", "Arial", "Helvetica", "Verdana", "Trebuchet MS",
+  "Georgia", "Times New Roman", "Courier New", "JetBrains Mono", "Impact",
+  "Comic Sans MS", "serif", "sans-serif", "monospace"];
+// pares tipográficos sugeridos (título / cuerpo) — clic para aplicar al texto
+const DZ_PAIRS = [
+  ["Impact", "Helvetica"], ["Georgia", "Verdana"],
+  ["Trebuchet MS", "Georgia"], ["Figtree", "JetBrains Mono"],
+];
+
+async function openDesign(path) {
+  const r = await api.image_data(path);
+  if (!r || r.error || !r.svg) return sysMsg("❌ No pude abrir el diseño: " + ((r && r.error) || path));
+  DZ.path = path; DZ.sel = null;
+  $("#dzTitle").textContent = r.name || path.split(/[\\/]/).pop();
+  const cv = $("#dzCanvas");
+  cv.innerHTML = r.svg;
+  const svg = cv.querySelector("svg");
+  if (svg && !svg.getAttribute("width")) svg.style.width = "min(80vw, 900px)";
+  $("#dzProps").hidden = true; $("#dzEmpty").hidden = false;
+  $("#designView").hidden = false;
+}
+function closeDesign() { $("#designView").hidden = true; DZ.sel = null; }
+
+function dzOnCanvasClick(e) {
+  const el = e.target;
+  if (!el || el === $("#dzCanvas") || el.tagName.toLowerCase() === "svg") return;
+  if (DZ.sel) DZ.sel.classList.remove("dz-sel");
+  DZ.sel = el; el.classList.add("dz-sel");
+  dzBuildInspector(el);
+}
+
+const dzGet = (el, attr, cssProp) => el.getAttribute(attr) ||
+  (cssProp ? getComputedStyle(el)[cssProp] : "") || "";
+
+function dzField(label, id, value, type) {
+  const v = (value == null ? "" : String(value)).replace(/"/g, "&quot;");
+  return `<div class="dz-field"><label>${label}</label>` +
+    `<input id="${id}" type="${type || "text"}" value="${v}"></div>`;
+}
+
+function dzBuildInspector(el) {
+  const tag = el.tagName.toLowerCase();
+  const P = $("#dzProps");
+  const isText = tag === "text" || tag === "tspan";
+  let html = `<div class="dz-tag">&lt;${tag}&gt;</div>`;
+  // color de relleno y trazo (picker + texto para aceptar none/hex/nombre)
+  html += `<div class="dz-field"><label>Relleno (fill)</label><div class="dz-row">` +
+    `<input id="dzFillC" type="color" value="${dzHex(dzGet(el, "fill", "fill"))}" style="width:44px">` +
+    `<input id="dzFill" type="text" value="${dzGet(el, "fill", "fill")}" style="flex:1"></div></div>`;
+  html += `<div class="dz-field"><label>Trazo (stroke)</label><div class="dz-row">` +
+    `<input id="dzStrokeC" type="color" value="${dzHex(dzGet(el, "stroke", "stroke"))}" style="width:44px">` +
+    `<input id="dzStroke" type="text" value="${dzGet(el, "stroke", "stroke")}" style="flex:1"></div></div>`;
+  html += `<div class="dz-row">` +
+    dzField("Grosor trazo", "dzSW", dzGet(el, "stroke-width", ""), "number") +
+    dzField("Opacidad", "dzOp", dzGet(el, "opacity", "opacity"), "number") + `</div>`;
+  if (isText) {
+    html += `<div class="dz-field"><label>Texto</label><input id="dzText" type="text" value="${(el.textContent || "").replace(/"/g, "&quot;")}"></div>`;
+    const fam = dzGet(el, "font-family", "fontFamily").replace(/["']/g, "");
+    html += `<div class="dz-field"><label>Tipografía</label><select id="dzFont">` +
+      DZ_FONTS.map(f => `<option ${fam.indexOf(f) === 0 ? "selected" : ""}>${f}</option>`).join("") +
+      `</select></div>`;
+    html += `<div class="dz-row">` +
+      dzField("Tamaño", "dzFS", parseFloat(dzGet(el, "font-size", "fontSize")) || "", "number") +
+      `<div class="dz-field"><label>Peso</label><select id="dzFW">` +
+      ["normal", "bold", "300", "400", "500", "600", "700", "800", "900"].map(w =>
+        `<option ${String(dzGet(el, "font-weight", "fontWeight")) === w ? "selected" : ""}>${w}</option>`).join("") +
+      `</select></div></div>`;
+    html += `<div class="dz-field"><label>Pares sugeridos</label><div class="dz-suggest">` +
+      DZ_PAIRS.map((p, i) => `<span class="dz-chip" data-pair="${i}">${p[0]} / ${p[1]}</span>`).join("") +
+      `</div><div class="dz-hint">Aplica la tipografía de título al elemento.</div></div>`;
+  }
+  // posición: x/y (rect,text) o cx/cy (circle,ellipse)
+  if (el.hasAttribute("x") || el.hasAttribute("y"))
+    html += `<div class="dz-row">` + dzField("X", "dzX", dzGet(el, "x", ""), "number") +
+      dzField("Y", "dzY", dzGet(el, "y", ""), "number") + `</div>`;
+  else if (el.hasAttribute("cx") || el.hasAttribute("cy"))
+    html += `<div class="dz-row">` + dzField("Centro X", "dzCX", dzGet(el, "cx", ""), "number") +
+      dzField("Centro Y", "dzCY", dzGet(el, "cy", ""), "number") + `</div>`;
+  if (el.hasAttribute("width") || el.hasAttribute("height"))
+    html += `<div class="dz-row">` + dzField("Ancho", "dzW", dzGet(el, "width", ""), "number") +
+      dzField("Alto", "dzH", dzGet(el, "height", ""), "number") + `</div>`;
+  P.innerHTML = html; P.hidden = false; $("#dzEmpty").hidden = true;
+  dzWire(el, isText);
+}
+
+// aplicar un atributo (o quitarlo si queda vacío) al elemento seleccionado
+function dzSet(el, attr, val) {
+  if (val === "" || val == null) el.removeAttribute(attr);
+  else el.setAttribute(attr, val);
+}
+function dzWire(el, isText) {
+  const on = (id, fn) => { const e = $("#" + id); if (e) e.addEventListener("input", fn); };
+  on("dzFill", e => { dzSet(el, "fill", e.target.value); const c = $("#dzFillC"); if (c) c.value = dzHex(e.target.value); });
+  on("dzFillC", e => { dzSet(el, "fill", e.target.value); $("#dzFill").value = e.target.value; });
+  on("dzStroke", e => { dzSet(el, "stroke", e.target.value); const c = $("#dzStrokeC"); if (c) c.value = dzHex(e.target.value); });
+  on("dzStrokeC", e => { dzSet(el, "stroke", e.target.value); $("#dzStroke").value = e.target.value; });
+  on("dzSW", e => dzSet(el, "stroke-width", e.target.value));
+  on("dzOp", e => dzSet(el, "opacity", e.target.value));
+  on("dzX", e => dzSet(el, "x", e.target.value));
+  on("dzY", e => dzSet(el, "y", e.target.value));
+  on("dzCX", e => dzSet(el, "cx", e.target.value));
+  on("dzCY", e => dzSet(el, "cy", e.target.value));
+  on("dzW", e => dzSet(el, "width", e.target.value));
+  on("dzH", e => dzSet(el, "height", e.target.value));
+  if (isText) {
+    on("dzText", e => { el.textContent = e.target.value; });
+    on("dzFont", e => dzSet(el, "font-family", e.target.value));
+    on("dzFS", e => dzSet(el, "font-size", e.target.value));
+    on("dzFW", e => dzSet(el, "font-weight", e.target.value));
+    document.querySelectorAll("#dzProps .dz-chip").forEach(ch => ch.onclick = () => {
+      const pair = DZ_PAIRS[+ch.dataset.pair];
+      dzSet(el, "font-family", pair[0]);
+      const sel = $("#dzFont"); if (sel) sel.value = DZ_FONTS.includes(pair[0]) ? pair[0] : sel.value;
+    });
+  }
+}
+
+// normaliza un color SVG (nombre/hex/rgb) a #rrggbb para el <input type=color>
+function dzHex(c) {
+  c = (c || "").trim();
+  if (/^#[0-9a-f]{6}$/i.test(c)) return c;
+  if (/^#[0-9a-f]{3}$/i.test(c)) return "#" + c.slice(1).split("").map(x => x + x).join("");
+  try {
+    const cx = document.createElement("canvas").getContext("2d");
+    cx.fillStyle = "#000"; cx.fillStyle = c;
+    if (/^#[0-9a-f]{6}$/i.test(cx.fillStyle)) return cx.fillStyle;
+  } catch (e) { /* */ }
+  return "#000000";
+}
+
+async function dzSave() {
+  const svg = $("#dzCanvas").querySelector("svg");
+  if (!svg || !DZ.path) return;
+  // sacar la marca de selección antes de serializar (es solo de la UI)
+  const clone = svg.cloneNode(true);
+  clone.querySelectorAll(".dz-sel").forEach(n => n.classList.remove("dz-sel"));
+  clone.querySelectorAll("[class='']").forEach(n => n.removeAttribute("class"));
+  const out = clone.outerHTML;
+  const r = await api.save_file(DZ.path, out);
+  if (r) { setStatus("💾 " + (r.name || "diseño guardado")); sysMsg("💾 Diseño guardado: " + (r.name || DZ.path)); }
+}
 
 /* ── Herramientas del agente (qué puede hacer solo) ── */
 function modalTools() {

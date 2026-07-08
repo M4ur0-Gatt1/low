@@ -35,7 +35,7 @@ CODE_EXT = {".py", ".js", ".ts", ".tsx", ".jsx", ".md", ".txt", ".json",
 LANG_BY_EXT = {".py": "python", ".js": "javascript", ".ts": "javascript",
                ".sh": "bash", ".ps1": "powershell"}
 
-FIDEL_VERSION = "2.0.30"
+FIDEL_VERSION = "2.1.0"
 
 # Desafío por defecto del comparador: verificable automáticamente
 DEFAULT_TASK = ("Escribe un programa Python que imprima los primeros 10 numeros "
@@ -53,8 +53,12 @@ DEFAULT_SP = ("Eres Fidel, programador senior. Tienes HERRAMIENTAS: read_file, "
               "No uses remember para cosas triviales o de un solo uso. "
               "Si el usuario adjunta una imagen la ves directo en el mensaje (mockup, "
               "screenshot, foto de un error) — describila o usala de referencia segun "
-              "lo que pida. Para generar assets/ilustraciones usa generate_image "
+              "lo que pida. Para generar assets/ilustraciones raster usa generate_image "
               "(requiere key de OpenAI o SiliconFlow cargada en Configuracion). "
+              "Para logos, iconos, diagramas o cualquier DISENO editable, escribi un "
+              ".svg con write_file: se abre solo en el entorno de diseno de Fidel, donde "
+              "el usuario selecciona y edita cada elemento. Usa SVG limpio: un elemento "
+              "por forma/texto, con fill/stroke/font-family explicitos. "
               "Antes de editar un proyecto grande, usa search_code para ubicar lo que "
               "buscas. Para modificar un archivo QUE YA EXISTE preferi edit_file "
               "(reemplaza solo el fragmento exacto que cambia) — es mas confiable y "

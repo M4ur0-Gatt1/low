@@ -2,7 +2,7 @@
 ; Compilar: ISCC.exe fidel_installer.iss
 
 #define AppName "Fidel"
-#define AppVersion "2.0.30"
+#define AppVersion "2.1.0"
 #define AppExe "Fidel.exe"
 
 [Setup]
