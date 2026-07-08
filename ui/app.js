@@ -169,8 +169,8 @@ async function init() {
          "⚙ API keys · 📁 proyecto · barra izquierda: 🧊 Artefactos (vista previa en vivo), " +
          "⟳ Rutinas, 🔧 Herramientas, 🖧 Servidores SSH, ⟲ Historial, ▦ Ranking.\n" +
          "El agente sabe git, ssh y scp: pedile «subí esto a github» o «entrá al server X y…».\n" +
-         "Aprende solo: /habilidades y /lecciones muestran lo que fue aprendiendo.\n" +
-         "Comandos: /commit /push /git /ssh /compare /ranking /undo /history /resume /run /files /search /preview /habilidades /lecciones · Zoom Ctrl +/−/0");
+         "Aprende solo: /habilidades y /lecciones (global) y /memoria (de este proyecto).\n" +
+         "Comandos: /commit /push /git /ssh /compare /ranking /undo /history /resume /run /files /search /preview /habilidades /lecciones /memoria · Zoom Ctrl +/−/0");
   api.log_js("init ok · zoom=" + S.zoom + " · figtree=" +
              document.fonts.check("12px Figtree") + " · jbmono=" +
              document.fonts.check("12px 'JetBrains Mono'"));

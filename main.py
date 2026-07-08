@@ -35,7 +35,7 @@ CODE_EXT = {".py", ".js", ".ts", ".tsx", ".jsx", ".md", ".txt", ".json",
 LANG_BY_EXT = {".py": "python", ".js": "javascript", ".ts": "javascript",
                ".sh": "bash", ".ps1": "powershell"}
 
-FIDEL_VERSION = "2.0.28"
+FIDEL_VERSION = "2.0.29"
 
 # Desafío por defecto del comparador: verificable automáticamente
 DEFAULT_TASK = ("Escribe un programa Python que imprima los primeros 10 numeros "
@@ -46,7 +46,11 @@ DEFAULT_EXPECTED = "2, 3, 5, 7, 11, 13, 17, 19, 23, 29"
 # ningún filtro ni instrucción oculta más allá de esto.
 DEFAULT_SP = ("Eres Fidel, programador senior. Tienes HERRAMIENTAS: read_file, "
               "write_file, edit_file, exec_cmd, run_code, list_files, search_code, "
-              "git, ssh_exec, scp_upload, generate_image. Usalas y ACTUA directo, sin pedir permiso. "
+              "git, ssh_exec, scp_upload, generate_image, remember. Usalas y ACTUA directo, sin pedir permiso. "
+              "Cuando descubras un hecho DURABLE de este proyecto (stack y versiones, "
+              "comandos de build/test/deploy, servidores y rutas, convenciones, "
+              "decisiones) guardalo con remember — así lo recordás en próximas sesiones. "
+              "No uses remember para cosas triviales o de un solo uso. "
               "Si el usuario adjunta una imagen la ves directo en el mensaje (mockup, "
               "screenshot, foto de un error) — describila o usala de referencia segun "
               "lo que pida. Para generar assets/ilustraciones usa generate_image "
@@ -275,6 +279,68 @@ class Api:
             # defensa amplia a propósito: aprender NUNCA debe romper un turno exitoso
             log(f"learn_skill fallo: {e}")
         return None
+
+    # ── Memoria del proyecto: hechos durables por workspace ────────
+    # Vive en .fidel/memoria.md DENTRO del proyecto (portable, editable, versionable
+    # si el usuario quiere). El árbol y search ya ignoran carpetas que empiezan con
+    # "." así que no ensucia el listado del proyecto.
+    def _mem_file(s):
+        if not s.ws:
+            return None
+        return Path(s.ws) / ".fidel" / "memoria.md"
+
+    def _load_project_memory(s):
+        f = s._mem_file()
+        if not f or not f.exists():
+            return ""
+        try:
+            return f.read_text(encoding="utf-8", errors="replace").strip()
+        except OSError:
+            return ""
+
+    def project_memory(s):
+        """Para el frontend/comando: contenido y ruta de la memoria del proyecto."""
+        f = s._mem_file()
+        return {"content": s._load_project_memory(),
+                "path": str(f) if f else "", "has_ws": bool(s.ws)}
+
+    def save_project_memory(s, text):
+        """Sobrescribe la memoria del proyecto (edición manual desde la UI)."""
+        f = s._mem_file()
+        if not f:
+            return {"error": "Abrí un proyecto primero"}
+        try:
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text((text or "").strip() + "\n", encoding="utf-8")
+            return {"ok": True, "path": str(f)}
+        except OSError as e:
+            return {"error": str(e)}
+
+    def _remember(s, note):
+        """Agrega un hecho durable a .fidel/memoria.md (sin duplicar). Devuelve
+        el texto de resultado para la tool `remember`."""
+        note = (note or "").strip().lstrip("-•").strip()
+        if not note:
+            return "❌ Nota vacía"
+        f = s._mem_file()
+        if not f:
+            return "❌ No hay proyecto abierto — no puedo guardar memoria de proyecto"
+        prev = s._load_project_memory()
+        # dedup laxo: si ya está esa línea (ignorando may/min), no repetir
+        if any(note.lower() == ln.strip().lstrip("-•").strip().lower()
+               for ln in prev.splitlines()):
+            return "✓ Ya estaba en la memoria del proyecto"
+        try:
+            f.parent.mkdir(parents=True, exist_ok=True)
+            header = "" if prev else "# Memoria del proyecto (Fidel)\n"
+            with open(f, "a", encoding="utf-8") as fh:
+                if header:
+                    fh.write(header)
+                fh.write(f"- {note}\n")
+            s._push("sys", f"📌 Recordé del proyecto: {note[:140]}")
+            return f"✅ Guardado en memoria del proyecto: {note[:120]}"
+        except OSError as e:
+            return f"❌ {e}"
 
     # ── infraestructura ───────────────────────────────────
     def _push(s, event, data):
@@ -760,6 +826,7 @@ class Api:
             {"type": "function", "function": {"name": "ssh_exec", "description": "Ejecuta un comando en un servidor remoto por SSH y devuelve stdout/stderr. 'host' puede ser un ALIAS guardado (ver lista de servidores) o 'usuario@ip' directo. Usalo para administrar servidores, desplegar, revisar logs, etc.", "parameters": {"type": "object", "properties": {"host": {"type": "string", "description": "alias guardado o usuario@ip"}, "command": {"type": "string"}}, "required": ["host", "command"]}}},
             {"type": "function", "function": {"name": "scp_upload", "description": "Sube un archivo o carpeta local a un servidor remoto por scp. 'host' = alias guardado o usuario@ip.", "parameters": {"type": "object", "properties": {"host": {"type": "string"}, "local": {"type": "string", "description": "ruta local (relativa al workspace o absoluta)"}, "remote": {"type": "string", "description": "ruta destino en el servidor"}}, "required": ["host", "local", "remote"]}}},
             {"type": "function", "function": {"name": "generate_image", "description": "Genera una imagen a partir de una descripcion (DALL-E de OpenAI, o SiliconFlow si no hay key de OpenAI) y la guarda en el workspace. Requiere API key de OpenAI o SiliconFlow cargada en Configuracion.", "parameters": {"type": "object", "properties": {"prompt": {"type": "string", "description": "descripcion de la imagen a generar, en ingles da mejor resultado"}, "path": {"type": "string", "description": "ruta donde guardarla dentro del workspace, ej assets/logo.png. Si se omite usa assets/img_<fecha>.png"}, "size": {"type": "string", "description": "tamano, ej 1024x1024 (default) — no todos los tamanos existen en todos los proveedores"}}, "required": ["prompt"]}}},
+            {"type": "function", "function": {"name": "remember", "description": "Guarda un HECHO DURABLE de ESTE proyecto en la memoria del workspace (.fidel/memoria.md) para tenerlo en futuras sesiones: stack y versiones, comandos de build/test/deploy, servidores y rutas, convenciones de código, decisiones tomadas. Usalo cuando descubras algo del proyecto que valga la pena recordar. NO lo uses para cosas triviales o de un solo uso.", "parameters": {"type": "object", "properties": {"note": {"type": "string", "description": "el hecho a recordar, en una frase concreta"}}, "required": ["note"]}}},
         ]
 
     def _exec_tool(s, name, args, code, lang):
@@ -933,6 +1000,8 @@ class Api:
                 s._written.append(str(p))
                 s._push("wrote", {"path": str(p)})
                 return f"✅ Imagen generada con {used} → {rel}"
+            if name == "remember":
+                return s._remember(args.get("note") or args.get("text") or "")
         except Exception as e:
             return f"❌ {e}"
 
@@ -1146,6 +1215,12 @@ class Api:
                 sp += ("\n\nHABILIDADES APRENDIDAS aplicables a este pedido (usalas como guía):\n"
                        + "\n".join(f"• {sk['name']} — cuándo: {sk.get('when','')}\n"
                                    f"  pasos: {sk.get('steps','')}" for sk in rel_skills))
+            # Memoria del proyecto: hechos durables de ESTE workspace (stack, servers,
+            # comandos, convenciones). Se carga entre sesiones para no arrancar de cero.
+            pmem = s._load_project_memory()
+            if pmem:
+                sp += ("\n\nMEMORIA DE ESTE PROYECTO (contexto persistente, tenelo en cuenta):\n"
+                       + pmem[:3000])
             # imagen adjunta (visión): arma el content multimodal formato OpenAI
             # ({"type":"image_url",...}); cada provider lo traduce si hace falta
             # (ver _msgs_to_anthropic). No se guarda en la memoria del turno para
@@ -1738,6 +1813,26 @@ class Api:
                                 "bien una tarea reutilizable. (/habilidades borrar para reiniciar)")
                 return msgs("🧠 Habilidades aprendidas (se aplican cuando el pedido se parece):\n"
                             + "\n".join(f"• {x['name']} — {x.get('when','')}" for x in sk[-25:]))
+            if cmd in ("memoria", "memory"):
+                if not s.ws:
+                    return msgs("Abrí un proyecto primero (ícono de carpeta) — la memoria es por workspace.")
+                arg_m = arg.strip()
+                if arg_m in ("borrar", "clear", "reset", "olvidar"):
+                    f = s._mem_file()
+                    try:
+                        if f and f.exists():
+                            f.unlink()
+                    except OSError:
+                        pass
+                    return msgs("📌 Memoria del proyecto borrada.")
+                if arg_m:                       # /memoria <texto> → agregar a mano
+                    return msgs(s._remember(arg_m))
+                pm = s._load_project_memory()
+                if not pm:
+                    return msgs("📌 Este proyecto todavía no tiene memoria. Se va llenando "
+                                "sola cuando el agente descubre cosas durables, o agregá con "
+                                "«/memoria <hecho>». Vive en .fidel/memoria.md")
+                return msgs("📌 Memoria de este proyecto (se le reinyecta al agente):\n" + pm[:2500])
             if cmd == "git" and arg:
                 return msgs(s._exec_tool("git", {"args": arg}, "", "python"))
             if cmd == "commit":
