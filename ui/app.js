@@ -421,6 +421,13 @@ function bind() {
   $("#dzSave").onclick = dzSave;
   $("#dzCanvas").addEventListener("click", dzOnCanvasClick);
   $("#dzExt").onclick = () => { if (DZ.path) api.preview_html(DZ.path, $("#dzCanvas").innerHTML); };
+  $("#dzZoomIn").onclick = () => dzZoom(0.15);
+  $("#dzZoomOut").onclick = () => dzZoom(-0.15);
+  $("#dzZoomFit").onclick = () => { DZ.zoom = 1; dzApplyZoom(); };
+  $("#dzSend").onclick = designPrompt;
+  $("#dzPrompt").addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); designPrompt(); }
+  });
   document.querySelectorAll(".chip").forEach(c => {
     c.onclick = () => {
       const cmd = c.dataset.chip;
@@ -1344,7 +1351,7 @@ function showArtifacts() {
 function closeArtifacts() { $("#artView").hidden = true; }
 
 /* ══ Entorno de diseño: SVG vivo + inspector por elemento ══ */
-const DZ = { path: null, sel: null };
+const DZ = { path: null, sel: null, zoom: 1 };
 const DZ_FONTS = ["Figtree", "Arial", "Helvetica", "Verdana", "Trebuchet MS",
   "Georgia", "Times New Roman", "Courier New", "JetBrains Mono", "Impact",
   "Comic Sans MS", "serif", "sans-serif", "monospace"];
@@ -1363,10 +1370,20 @@ async function openDesign(path) {
   cv.innerHTML = r.svg;
   const svg = cv.querySelector("svg");
   if (svg && !svg.getAttribute("width")) svg.style.width = "min(80vw, 900px)";
+  DZ.zoom = 1; dzApplyZoom();
   $("#dzProps").hidden = true; $("#dzEmpty").hidden = false;
   $("#designView").hidden = false;
 }
 function closeDesign() { $("#designView").hidden = true; DZ.sel = null; }
+
+/* zoom del lienzo (no altera el SVG, solo la vista) */
+function dzApplyZoom() {
+  const svg = $("#dzCanvas").querySelector("svg");
+  if (svg) svg.style.transform = "scale(" + DZ.zoom + ")";
+  const lbl = $("#dzZoomLbl"); if (lbl) lbl.textContent = Math.round(DZ.zoom * 100) + "%";
+}
+function dzZoom(delta) { DZ.zoom = Math.min(4, Math.max(0.2, Math.round((DZ.zoom + delta) * 100) / 100)); dzApplyZoom(); }
+function dzDeselect() { if (DZ.sel) { DZ.sel.classList.remove("dz-sel"); DZ.sel = null; } $("#dzProps").hidden = true; $("#dzEmpty").hidden = false; }
 
 /* botón "Diseño" de la barra: reabre el diseño actual, o crea un lienzo nuevo
    para que se vean las herramientas aunque no haya un SVG abierto todavía */
@@ -1384,10 +1401,43 @@ async function designEntry() {
 
 function dzOnCanvasClick(e) {
   const el = e.target;
-  if (!el || el === $("#dzCanvas") || el.tagName.toLowerCase() === "svg") return;
+  // clic en el vacío (lienzo o fondo del svg) → deseleccionar
+  if (!el || el === $("#dzCanvas") || el.tagName.toLowerCase() === "svg") { dzDeselect(); return; }
   if (DZ.sel) DZ.sel.classList.remove("dz-sel");
   DZ.sel = el; el.classList.add("dz-sel");
   dzBuildInspector(el);
+}
+
+/* ── chat del diseño: pedirle una corrección al agente sin salir del editor ── */
+function dzSetStatus(txt) {
+  const el = $("#dzStatus");
+  if (!txt) { el.hidden = true; el.textContent = ""; return; }
+  el.hidden = false; el.textContent = txt;
+}
+async function designPrompt() {
+  const ta = $("#dzPrompt");
+  const text = ta.value.trim();
+  if (!text || !DZ.path || DZ.busy) return;
+  ta.value = "";
+  DZ.busy = true;
+  dzSetStatus("✍ Fidel está ajustando el diseño…");
+  // registrar también en el chat principal (queda en el historial)
+  userMsg("🎨 " + text); persist("user", "(diseño) " + text);
+  try {
+    const sel = DZ.sel ? ` El usuario tiene seleccionado el elemento <${DZ.sel.tagName.toLowerCase()}>.` : "";
+    const msg = "Estás editando el SVG «" + DZ.path + "» abierto en el editor de diseño de Fidel." + sel +
+      " Aplicá SOLO este cambio, editando el archivo con edit_file (mantené el viewBox y todo dentro del lienzo, " +
+      "prolijo y alineado): " + text +
+      "\nDespués revisalo con check_design y confirmá en una línea qué cambiaste.";
+    const r = await api.send_chat(msg, "", "xml", null);
+    // onWrote ya refrescó el lienzo si el agente editó el .svg
+    const reply = (r && (r.full || r.text)) || "";
+    dzSetStatus(reply ? reply.slice(0, 300) : (r && r.status) || "Listo.");
+  } catch (e) {
+    dzSetStatus("❌ " + (e.message || e));
+  } finally {
+    DZ.busy = false;
+  }
 }
 
 const dzGet = (el, attr, cssProp) => el.getAttribute(attr) ||

@@ -7,6 +7,7 @@ como js_api para ui/app.js. La versión CustomTkinter quedó en main_ctk.py.
 import base64
 import datetime
 import difflib
+import html as _html
 import http.server
 import json
 import os
@@ -16,6 +17,7 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.parse
 import webbrowser
 from pathlib import Path
 
@@ -35,7 +37,7 @@ CODE_EXT = {".py", ".js", ".ts", ".tsx", ".jsx", ".md", ".txt", ".json",
 LANG_BY_EXT = {".py": "python", ".js": "javascript", ".ts": "javascript",
                ".sh": "bash", ".ps1": "powershell"}
 
-FIDEL_VERSION = "2.4.0"
+FIDEL_VERSION = "2.5.0"
 
 # Desafío por defecto del comparador: verificable automáticamente
 DEFAULT_TASK = ("Escribe un programa Python que imprima los primeros 10 numeros "
@@ -46,7 +48,10 @@ DEFAULT_EXPECTED = "2, 3, 5, 7, 11, 13, 17, 19, 23, 29"
 # ningún filtro ni instrucción oculta más allá de esto.
 DEFAULT_SP = ("Eres Fidel, programador senior. Tienes HERRAMIENTAS: read_file, "
               "write_file, edit_file, exec_cmd, run_code, list_files, search_code, "
-              "git, ssh_exec, scp_upload, generate_image, remember, check_design, social_export. Usalas y ACTUA directo, sin pedir permiso. "
+              "git, ssh_exec, scp_upload, generate_image, remember, check_design, social_export, "
+              "web_search, web_fetch. Usalas y ACTUA directo, sin pedir permiso. "
+              "Tenes INTERNET: si necesitas info actual, documentacion, precios o algo que no sabes, "
+              "usa web_search y leé las páginas con web_fetch en vez de inventar. "
               "Cuando descubras un hecho DURABLE de este proyecto (stack y versiones, "
               "comandos de build/test/deploy, servidores y rutas, convenciones, "
               "decisiones) guardalo con remember — así lo recordás en próximas sesiones. "
@@ -879,6 +884,8 @@ class Api:
             {"type": "function", "function": {"name": "remember", "description": "Guarda un HECHO DURABLE de ESTE proyecto en la memoria del workspace (.fidel/memoria.md) para tenerlo en futuras sesiones: stack y versiones, comandos de build/test/deploy, servidores y rutas, convenciones de código, decisiones tomadas. Usalo cuando descubras algo del proyecto que valga la pena recordar. NO lo uses para cosas triviales o de un solo uso.", "parameters": {"type": "object", "properties": {"note": {"type": "string", "description": "el hecho a recordar, en una frase concreta"}}, "required": ["note"]}}},
             {"type": "function", "function": {"name": "check_design", "description": "VE un archivo .svg: lo rasteriza y lo revisa con un modelo de visión, devolviendo qué está visualmente mal o mejorable (proporciones, alineación, elementos fuera del lienzo, texto desbordado, colores). Usalo DESPUÉS de escribir un SVG para no dibujar a ciegas — corregí según la devolución y volvé a chequear.", "parameters": {"type": "object", "properties": {"path": {"type": "string", "description": "ruta al .svg a revisar"}}, "required": ["path"]}}},
             {"type": "function", "function": {"name": "social_export", "description": "Genera versiones de una imagen/diseño (png/jpg/svg) en el TAMAÑO EXACTO de cada red social, con recorte centrado, y las guarda en social/. Plataformas: instagram_post (1080x1080), instagram_story (1080x1920), facebook_post (1200x630), x_post (1600x900), linkedin_post (1200x627), tiktok, youtube_thumbnail, pinterest, whatsapp_status; o alias instagram/facebook/x/linkedin/youtube; o 'all'. El COPY y los hashtags escribilos vos aparte en social/post.md.", "parameters": {"type": "object", "properties": {"image": {"type": "string", "description": "ruta a la imagen/diseño fuente"}, "platforms": {"type": "array", "items": {"type": "string"}, "description": "lista de plataformas o formatos; default ['all']"}}, "required": ["image"]}}},
+            {"type": "function", "function": {"name": "web_search", "description": "Busca en internet (DuckDuckGo, sin API key) y devuelve los primeros resultados con título, URL y resumen. Usalo para info actual, documentación, precios, noticias, etc. Después podés leer una URL con web_fetch.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}}},
+            {"type": "function", "function": {"name": "web_fetch", "description": "Descarga una URL y devuelve su texto legible (quita HTML/scripts). Usalo para LEER una página, doc o API pública. Devuelve hasta ~8000 caracteres.", "parameters": {"type": "object", "properties": {"url": {"type": "string"}}, "required": ["url"]}}},
         ]
 
     def _exec_tool(s, name, args, code, lang):
@@ -1057,6 +1064,10 @@ class Api:
                 s._written.append(str(p))
                 s._push("wrote", {"path": str(p)})
                 return f"✅ Imagen generada con {used} → {rel}"
+            if name == "web_search":
+                return s._web_search(args.get("query") or args.get("q") or "")
+            if name == "web_fetch":
+                return s._web_fetch(args.get("url") or args.get("path") or "")
             if name == "remember":
                 return s._remember(args.get("note") or args.get("text") or "")
             if name == "social_export":
@@ -1369,6 +1380,92 @@ class Api:
                 out.append(key)
         # sin duplicados, preservando orden
         return list(dict.fromkeys(out)) or ["instagram_post"]
+
+    # ── Internet: buscar y leer páginas (sin API key) ──────────────
+    _UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                         "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+           "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+           "Accept-Language": "es,en;q=0.9", "Referer": "https://duckduckgo.com/"}
+
+    def _ddg_html(s, q):
+        """Resultados web de DuckDuckGo HTML. Devuelve lista de (titulo, url, snippet)."""
+        try:
+            r = requests.post("https://html.duckduckgo.com/html/",
+                              data={"q": q, "kl": "wt-wt"}, headers=s._UA, timeout=15)
+        except requests.RequestException:
+            return []
+        if r.status_code != 200:
+            return []
+        html_txt, out = r.text, []
+        for m in re.finditer(
+                r'result__a[^>]*href="(?P<href>[^"]+)"[^>]*>(?P<title>.*?)</a>', html_txt, re.DOTALL):
+            href = _html.unescape(m.group("href"))
+            um = re.search(r"[?&]uddg=([^&]+)", href)   # DDG envuelve en /l/?uddg=<url>
+            if um:
+                href = urllib.parse.unquote(um.group(1))
+            title = _html.unescape(re.sub(r"<[^>]+>", "", m.group("title"))).strip()
+            snip = ""
+            sm = re.search(r'result__snippet[^>]*>(.*?)</a>', html_txt[m.end():m.end() + 2000], re.DOTALL)
+            if sm:
+                snip = _html.unescape(re.sub(r"<[^>]+>", "", sm.group(1))).strip()
+            if title and href.startswith("http"):
+                out.append((title, href, snip))
+            if len(out) >= 8:
+                break
+        return out
+
+    def _ddg_instant(s, q):
+        """Fallback: API JSON de instant answers (abstract + temas relacionados)."""
+        try:
+            d = requests.get("https://api.duckduckgo.com/",
+                             params={"q": q, "format": "json", "no_html": 1, "no_redirect": 1},
+                             headers=s._UA, timeout=15).json()
+        except (requests.RequestException, ValueError):
+            return []
+        out = []
+        if d.get("AbstractText") and d.get("AbstractURL"):
+            out.append((d.get("Heading") or q, d["AbstractURL"], d["AbstractText"]))
+        for t in d.get("RelatedTopics", []):
+            if isinstance(t, dict) and t.get("Text") and t.get("FirstURL"):
+                out.append((t["Text"][:80], t["FirstURL"], t["Text"]))
+            if len(out) >= 8:
+                break
+        return out
+
+    def _web_search(s, query):
+        """Busca en internet sin API key: DuckDuckGo HTML y, si está bloqueado o
+        vacío, la API de instant answers."""
+        q = (query or "").strip()
+        if not q:
+            return "❌ Falta la búsqueda (query)"
+        res = s._ddg_html(q) or s._ddg_instant(q)
+        if not res:
+            return (f"(no obtuve resultados web para «{q}» — el buscador puede estar "
+                    "limitando peticiones ahora. Si sabés una URL, leela directo con web_fetch.)")
+        return "\n".join(
+            f"• {t}\n  {u}" + (f"\n  {sn[:200]}" if sn else "") for t, u, sn in res)
+
+    def _web_fetch(s, url):
+        """Descarga una URL y devuelve su texto legible (sin HTML/scripts)."""
+        url = (url or "").strip()
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+        try:
+            r = requests.get(url, headers=s._UA, timeout=20)
+            r.raise_for_status()
+        except requests.RequestException as e:
+            return f"❌ No pude abrir {url}: {e}"
+        ct = r.headers.get("content-type", "")
+        text = r.text
+        if "html" in ct or re.search(r"<html", text[:500], re.IGNORECASE):
+            # sacar script/style y tags → texto plano
+            text = re.sub(r"(?is)<(script|style|noscript)[^>]*>.*?</\1>", " ", text)
+            text = re.sub(r"(?s)<[^>]+>", " ", text)
+            text = _html.unescape(text)
+            text = re.sub(r"[ \t]+", " ", text)
+            text = re.sub(r"\n\s*\n\s*\n+", "\n\n", text).strip()
+        cap = 8000
+        return text[:cap] + (f"\n\n… (recortado; la página tiene {len(text)} chars)" if len(text) > cap else "")
 
     def _check_svg(s, path):
         """Validación estructural barata del SVG (antes de gastar en visión):

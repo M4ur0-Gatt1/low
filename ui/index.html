@@ -172,6 +172,11 @@
   <div class="art-bar">
     <span class="art-title" id="dzTitle">Diseño</span>
     <div class="flex1"></div>
+    <button class="ibtn" id="dzZoomOut" title="Alejar">−</button>
+    <span class="dz-zoom" id="dzZoomLbl">100%</span>
+    <button class="ibtn" id="dzZoomIn" title="Acercar">+</button>
+    <button class="ibtn" id="dzZoomFit" title="Ajustar">⤢</button>
+    <div class="vsep"></div>
     <button class="ibtn" id="dzSave" title="Guardar cambios al .svg"><svg class="ico"><use href="#i-save"/></svg></button>
     <button class="ibtn" id="dzExt" title="Abrir en el navegador"><svg class="ico"><use href="#i-ext"/></svg></button>
     <button class="ibtn" id="dzClose" title="Cerrar (Esc)"><svg class="ico"><use href="#i-x"/></svg></button>
@@ -179,8 +184,16 @@
   <div class="dz-body">
     <div class="dz-canvas" id="dzCanvas"></div>
     <div class="dz-inspector" id="dzInspector">
-      <div class="dz-empty" id="dzEmpty">Hacé clic en un elemento del diseño para editarlo.</div>
+      <div class="dz-empty" id="dzEmpty">Hacé clic en un elemento del diseño para editarlo,<br>o pedile un cambio a Fidel abajo.</div>
       <div id="dzProps" hidden></div>
+    </div>
+  </div>
+  <!-- chat/prompt del diseño: pedirle correcciones al agente sin salir del editor -->
+  <div class="dz-dock">
+    <div class="dz-dock-status" id="dzStatus" hidden></div>
+    <div class="dz-dock-in">
+      <textarea id="dzPrompt" rows="1" placeholder="Pedile un cambio a Fidel… ej: «hacé el título más grande y centralo»" spellcheck="false"></textarea>
+      <button class="send" id="dzSend"><svg class="ico"><use href="#i-arrow"/></svg></button>
     </div>
   </div>
 </div>
