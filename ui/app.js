@@ -1406,23 +1406,30 @@ function dzSelect(el) {
   DZ.sel = el; el.classList.add("dz-sel");
   dzBuildInspector(el);
   dzPositionHandle();
+  // modo comentario: el dock ahora apunta SOLO a este elemento
+  $("#dzPrompt").placeholder = `💬 Comentario sobre <${el.tagName.toLowerCase()}> — Fidel edita SOLO ese elemento`;
 }
 function dzDeselect() {
   if (DZ.sel) { DZ.sel.classList.remove("dz-sel"); DZ.sel = null; }
   $("#dzProps").hidden = true; $("#dzEmpty").hidden = false;
-  $("#dzHandle").hidden = true;
+  $("#dzHandle").hidden = true; $("#dzPin").hidden = true;
+  $("#dzPrompt").placeholder = "Pedile un cambio a Fidel… ej: «hacé el título más grande y centralo»";
 }
-/* ubica el tirador de resize en la esquina inferior-derecha del elemento */
+/* ubica el tirador de resize (esquina inferior-derecha) y el pin de comentario
+   (esquina superior-izquierda) sobre el elemento seleccionado */
 function dzPositionHandle() {
-  const h = $("#dzHandle");
-  if (!DZ.sel) { h.hidden = true; return; }
+  const h = $("#dzHandle"), pin = $("#dzPin");
+  if (!DZ.sel) { h.hidden = true; pin.hidden = true; return; }
   try {
     const cvRect = $("#dzCanvas").getBoundingClientRect();
     const b = DZ.sel.getBoundingClientRect();
     h.style.left = (b.right - cvRect.left) + "px";
     h.style.top = (b.bottom - cvRect.top) + "px";
     h.hidden = false;
-  } catch (e) { h.hidden = true; }
+    pin.style.left = (b.left - cvRect.left + 4) + "px";
+    pin.style.top = (b.top - cvRect.top) + "px";
+    pin.hidden = false;
+  } catch (e) { h.hidden = true; pin.hidden = true; }
 }
 
 /* botón "Diseño" de la barra: reabre el diseño actual, o crea un lienzo nuevo
@@ -1619,17 +1626,28 @@ async function designPrompt() {
   if (!text || !DZ.path || DZ.busy) return;
   ta.value = "";
   DZ.busy = true;
-  dzSetStatus("✍ Fidel está ajustando el diseño…");
-  // registrar también en el chat principal (queda en el historial)
-  userMsg("🎨 " + text); persist("user", "(diseño) " + text);
+  const tag = DZ.sel ? DZ.sel.tagName.toLowerCase() : null;
+  dzSetStatus(tag ? `✍ Fidel edita el <${tag}>…` : "✍ Fidel está ajustando el diseño…");
+  userMsg("🎨 " + (tag ? `[${tag}] ` : "") + text); persist("user", "(diseño) " + text);
   try {
-    const sel = DZ.sel ? ` El usuario tiene seleccionado el elemento <${DZ.sel.tagName.toLowerCase()}>.` : "";
-    const msg = "Estás editando el SVG «" + DZ.path + "» abierto en el editor de diseño de Fidel." + sel +
-      " Aplicá SOLO este cambio, editando el archivo con edit_file (mantené el viewBox y todo dentro del lienzo, " +
-      "prolijo y alineado): " + text +
-      "\nDespués revisalo con check_design y confirmá en una línea qué cambiaste.";
+    let msg;
+    if (DZ.sel) {
+      // MODO COMENTARIO/PIN: el cambio aplica SOLO al elemento marcado. Le paso el
+      // código exacto del elemento como ancla para que edit_file sea preciso.
+      const exact = dzElementCode(DZ.sel);
+      msg = "Estás editando el SVG «" + DZ.path + "» en el editor de diseño de Fidel. " +
+        "El usuario dejó un comentario sobre UN elemento puntual. Modificá SOLO ese elemento " +
+        "(no toques el resto del SVG) con edit_file, usando este fragmento exacto como old_text:\n" +
+        "```\n" + exact + "\n```\n" +
+        "Comentario del usuario: " + text +
+        "\nMantené el viewBox y que quede dentro del lienzo. Confirmá en una línea qué cambiaste.";
+    } else {
+      msg = "Estás editando el SVG «" + DZ.path + "» abierto en el editor de diseño de Fidel. " +
+        "Aplicá SOLO este cambio con edit_file (mantené el viewBox y todo dentro del lienzo, " +
+        "prolijo y alineado): " + text +
+        "\nConfirmá en una línea qué cambiaste.";
+    }
     const r = await api.send_chat(msg, "", "xml", null);
-    // onWrote ya refrescó el lienzo si el agente editó el .svg
     const reply = (r && (r.full || r.text)) || "";
     dzSetStatus(reply ? reply.slice(0, 300) : (r && r.status) || "Listo.");
   } catch (e) {
@@ -1637,6 +1655,14 @@ async function designPrompt() {
   } finally {
     DZ.busy = false;
   }
+}
+
+/* código exacto de un elemento (sin marcas de UI) para anclar el edit_file */
+function dzElementCode(el) {
+  const c = el.cloneNode(true);
+  c.classList.remove("dz-sel");
+  if (!c.getAttribute("class")) c.removeAttribute("class");
+  return c.outerHTML;
 }
 
 const dzGet = (el, attr, cssProp) => el.getAttribute(attr) ||
