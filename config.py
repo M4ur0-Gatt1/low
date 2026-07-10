@@ -55,6 +55,10 @@ DEFAULT_CONFIG = {
         "qwen": {"api_key": "", "model": "qwen-plus", "base_url": ""},
         "glm": {"api_key": "", "model": "glm-4", "base_url": ""},
         "xai": {"api_key": "", "model": "grok-2", "base_url": ""},
+        # LTX (Lightricks) — SOLO video (text→video / imagen→video con audio).
+        # No es un modelo de chat: no entra en la cadena de failover del agente.
+        # Key: https://console.ltx.video/api-keys
+        "ltx": {"api_key": "", "model": "ltx-2-3-fast", "base_url": ""},
     }
 }
 

@@ -324,7 +324,9 @@ function applyState(st) {
   applyZoom(st.zoom || 1.0, true);
   document.body.classList.toggle("light", st.theme === "light");
   $("#btnTheme").innerHTML = icoUse(st.theme === "dark" ? "i-sun" : "i-moon");
-  fillSelect($("#selProv"), st.providers.map(p => p.name), st.provider);
+  // el selector de chat excluye proveedores solo-medios (ltx: video, no chatea);
+  // igual aparecen en ⚙ para cargarles la key
+  fillSelect($("#selProv"), st.providers.filter(p => !p.media_only).map(p => p.name), st.provider);
   fillSelect($("#selModel"), st.models, st.model);
   fillSelect($("#selLang"), ["auto", ...(st.langs || [])], "auto");
   S.tree = st.tree || [];
@@ -1314,7 +1316,7 @@ const DEF_TASK = "Escribe un programa Python que imprima los primeros 10 numeros
 const DEF_EXP = "2, 3, 5, 7, 11, 13, 17, 19, 23, 29";
 
 function modalCompare() {
-  const withKey = S.providers.filter(p => p.has_key);
+  const withKey = S.providers.filter(p => p.has_key && !p.media_only);
   let rows = withKey.map(p =>
     `<label class="crow"><input type="checkbox" checked data-p="${p.name}">` +
     `<span>${p.name}</span><span class="cm-model">${p.model || ""}</span></label>`).join("");
@@ -1512,6 +1514,7 @@ const DZ_PAIRS = [
 ];
 
 async function openDesign(path) {
+  if (DZ.path && DZ.path !== path) await dzPersist();
   const r = await api.image_data(path);
   if (!r || r.error || !r.svg) return sysMsg("❌ No pude abrir el diseño: " + ((r && r.error) || path));
   DZ.path = path; DZ.sel = null;
@@ -1527,13 +1530,14 @@ async function openDesign(path) {
   if (!svg.getAttribute("width")) svg.style.width = "min(80vw, 900px)";
   DZ.zoom = 1; dzApplyZoom();
   DZ.undo = []; DZ.redo = [];   // pilas de deshacer por archivo
+  DZ.dirty = false;             // recién cargado = limpio (no arrastrar el flag)
   $("#dzProps").hidden = true; $("#dzEmpty").hidden = false;
   $("#dzHandle").hidden = true;
   $("#dzCode").hidden = true;
   dzBuildLayers();
   $("#designView").hidden = false;
 }
-function closeDesign() { $("#designView").hidden = true; DZ.sel = null; }
+function closeDesign() { dzPersist(); $("#designView").hidden = true; DZ.sel = null; }
 
 /* zoom del lienzo (no altera el SVG, solo la vista) */
 function dzApplyZoom() {
@@ -1909,6 +1913,7 @@ async function dzAnimToggle() {
   const bar = $("#dzTimeline");
   if (!bar.hidden) { dzAnimStop(); bar.hidden = true; DZ.anim = null; dzOnionClear(); return; }
   if (!DZ.path) return sysMsg("Abrí un diseño primero (✒ o un .svg del árbol).");
+  await dzPersist();
   let r = await api.make_frame(DZ.path);
   if (r && r.error) return sysMsg("❌ " + r.error);
   if (r.path !== DZ.path) {
@@ -1937,8 +1942,23 @@ async function dzTimelineRefresh() {
   });
   $("#tlInfo").textContent = DZ.anim.frames.length + " cuadro(s)";
 }
+/* auto-guardado: los trazos del cuadro persisten SOLOS al cambiar de cuadro,
+   reproducir, duplicar o hablar con el agente (flujo OpenToonz, sin diálogos) */
+async function dzPersist() {
+  const svg = $("#dzCanvas").querySelector("svg");
+  if (!svg || !DZ.path || !DZ.dirty) return;
+  const txt = dzSerialize(svg);
+  try {
+    await api.save_file(DZ.path, txt);
+    DZ.dirty = false;
+    if (DZ.anim) DZ.anim.cache[DZ.path] = txt;   // la cache/miniatura ve lo nuevo
+    setStatus("💾 auto-guardado");
+  } catch (e) { sysMsg("❌ auto-guardado falló: " + (e.message || e)); }
+}
+
 async function dzGoFrame(i) {
   if (!DZ.anim || !DZ.anim.frames[i]) return;
+  await dzPersist();                             // el papel cebolla necesita el disco al día
   await openDesign(DZ.anim.frames[i]);
   // openDesign no conoce la animación: restaurar la barra y el estado
   DZ.anim.idx = i;
@@ -1948,6 +1968,7 @@ async function dzGoFrame(i) {
 }
 async function dzFrameAdd() {
   if (!DZ.anim) return;
+  await dzPersist();
   const r = await api.dup_frame(DZ.path);
   if (r && r.error) return sysMsg("❌ " + r.error);
   try { S.tree = (await api.refresh_tree()).tree; renderTree(); } catch (e) { /* */ }
@@ -2015,6 +2036,7 @@ async function dzOnionUpdate() {
 async function dzAnimPlay() {
   if (!DZ.anim) return;
   if (DZ.anim.playing) return dzAnimStop();
+  await dzPersist();
   const cv = $("#dzCanvas");
   for (const f of DZ.anim.frames) {
     if (!DZ.anim.cache[f]) {

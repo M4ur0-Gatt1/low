@@ -41,7 +41,7 @@ ASSET_EXT = {".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp",
 LANG_BY_EXT = {".py": "python", ".js": "javascript", ".ts": "javascript",
                ".sh": "bash", ".ps1": "powershell"}
 
-FIDEL_VERSION = "2.13.0"
+FIDEL_VERSION = "2.14.0"
 
 # Desafío por defecto del comparador: verificable automáticamente
 DEFAULT_TASK = ("Escribe un programa Python que imprima los primeros 10 numeros "
@@ -438,7 +438,8 @@ class Api:
         return {
             "apis": sum(1 for d in provs.values() if d.get("api_key")),
             "providers": [{"name": k, "has_key": bool(d.get("api_key")),
-                           "key": d.get("api_key", ""), "model": d.get("model", "")}
+                           "key": d.get("api_key", ""), "model": d.get("model", ""),
+                           "media_only": k in s.MEDIA_ONLY}
                           for k, d in provs.items()],
         }
 
@@ -927,6 +928,10 @@ class Api:
 
     # modelo RÁPIDO y confiable por proveedor para el failover (evita razonadores
     # lentos como glm-5.2 al saltar: queremos que responda YA, no que piense 40s)
+    # proveedores que NO son de chat (solo medios): nunca entran en la cadena
+    # de failover ni se ofrecen como modelo del agente
+    MEDIA_ONLY = {"ltx"}
+
     FAST_MODEL = {
         "groq": "openai/gpt-oss-120b",
         "nvidia": "meta/llama-3.3-70b-instruct",
@@ -947,10 +952,12 @@ class Api:
         # Prioridad: deepseek, siliconflow, nvidia, groq, openai, anthropic, …, custom
         pref = ["deepseek", "siliconflow", "nvidia", "groq", "openai",
                 "anthropic", "qwen", "glm", "xai", "custom"]
-        rest = sorted((p for p in provs if p != active),
+        rest = sorted((p for p in provs if p != active and p not in s.MEDIA_ONLY),
                       key=lambda p: pref.index(p) if p in pref else 99)
         chain = []
         for i, name in enumerate([active] + rest):
+            if name in s.MEDIA_ONLY:   # ltx & cía no chatean
+                continue
             d = provs.get(name, {})
             if not (d.get("api_key") or name == "custom"):
                 continue
@@ -1028,7 +1035,7 @@ class Api:
         return [
             {"type": "function", "function": {"name": "read_file", "description": "Lee un archivo (ruta relativa al workspace O absoluta). Para archivos grandes leelo por partes con start_line y max_lines; si la salida avisa que hay mas, segui desde el start_line que indica.", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "start_line": {"type": "integer", "description": "linea inicial, 1 = principio"}, "max_lines": {"type": "integer", "description": "cuantas lineas leer; 0 = hasta el final o el tope"}}, "required": ["path"]}}},
             {"type": "function", "function": {"name": "write_file", "description": "Escribe archivo COMPLETO (crea o reemplaza todo el contenido). Para archivos existentes grandes preferi edit_file.", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}}},
-            {"type": "function", "function": {"name": "edit_file", "description": "Reemplaza un fragmento exacto de un archivo existente por otro, sin reescribir el resto. old_text debe aparecer LITERAL y UNA SOLA VEZ en el archivo (copialo de un read_file previo, con la indentacion exacta). Preferi esto sobre write_file para archivos grandes.", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old_text": {"type": "string"}, "new_text": {"type": "string"}}, "required": ["path", "old_text", "new_text"]}}},
+            {"type": "function", "function": {"name": "edit_file", "description": "Reemplaza un fragmento de un archivo existente sin reescribir el resto (PREFERILO sobre write_file en archivos que ya existen). old_text tiene que identificar UNA SOLA parte del archivo; copialo de un read_file previo — la indentación exacta ayuda pero se tolera alguna diferencia de espacios. Para varios cambios en el mismo archivo, mandá edits:[{old_text,new_text},...] en UNA sola llamada en vez de muchas. Si da '❌ No encontré ese texto', te devuelve las líneas reales del archivo: copiá el old_text de ahí, no reintentes a ciegas.", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old_text": {"type": "string"}, "new_text": {"type": "string"}, "edits": {"type": "array", "description": "opcional: varios reemplazos en este archivo, cada uno {old_text,new_text}", "items": {"type": "object", "properties": {"old_text": {"type": "string"}, "new_text": {"type": "string"}}}}}, "required": ["path"]}}},
             {"type": "function", "function": {"name": "exec_cmd", "description": "Ejecuta comando shell", "parameters": {"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]}}},
             {"type": "function", "function": {"name": "run_code", "description": "Corre codigo del editor", "parameters": {"type": "object", "properties": {"language": {"type": "string"}}, "required": ["language"]}}},
             {"type": "function", "function": {"name": "list_files", "description": "Lista archivos del workspace", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}}}},
@@ -1042,11 +1049,75 @@ class Api:
             {"type": "function", "function": {"name": "social_export", "description": "Genera versiones de una imagen/diseño (png/jpg/svg) en el TAMAÑO EXACTO de cada red social, con recorte centrado, y las guarda en social/. Plataformas: instagram_post (1080x1080), instagram_story (1080x1920), facebook_post (1200x630), x_post (1600x900), linkedin_post (1200x627), tiktok, youtube_thumbnail, pinterest, whatsapp_status; o alias instagram/facebook/x/linkedin/youtube; o 'all'. El COPY y los hashtags escribilos vos aparte en social/post.md.", "parameters": {"type": "object", "properties": {"image": {"type": "string", "description": "ruta a la imagen/diseño fuente"}, "platforms": {"type": "array", "items": {"type": "string"}, "description": "lista de plataformas o formatos; default ['all']"}}, "required": ["image"]}}},
             {"type": "function", "function": {"name": "write_doc", "description": "Crea un DOCUMENTO Word (.docx) real, que se abre en Word/LibreOffice/Google Docs. El contenido va en markdown simple: # titulo, ## subtitulo, - viñetas, **negrita**, y párrafos separados por línea en blanco. Usalo cuando pidan un documento de texto, informe, carta, presupuesto, etc.", "parameters": {"type": "object", "properties": {"path": {"type": "string", "description": "ruta destino, ej docs/informe.docx"}, "content": {"type": "string", "description": "contenido en markdown simple"}}, "required": ["path", "content"]}}},
             {"type": "function", "function": {"name": "edit_image", "description": "EDITA una imagen existente (png/jpg/webp) con IA según un pedido en lenguaje natural (ej: 'cambiá el fondo a azul', 'sacale el texto', 'convertila en acuarela'). Guarda una VERSIÓN nueva al lado (no pisa la original). Requiere key de SiliconFlow.", "parameters": {"type": "object", "properties": {"path": {"type": "string", "description": "ruta a la imagen a editar"}, "prompt": {"type": "string", "description": "qué cambiar, concreto"}}, "required": ["path", "prompt"]}}},
-            {"type": "function", "function": {"name": "animate_image", "description": "ANIMA una imagen existente (png/jpg): imagen→video de ~5s que MANTIENE el estilo del cuadro (Wan 2.2 I2V). Ideal para storyboard/animatic: describí el movimiento ('zoom lento hacia la cara', 'las hojas se mueven con el viento', 'la cámara recorre de izquierda a derecha'). Tarda 2-4 min. Guarda un .mp4 al lado.", "parameters": {"type": "object", "properties": {"image": {"type": "string", "description": "ruta a la imagen a animar"}, "prompt": {"type": "string", "description": "qué movimiento/acción debe tener"}}, "required": ["image", "prompt"]}}},
-            {"type": "function", "function": {"name": "generate_video", "description": "Genera un VIDEO corto (~5s) desde una descripción de texto (Wan 2.2 T2V). Para mantener estilo entre planos de un storyboard preferí animate_image sobre un cuadro ya diseñado. Tarda 2-4 min. Guarda un .mp4.", "parameters": {"type": "object", "properties": {"prompt": {"type": "string", "description": "escena, estilo y movimiento de cámara"}, "path": {"type": "string", "description": "ruta destino, ej video/plano01.mp4 (opcional)"}}, "required": ["prompt"]}}},
+            {"type": "function", "function": {"name": "animate_image", "description": "ANIMA una imagen existente (png/jpg): imagen→video que MANTIENE el estilo del cuadro. Usa LTX-2.3 si hay key (rápido, CON audio generado, hasta 20s) y si no Wan 2.2 en SiliconFlow (~5s, 2-4 min). Ideal para storyboard/animatic: describí el movimiento ('zoom lento hacia la cara', 'las hojas se mueven con el viento', 'la cámara recorre de izquierda a derecha'). Guarda un .mp4 al lado.", "parameters": {"type": "object", "properties": {"image": {"type": "string", "description": "ruta a la imagen a animar"}, "prompt": {"type": "string", "description": "qué movimiento/acción debe tener"}}, "required": ["image", "prompt"]}}},
+            {"type": "function", "function": {"name": "generate_video", "description": "Genera un VIDEO desde una descripción de texto. Usa LTX-2.3 si hay key (rápido, CON audio, hasta 20s) y si no Wan 2.2 T2V (~5s, 2-4 min). Para mantener estilo entre planos de un storyboard preferí animate_image sobre un cuadro ya diseñado. Guarda un .mp4.", "parameters": {"type": "object", "properties": {"prompt": {"type": "string", "description": "escena, estilo y movimiento de cámara"}, "path": {"type": "string", "description": "ruta destino, ej video/plano01.mp4 (opcional)"}}, "required": ["prompt"]}}},
             {"type": "function", "function": {"name": "web_search", "description": "Busca en internet (DuckDuckGo, sin API key) y devuelve los primeros resultados con título, URL y resumen. Usalo para info actual, documentación, precios, noticias, etc. Después podés leer una URL con web_fetch.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}}},
             {"type": "function", "function": {"name": "web_fetch", "description": "Descarga una URL y devuelve su texto legible (quita HTML/scripts). Usalo para LEER una página, doc o API pública. Devuelve hasta ~8000 caracteres.", "parameters": {"type": "object", "properties": {"url": {"type": "string"}}, "required": ["url"]}}},
         ]
+
+    # ── helpers de edición robusta / progreso ──────────────────────
+    @staticmethod
+    def _is_tool_err(res):
+        """True si el resultado de una tool NO representa avance real: errores
+        (❌) o el aviso de llamada repetida (⚠ Ya ejecutaste). El resto (✅,
+        contenido de read_file, salida de comandos, etc.) cuenta como progreso."""
+        t = str(res or "").lstrip()
+        return t.startswith("❌") or t.startswith("⚠ Ya ejecutaste")
+
+    @staticmethod
+    def _norm_ws(t):
+        """Normaliza para comparar ignorando indentación y espacios internos:
+        cada línea trim + colapso de runs de espacios."""
+        return "\n".join(re.sub(r"[ \t]+", " ", ln.strip()) for ln in t.splitlines())
+
+    @classmethod
+    def _find_fuzzy(cls, src, old):
+        """Localiza `old` dentro de `src` tolerando diferencias de espacios /
+        indentación (el error #1 de los modelos al copiar un fragmento).
+        Devuelve (start, end) en caracteres del tramo REAL de src, o None si no
+        hay exactamente un candidato. Compara ventana de líneas por _norm_ws."""
+        old_lines = old.splitlines()
+        win = len(old_lines)
+        if win == 0:
+            return None
+        old_n = cls._norm_ws(old)
+        if not old_n.strip():
+            return None
+        src_lines = src.splitlines(keepends=True)
+        offsets, acc = [], 0
+        for ln in src_lines:
+            offsets.append(acc)
+            acc += len(ln)
+        offsets.append(acc)
+        matches = []
+        for i in range(0, len(src_lines) - win + 1):
+            chunk = "".join(src_lines[i:i + win])
+            if cls._norm_ws(chunk) == old_n:
+                matches.append((offsets[i], offsets[i + win]))
+                if len(matches) > 1:
+                    return None
+        return matches[0] if len(matches) == 1 else None
+
+    @classmethod
+    def _nearest_hint(cls, src, old, ctx=3):
+        """Muestra las líneas del archivo más parecidas al old_text buscado, con
+        número de línea, para que el modelo corrija el fragmento en vez de
+        reintentar a ciegas (lo que provocaba los bucles)."""
+        first = next((ln for ln in old.splitlines() if ln.strip()), "")
+        a = set(re.findall(r"\w+", first.lower()))
+        if not a:
+            return ""
+        lines = src.splitlines()
+        best_i, best = None, 0
+        for i, ln in enumerate(lines):
+            sc = len(a & set(re.findall(r"\w+", ln.lower())))
+            if sc > best:
+                best, best_i = sc, i
+        if best_i is None or best == 0:
+            return ""
+        lo, hi = max(0, best_i - ctx), min(len(lines), best_i + ctx + 1)
+        snip = "\n".join(f"{j + 1}: {lines[j]}" for j in range(lo, hi))
+        return "Lo más parecido en el archivo (copiá el old_text de acá, tal cual):\n" + snip
 
     def _exec_tool(s, name, args, code, lang):
         try:
@@ -1105,35 +1176,68 @@ class Api:
                 rel = s._arg_path(args)
                 if not rel:
                     return ("❌ Falta 'path'. Llamá edit_file con "
-                            "{path, old_text, new_text}. No repitas sin el path.")
+                            "{path, old_text, new_text} (o {path, edits:[{old_text,new_text},...]}). "
+                            "No repitas sin el path.")
                 p = s._base() / rel
                 if not p.exists():
                     return f"❌ No existe {rel} — usa write_file para crear un archivo nuevo"
-                old, new = args.get("old_text", ""), args.get("new_text", "")
-                if not old:
-                    return "❌ old_text vacio — copia el fragmento exacto a reemplazar (de un read_file previo)"
+                # acepta un solo reemplazo {old_text,new_text} o varios en {edits:[...]}
+                edits = args.get("edits")
+                if not isinstance(edits, list) or not edits:
+                    edits = [{"old_text": args.get("old_text", ""),
+                              "new_text": args.get("new_text", "")}]
                 try:
                     src = p.read_text(encoding="utf-8", errors="replace")
                 except OSError as e:
                     return f"❌ {e}"
-                n = src.count(old)
-                if n == 0:
-                    return ("❌ No encontre ese texto exacto en el archivo — releelo con "
-                             "read_file y copia el fragmento tal cual (indentacion incluida)")
-                if n > 1:
-                    return f"❌ Ese texto aparece {n} veces en el archivo — agrega mas contexto para que sea unico"
+                orig = src
+                ranges = []
+                for i, ed in enumerate(edits):
+                    tag = f" (edit {i + 1}/{len(edits)})" if len(edits) > 1 else ""
+                    old = ed.get("old_text") or ed.get("old") or ""
+                    new = ed.get("new_text")
+                    if new is None:
+                        new = ed.get("new") or ""
+                    if not old:
+                        return ("❌ old_text vacío" + tag + " — copiá el fragmento EXACTO a "
+                                "reemplazar (de un read_file previo, con su indentación).")
+                    cnt = src.count(old)
+                    if cnt == 1:
+                        a = src.find(old); b = a + len(old)
+                    elif cnt == 0:
+                        # match exacto falló → intento tolerante a espacios/indentación
+                        span = s._find_fuzzy(src, old)
+                        if span is None:
+                            hint = s._nearest_hint(src, old)
+                            return ("❌ No encontré ese texto en el archivo" + tag +
+                                    ". Releé con read_file y copiá el fragmento EXACTO "
+                                    "(indentación incluida).\n" + hint).rstrip()
+                        a, b = span
+                        # el fuzzy matchea líneas completas (con su \n); si el modelo
+                        # mandó new_text sin salto final, no pegar con la línea de abajo
+                        if src[a:b].endswith("\n") and new and not new.endswith("\n"):
+                            new += "\n"
+                    else:
+                        return (f"❌ Ese texto aparece {cnt} veces" + tag +
+                                " — agregá más líneas de contexto para que sea único.")
+                    if new == src[a:b]:
+                        continue  # ese reemplazo no cambia nada, saltarlo
+                    line_start = src[:a].count("\n")
+                    src = src[:a] + new + src[b:]
+                    ranges.append([line_start, line_start + new.count("\n")])
+                if src == orig:
+                    return ("⚠ El edit no cambió nada (el new_text ya estaba igual). "
+                            "Si el archivo ya está como querés, decilo y seguí.")
                 key = str(p)
                 if key not in s._checkpoint:
-                    s._checkpoint[key] = src
-                new_src = src.replace(old, new, 1)
-                p.write_text(new_src, encoding="utf-8")
+                    s._checkpoint[key] = orig
+                p.write_text(src, encoding="utf-8")
                 s._written.append(str(p))
-                # rango de líneas cambiado → el frontend lo abre, hace scroll y lo
-                # resalta en vivo, para VER dónde tocó el agente
-                start = src[:src.find(old)].count("\n")          # 0-based
-                end = start + new.count("\n")
-                s._push("wrote", {"path": str(p), "range": [start, end]})
-                return f"✅ Editado ({len(new)}c)"
+                # rango de líneas tocado → el frontend lo abre, scrollea y resalta
+                lo = min(r[0] for r in ranges); hi = max(r[1] for r in ranges)
+                s._push("wrote", {"path": str(p), "range": [lo, hi]})
+                nch = len(ranges)
+                return f"✅ Editado {rel} ({nch} cambio{'s' if nch != 1 else ''})"
             if name == "exec_cmd":
                 cmd = args.get("command") or args.get("cmd") or ""
                 if not cmd:
@@ -1240,12 +1344,12 @@ class Api:
                 if not p.exists():
                     return f"❌ No existe: {rel}"
                 prompt = s._enhance_gen_prompt(args.get("prompt") or "gentle cinematic motion", "video")
-                data, err = s._sf_video(prompt, image_path=str(p))
+                data, used, err = s._gen_video_any(prompt, image_path=str(p))
                 if err:
                     return f"❌ {err}"
                 out = s._save_video(data, f"video/{p.stem}_anim.mp4"
                                     if not os.path.isabs(rel) else str(Path(rel).with_suffix("")) + "_anim.mp4")
-                return f"✅ Imagen animada → {out.name} (~5s, mantiene el estilo del cuadro)"
+                return f"✅ Imagen animada con {used} → {out.name} (mantiene el estilo del cuadro)"
             if name == "generate_video":
                 prompt = (args.get("prompt") or "").strip()
                 if not prompt:
@@ -1253,11 +1357,11 @@ class Api:
                 rel = args.get("path") or f"video/video_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4"
                 if not rel.lower().endswith(".mp4"):
                     rel += ".mp4"
-                data, err = s._sf_video(s._enhance_gen_prompt(prompt, "video"))
+                data, used, err = s._gen_video_any(s._enhance_gen_prompt(prompt, "video"))
                 if err:
                     return f"❌ {err}"
                 out = s._save_video(data, rel)
-                return f"✅ Video generado → {rel} (~5s)"
+                return f"✅ Video generado con {used} → {rel}"
             if name == "write_doc":
                 rel = s._arg_path(args)
                 if not rel:
@@ -1470,6 +1574,79 @@ class Api:
             if st == "Failed":
                 return None, f"la generación falló{': ' + d.get('reason') if d.get('reason') else ' (probá reformular el pedido)'}"
         return None, "timeout: el video tardó más de 10 minutos"
+
+    # ── video (LTX-2.3 de Lightricks): sync, con AUDIO generado ──────────
+    # Docs: https://docs.ltx.video · key: https://console.ltx.video/api-keys
+    # A diferencia de Wan (submit+poll), LTX v1 es SÍNCRONO: el POST devuelve
+    # el mp4 directo (octet-stream). Soporta t2v e i2v (image_uri).
+    LTX_DURATIONS = (6, 8, 10, 12, 14, 16, 18, 20)   # segundos válidos en 1080p
+
+    def _ltx_video(s, prompt, image_path=None, duration=6, resolution="1920x1080"):
+        """Genera video con LTX. Con image_path anima esa imagen (primer cuadro).
+        Devuelve (bytes, error). La imagen local va como data-URI base64."""
+        key = s.cfg.get_api_key("ltx")
+        if not key:
+            return None, "video LTX necesita la API key (⚙ → ltx · console.ltx.video/api-keys)"
+        model = s.cfg.get_model("ltx") or "ltx-2-3-fast"
+        # duración: al valor válido más cercano (la API rechaza intermedios)
+        try:
+            duration = int(duration or 6)
+        except (TypeError, ValueError):
+            duration = 6
+        duration = min(s.LTX_DURATIONS, key=lambda d: abs(d - duration))
+        body = {"prompt": prompt, "model": model, "duration": duration,
+                "resolution": resolution}
+        url = "https://api.ltx.video/v1/text-to-video"
+        if image_path:
+            p = Path(image_path)
+            mime = s.IMG_MIME.get(p.suffix.lower())
+            if not mime:
+                return None, f"formato no soportado para animar: {p.suffix}"
+            try:
+                body["image_uri"] = f"data:{mime};base64," + \
+                    base64.b64encode(p.read_bytes()).decode("ascii")
+            except OSError as e:
+                return None, str(e)
+            url = "https://api.ltx.video/v1/image-to-video"
+        s._push("sys", f"🎬 Generando video con LTX ({model}, {duration}s)…")
+        try:
+            r = requests.post(url, json=body, timeout=(30, 600),
+                              headers={"Authorization": f"Bearer {key}",
+                                       "Content-Type": "application/json"})
+        except requests.RequestException as e:
+            return None, f"LTX: {e}"
+        ctype = r.headers.get("content-type", "")
+        if r.status_code == 200 and "json" not in ctype:
+            return r.content, None      # el mp4 viene directo en el body
+        # error: viene JSON {type, error:{message}} — devolver el mensaje útil
+        try:
+            j = r.json()
+            detail = (j.get("error") or {}).get("message") or j.get("message") or r.text[:200]
+        except ValueError:
+            detail = r.text[:200]
+        return None, f"LTX {r.status_code}: {detail}"
+
+    def _gen_video_any(s, prompt, image_path=None):
+        """Despachador de video: LTX primero si hay key (rápido, con audio,
+        hasta 4K/20s); si falla o no está, cae a Wan en SiliconFlow. Devuelve
+        (bytes, proveedor_usado, error)."""
+        errs = []
+        if s.cfg.get_api_key("ltx"):
+            data, err = s._ltx_video(prompt, image_path=image_path)
+            if data:
+                return data, "LTX", None
+            errs.append(err)
+            if s.cfg.get_api_key("siliconflow"):
+                s._push("sys", f"⚠ LTX falló ({str(err)[:120]}) → pruebo con Wan/SiliconFlow…")
+        if s.cfg.get_api_key("siliconflow"):
+            data, err = s._sf_video(prompt, image_path=image_path)
+            if data:
+                return data, "Wan (SiliconFlow)", None
+            errs.append(err)
+        if not errs:
+            errs.append("no hay API key de video: cargá LTX (console.ltx.video/api-keys) "
+                        "o SiliconFlow en ⚙")
+        return None, None, " · ".join(str(e) for e in errs if e)
 
     def _save_video(s, data, rel):
         out = s._base() / rel
@@ -2194,10 +2371,12 @@ class Api:
             design_fixes = 0  # correcciones pedidas por la revisión visual de un .svg
             max_tok = 8192   # se ajusta solo (413 lo baja, archivo cortado lo sube)
             seen_calls = {}   # (tool, args) -> veces repetida en este turno → detectar bucles
-            stall = 0         # llamadas repetidas seguidas sin avance
+            stall = 0         # tramos seguidos sin ejecutar ninguna tool
             stalled_out = False
             hit_cap = False
-            tool_runs = 0     # herramientas realmente ejecutadas en el turno (progreso)
+            tool_runs = 0     # tools que AVANZARON (resultado sin ❌) → progreso real
+            fail_streak = 0   # tools seguidas que fallaron sin ningún éxito en el medio
+            edit_fails = 0    # edit_file fallidos seguidos → escalar la guía
             # cadena de failover: si el modelo actual se cae/agota, saltar al siguiente
             chain = s._chain()   # [(proveedor, modelo), ...]
             ci = 0
@@ -2361,7 +2540,8 @@ class Api:
                     if msg_resp.get("reasoning_content"):
                         asst["reasoning_content"] = msg_resp["reasoning_content"]
                     ms.append(asst)
-                    progressed = False
+                    progressed = False   # ¿alguna tool AVANZÓ (no error) en esta ronda?
+                    ran_any = False      # ¿se ejecutó alguna tool (aunque falle)?
                     for tc in tcs:
                         fn = tc["function"]["name"]
                         try:
@@ -2381,20 +2561,47 @@ class Api:
                                    "cambia de enfoque o responde con lo que ya tenes.")
                         else:
                             res = s._exec_tool(fn, args, code, lang)
+                            ran_any = True
+                        # avance REAL = la tool no devolvió error. Un ❌ (típico:
+                        # edit_file que no encuentra el fragmento) NO es progreso —
+                        # antes se contaba como tal y por eso los bucles no se
+                        # detectaban y se quemaban los 40×25 pasos en silencio.
+                        err = s._is_tool_err(res)
+                        if not err:
                             progressed = True
                             tool_runs += 1
+                            fail_streak = 0
+                            if fn == "edit_file":
+                                edit_fails = 0
+                        else:
+                            fail_streak += 1
+                            if fn == "edit_file":
+                                edit_fails += 1
                         ms.append({"role": "tool", "tool_call_id": tc.get("id", ""),
                                    "content": res})
+                        # tras 2 edit_file fallidos seguidos, empujar a que RELEA el
+                        # archivo antes de reintentar (rompe el bucle de indentación)
+                        if err and fn == "edit_file" and edit_fails == 2:
+                            ms.append({"role": "user", "content":
+                                       "Van 2 edit_file seguidos que fallan en el mismo archivo. "
+                                       "PARÁ de adivinar el old_text: llamá read_file de esa zona, "
+                                       "copiá el fragmento EXACTO tal cual aparece, y recién ahí "
+                                       "edit_file. Si igual no entra, reescribí el archivo con "
+                                       "write_file (contenido completo)."})
                         # Enviar detalles más específicos de la herramienta
                         tool_info = {"name": fn, "res": str(res)[:150]}
-                        if fn == "write_file" and "path" in args:
-                            tool_info["file"] = args["path"]
-                        elif fn == "edit_file" and "path" in args:
-                            tool_info["file"] = args["path"]
-                        elif fn == "read_file" and "path" in args:
+                        if fn in ("write_file", "edit_file", "read_file") and "path" in args:
                             tool_info["file"] = args["path"]
                         s._push("tool", tool_info)
-                    stall = 0 if progressed else stall + 1
+                    # backstop de racha de fallos: si el agente encadena muchos
+                    # errores de tool sin ningún éxito, está trabado aunque cada
+                    # llamada sea distinta (el dedup no lo caza). Cortar y avisar.
+                    if fail_streak >= 5:
+                        stalled_out = True
+                        s._push("sys", "⏹ El agente encadenó varios errores de herramienta sin avanzar — corté el turno.")
+                        break
+                    # ninguna tool se ejecutó (todas repetidas/vacías) → tramo perdido
+                    stall = 0 if ran_any else stall + 1
                     if stall >= 2:
                         stalled_out = True
                         s._push("sys", "⏹ El agente quedó repitiendo la misma acción sin avanzar — corté el turno.")
@@ -2430,15 +2637,19 @@ class Api:
                     break
             # los modelos razonadores a veces dejan content vacío o con <think>
             text = re.sub(r"<think>.*?</think>", "", text or "", flags=re.DOTALL).strip()
+            # resumen concreto de lo que SÍ se hizo en el turno (archivos tocados),
+            # para no cerrar nunca con un mensaje vacío u opaco
+            done = list(dict.fromkeys(s._written))
+            done_str = ", ".join(Path(p).name for p in done)
             if not text and stalled_out:
-                n_esc = len(dict.fromkeys(s._written))
-                text = ("⚠ Corté el turno: el agente repitió la misma llamada a "
-                        "herramienta sin avanzar" +
-                        (f" (llegó a escribir {n_esc} archivo(s) antes de trabarse)."
-                         if n_esc else ".") +
-                        " Probá pedir algo más chico y específico, o dividir la tarea en pasos.")
-                s._reflect_and_learn(msg, "repetiste la misma llamada a herramienta ante un "
-                                          "error en vez de corregir los argumentos o cambiar de enfoque")
+                text = ("⏹ Corté el turno: el agente se trabó (repitió acciones o encadenó "
+                        "errores de herramienta sin avanzar)." +
+                        (f" Alcancé a tocar {len(done)} archivo(s): {done_str}."
+                         if done else "") +
+                        " Probá pedir algo más chico y específico, o dividí la tarea en pasos.")
+                s._reflect_and_learn(msg, "te trabaste reintentando una herramienta que fallaba "
+                                          "en vez de releer el archivo, corregir los argumentos o "
+                                          "cambiar de enfoque")
             elif not text and hit_cap:
                 n_esc = len(dict.fromkeys(s._written))
                 toque = f" (toqué {n_esc} archivo(s))" if n_esc else ""
@@ -2454,14 +2665,25 @@ class Api:
                             "contexto: escribí «segui» y continúo desde donde quedé. Si es una "
                             "tarea siempre grande, subí «tramos automáticos» en ⚙.")
             if not text:
-                try:
-                    rc = (r.raw or {}).get("choices", [{}])[0] \
-                        .get("message", {}).get("reasoning_content") or ""
-                except Exception:
-                    rc = ""
-                text = rc.strip()[:1500] or \
-                    "⚠ El modelo no devolvió respuesta (se quedó razonando o cortó). " \
-                    "Probá de nuevo o cambiá de modelo."
+                # el modelo no cerró con texto pero SÍ hubo trabajo real → resumir yo
+                # (antes esto caía en "el modelo no devolvió respuesta" y parecía que
+                # no había pasado nada, cuando en realidad había editado archivos)
+                if done:
+                    text = (f"✅ Listo. Toqué {len(done)} archivo(s): {done_str}. "
+                            "(El modelo no dejó un resumen escrito, así que te lo resumo yo — "
+                            "revisá los cambios y decime si querés ajustar algo.)")
+                elif tool_runs:
+                    text = ("✅ Terminé de ejecutar las acciones del pedido. (El modelo no dejó "
+                            "un resumen escrito.) Decime si querés que profundice en algo.")
+                else:
+                    try:
+                        rc = (r.raw or {}).get("choices", [{}])[0] \
+                            .get("message", {}).get("reasoning_content") or ""
+                    except Exception:
+                        rc = ""
+                    text = rc.strip()[:1500] or \
+                        "⚠ El modelo no devolvió respuesta (se quedó razonando o cortó). " \
+                        "Probá de nuevo o cambiá de modelo."
             status = f"✅ {r.tokens_used}t · ${r.cost:.4f} · {r.model}" if r else "Listo"
             # guardar el turno en memoria (solo texto limpio, robusto entre modelos).
             # SOLO si seguimos en la misma charla: si el usuario cambió de solapa
