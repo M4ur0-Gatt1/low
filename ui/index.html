@@ -182,6 +182,13 @@
   <div class="art-bar">
     <span class="art-title" id="dzTitle">Diseño</span>
     <div class="vsep"></div>
+    <button class="ibtn dz-toolbtn active" data-tool="select" title="Seleccionar / mover">➤</button>
+    <button class="ibtn dz-toolbtn" data-tool="pencil" title="Lápiz: trazo a mano alzada suavizado">✏</button>
+    <button class="ibtn dz-toolbtn" data-tool="brush" title="Pincel: grosor según presión de la tableta">🖌</button>
+    <button class="ibtn dz-toolbtn" data-tool="pen" title="Pluma vectorial: clic = punto, clic y arrastrar = curva · Enter termina, Esc cancela">✒</button>
+    <input type="color" id="dzDrawColor" value="#E5322D" title="Color de trazo" class="dz-colorin">
+    <input type="number" id="dzDrawW" value="6" min="1" max="80" title="Grosor de trazo" class="dz-win">
+    <div class="vsep"></div>
     <button class="ibtn" id="dzAddRect" title="Agregar rectángulo">▭</button>
     <button class="ibtn" id="dzAddCircle" title="Agregar círculo">◯</button>
     <button class="ibtn" id="dzAddText" title="Agregar texto">T</button>
@@ -190,6 +197,7 @@
     <button class="ibtn" id="dzDel" title="Borrar seleccionado (Supr)">🗑</button>
     <div class="vsep"></div>
     <button class="ibtn" id="dzVar" title="🧬 Variaciones: el agente evoluciona el diseño y elegís">🧬</button>
+    <button class="ibtn" id="dzAnim" title="Animación: línea de tiempo + papel cebolla">🎞</button>
     <div class="flex1"></div>
     <button class="ibtn" id="dzZoomOut" title="Alejar">−</button>
     <span class="dz-zoom" id="dzZoomLbl">100%</span>
@@ -219,6 +227,14 @@
       <div class="dz-empty" id="dzEmpty">Hacé clic en un elemento para editarlo o moverlo (arrastrá),<br>o pedile un cambio a Fidel abajo.</div>
       <div id="dzProps" hidden></div>
     </div>
+  </div>
+  <!-- línea de tiempo de animación: cuadros nombre_f001.svg, _f002… -->
+  <div class="dz-timeline" id="dzTimeline" hidden>
+    <button class="ibtn" id="tlPlay" title="Reproducir / parar (12 fps)">▶</button>
+    <button class="ibtn active" id="tlOnion" title="Papel cebolla: cuadro anterior transparentado">🧅</button>
+    <div class="tl-frames" id="tlFrames"></div>
+    <button class="ibtn" id="tlAdd" title="Duplicar este cuadro → cuadro siguiente">＋</button>
+    <span class="dz-hint" id="tlInfo"></span>
   </div>
   <!-- chat/prompt del diseño: pedirle correcciones al agente sin salir del editor -->
   <div class="dz-dock">

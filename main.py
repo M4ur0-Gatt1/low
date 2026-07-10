@@ -41,7 +41,7 @@ ASSET_EXT = {".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp",
 LANG_BY_EXT = {".py": "python", ".js": "javascript", ".ts": "javascript",
                ".sh": "bash", ".ps1": "powershell"}
 
-FIDEL_VERSION = "2.11.0"
+FIDEL_VERSION = "2.12.0"
 
 # Desafío por defecto del comparador: verificable automáticamente
 DEFAULT_TASK = ("Escribe un programa Python que imprima los primeros 10 numeros "
@@ -568,6 +568,54 @@ class Api:
             return {"ok": True}
         except Exception as e:
             return {"error": str(e)}
+
+    # ── animación: cuadros como archivos nombre_f001.svg, _f002… ────────
+    _FRAME_RX = re.compile(r"^(.*)_f(\d{3})\.svg$", re.IGNORECASE)
+
+    def make_frame(s, path):
+        """Convierte un .svg suelto en el cuadro 1 de una animación (copia a
+        nombre_f001.svg, el original queda). Si ya es un cuadro, lo devuelve."""
+        p = Path(path)
+        if s._FRAME_RX.match(p.name):
+            return {"path": str(p)}
+        out = p.with_name(f"{p.stem}_f001.svg")
+        try:
+            if not out.exists():
+                out.write_text(p.read_text(encoding="utf-8", errors="replace"),
+                               encoding="utf-8")
+        except OSError as e:
+            return {"error": str(e)}
+        return {"path": str(out)}
+
+    def list_frames(s, path):
+        """Todos los cuadros hermanos de un cuadro dado, ordenados."""
+        p = Path(path)
+        m = s._FRAME_RX.match(p.name)
+        if not m:
+            return {"frames": []}
+        base = m.group(1)
+        try:
+            fs = sorted(str(f) for f in p.parent.glob(f"{base}_f[0-9][0-9][0-9].svg"))
+        except OSError:
+            fs = []
+        return {"frames": fs, "current": str(p)}
+
+    def dup_frame(s, path):
+        """Duplica el cuadro dado como el número siguiente al último — el flujo
+        clásico de animación: dibujar sobre la copia del cuadro anterior."""
+        p = Path(path)
+        m = s._FRAME_RX.match(p.name)
+        if not m:
+            return {"error": "no es un cuadro (_fNNN.svg)"}
+        frames = s.list_frames(path)["frames"]
+        last = max(int(s._FRAME_RX.match(Path(f).name).group(2)) for f in frames) if frames else 0
+        out = p.with_name(f"{m.group(1)}_f{last + 1:03d}.svg")
+        try:
+            out.write_text(p.read_text(encoding="utf-8", errors="replace"),
+                           encoding="utf-8")
+        except OSError as e:
+            return {"error": str(e)}
+        return {"path": str(out)}
 
     def new_design(s):
         """Crea un lienzo SVG inicial (con elementos editables) y devuelve su ruta,
