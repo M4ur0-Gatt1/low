@@ -446,7 +446,30 @@ function bind() {
   $("#dzExt").onclick = () => { if (DZ.path) api.preview_html(DZ.path, $("#dzCanvas").innerHTML); };
   $("#dzZoomIn").onclick = () => dzZoom(0.15);
   $("#dzZoomOut").onclick = () => dzZoom(-0.15);
-  $("#dzZoomFit").onclick = () => { DZ.zoom = 1; DZ.panX = DZ.panY = 0; dzApplyZoom(); };
+  $("#dzZoomFit").onclick = dzFitView;
+  $("#dzDoc").onclick = dzDocModal;
+  $("#dzRotL").onclick = () => dzRotView(-15);
+  $("#dzRotR").onclick = () => dzRotView(15);
+  $("#dzRotLbl").ondblclick = () => { DZ.viewRot = 0; dzApplyZoom(); };
+  $("#dzMirror").onclick = dzMirrorToggle;
+  $("#tlMove").onclick = dzMoveTween;
+  $("#tlRec").onclick = dzRecToggle;
+  // scrub del X-sheet: arrastrá sobre los cuadros para hojearlos (flipping)
+  $("#tlFrames").addEventListener("mousedown", (e) => {
+    if (!DZ.anim) return;
+    let busy = false;
+    const go = async (x, y) => {
+      const chip = document.elementFromPoint(x, y);
+      const c = chip && chip.closest && chip.closest(".tl-frame");
+      if (!c || busy || !DZ.anim) return;
+      const idx = [...$("#tlFrames").children].indexOf(c);
+      if (idx >= 0 && idx !== DZ.anim.idx) { busy = true; try { await dzGoFrame(idx); } finally { busy = false; } }
+    };
+    const mm = (ev) => go(ev.clientX, ev.clientY);
+    const mu = () => { document.removeEventListener("mousemove", mm); document.removeEventListener("mouseup", mu); };
+    document.addEventListener("mousemove", mm);
+    document.addEventListener("mouseup", mu);
+  });
   // herramientas de dibujo (lápiz/pincel/pluma) — pointer events para presión
   document.querySelectorAll(".dz-toolbtn").forEach(b =>
     b.onclick = () => dzSetTool(b.dataset.tool));
@@ -462,6 +485,16 @@ function bind() {
   };
   DZ.fillColor = $("#dzPFill").value; DZ.drawColor = $("#dzPStroke").value;
   dzPaletteRender();
+  // preferencias del estudio: atajos configurables + suavizado persistente
+  dzKeysLoad();
+  DZ.smooth = +(localStorage.getItem("fidel.dzsmooth") || 40);
+  $("#dzSmooth").value = DZ.smooth; $("#dzSmoothLbl").textContent = DZ.smooth;
+  $("#dzSmooth").oninput = e => {
+    DZ.smooth = +e.target.value;
+    $("#dzSmoothLbl").textContent = e.target.value;
+    try { localStorage.setItem("fidel.dzsmooth", String(DZ.smooth)); } catch (err) { /* */ }
+  };
+  $("#dzPrefs").onclick = dzPrefsModal;
   $("#dzRotate").addEventListener("mousedown", dzRotateDown);
   $("#dzGroup").onclick = (e) => dzGroupSel(e.shiftKey);
   $("#dzImg").onclick = dzImportImage;
@@ -489,13 +522,95 @@ function bind() {
     await dzTimelineRefresh();
     dzOnionUpdate();
   };
-  $("#tlSkin").onchange = () => { if (DZ.anim) { DZ.anim.skin = +$("#tlSkin").value; dzOnionUpdate(); } };
   $("#tlOnion").onclick = () => {
     if (!DZ.anim) return;
     DZ.anim.onion = !DZ.anim.onion;
     $("#tlOnion").classList.toggle("active", DZ.anim.onion);
+    $("#dzOnionPanel").hidden = !DZ.anim.onion;
     dzOnionUpdate();
   };
+  // panel 🧅 flotante: configuración en vivo + arrastrable por el encabezado
+  const opCfg = dzOnionCfg();
+  $("#opBefore").value = opCfg.before; $("#opAfter").value = opCfg.after;
+  $("#opAlpha").value = opCfg.alpha;
+  $("#opColorB").value = opCfg.colorB; $("#opColorA").value = opCfg.colorA;
+  const opBind = (id, key, num) => {
+    $("#" + id).oninput = (e) => {
+      DZ.onionCfg[key] = num ? +e.target.value : e.target.value;
+      dzOnionCfgSave(); dzOnionUpdate();
+    };
+  };
+  opBind("opBefore", "before", true); opBind("opAfter", "after", true);
+  opBind("opAlpha", "alpha", true);
+  opBind("opColorB", "colorB", false); opBind("opColorA", "colorA", false);
+  $("#dzOpClose").onclick = () => { $("#dzOnionPanel").hidden = true; };
+  // chrome de estudio: menubar, splitter, opciones de herramienta, statusbar
+  dzMenubarWire();
+  dzSplitWire();
+  dzToolOptsRender();
+  dzSbTool();
+  $("#dzCanvas").addEventListener("pointermove", (e) => {
+    // coordenadas del cursor en unidades del documento (statusbar)
+    if (DZ.sbTick) return;
+    DZ.sbTick = true;
+    requestAnimationFrame(() => {
+      DZ.sbTick = false;
+      const sb = $("#sbPos");
+      if (!sb || !$("#dzCanvas").querySelector("svg")) return;
+      try {
+        const p = dzToUser(e.clientX, e.clientY);
+        sb.textContent = Math.round(p.x) + ", " + Math.round(p.y);
+      } catch (err) { /* sin svg todavía */ }
+    });
+  });
+  // X-sheet: toggle, cerrar y arrastre del panel
+  $("#tlXs").onclick = dzXsToggle;
+  $("#dzXsClose").onclick = () => { $("#dzXsheet").hidden = true; $("#tlXs").classList.remove("active"); };
+  $("#dzXsHead").addEventListener("mousedown", (e) => {
+    if (e.target.id === "dzXsClose") return;
+    e.preventDefault();
+    const pnl = $("#dzXsheet");
+    const r = pnl.getBoundingClientRect(), host = $("#designView").getBoundingClientRect();
+    const dx = e.clientX - r.left, dy = e.clientY - r.top;
+    const move = (ev) => {
+      pnl.style.left = Math.max(0, ev.clientX - host.left - dx) + "px";
+      pnl.style.top = Math.max(0, ev.clientY - host.top - dy) + "px";
+      pnl.style.right = "auto";
+    };
+    const up = () => { document.removeEventListener("mousemove", move); document.removeEventListener("mouseup", up); };
+    document.addEventListener("mousemove", move); document.addEventListener("mouseup", up);
+  });
+  // 🎭 diorama: toggle, cerrar y arrastre del panel
+  $("#dzZBtn").onclick = dzZPanelToggle;
+  $("#dzZpClose").onclick = () => { $("#dzZPanel").hidden = true; $("#dzZBtn").classList.remove("active"); };
+  $("#dzZpHead").addEventListener("mousedown", (e) => {
+    if (e.target.id === "dzZpClose") return;
+    e.preventDefault();
+    const pnl = $("#dzZPanel");
+    const r = pnl.getBoundingClientRect(), host = $("#designView").getBoundingClientRect();
+    const dx = e.clientX - r.left, dy = e.clientY - r.top;
+    const move = (ev) => {
+      pnl.style.left = Math.max(0, ev.clientX - host.left - dx) + "px";
+      pnl.style.top = Math.max(0, ev.clientY - host.top - dy) + "px";
+      pnl.style.right = "auto";
+    };
+    const up = () => { document.removeEventListener("mousemove", move); document.removeEventListener("mouseup", up); };
+    document.addEventListener("mousemove", move); document.addEventListener("mouseup", up);
+  });
+  $("#dzOpHead").addEventListener("mousedown", (e) => {
+    if (e.target.id === "dzOpClose") return;
+    e.preventDefault();
+    const pnl = $("#dzOnionPanel");
+    const r = pnl.getBoundingClientRect(), host = $("#designView").getBoundingClientRect();
+    const dx = e.clientX - r.left, dy = e.clientY - r.top;
+    const move = (ev) => {
+      pnl.style.left = Math.max(0, ev.clientX - host.left - dx) + "px";
+      pnl.style.top = Math.max(0, ev.clientY - host.top - dy) + "px";
+      pnl.style.right = "auto";
+    };
+    const up = () => { document.removeEventListener("mousemove", move); document.removeEventListener("mouseup", up); };
+    document.addEventListener("mousemove", move); document.addEventListener("mouseup", up);
+  });
   $("#dzAddRect").onclick = () => dzAddShape("rect");
   $("#dzAddCircle").onclick = () => dzAddShape("circle");
   $("#dzAddEllipse").onclick = () => dzAddShape("ellipse");
@@ -549,27 +664,17 @@ function bind() {
     if (e.ctrlKey && e.key.toLowerCase() === "g") {
       e.preventDefault(); dzGroupSel(e.shiftKey);
     }
-    // atajos de herramienta (una letra, como Illustrator/OpenToonz)
-    if (!e.ctrlKey && !e.altKey && !e.metaKey) {
-      const k = e.key.toLowerCase();
-      const TOOL_KEYS = { v: "select", a: "nodes", n: "pencil", b: "brush",
-                          p: "pen", e: "eraser", i: "dropper", g: "bucket" };
-      if (TOOL_KEYS[k]) { e.preventDefault(); dzSetTool(TOOL_KEYS[k]); }
-      else if (k === "r") { e.preventDefault(); dzAddShape("rect"); }
-      else if (k === "o") { e.preventDefault(); dzAddShape("ellipse"); }
-      else if (k === "t") { e.preventDefault(); dzAddShape("text"); }
-      else if (k === "l") { e.preventDefault(); dzAddShape("line"); }
-      else if (k === "c") { e.preventDefault(); dzCamToggle(); }
-      else if (k === "+" || k === "=") { e.preventDefault(); dzZoom(0.15); }
-      else if (k === "-") { e.preventDefault(); dzZoom(-0.15); }
-      else if (k === "0") { e.preventDefault(); DZ.zoom = 1; DZ.panX = DZ.panY = 0; dzApplyZoom(); }
-      else if (k === "f") { e.preventDefault(); DZ.zoom = 1; DZ.panX = DZ.panY = 0; dzApplyZoom(); }
+    // atajos configurables (⚙ Preferencias): una tecla → una acción
+    if (!e.ctrlKey && !e.altKey && !e.metaKey && e.key.length === 1) {
+      if (!DZ.keyrev) dzKeysLoad();
+      const k = e.key === "=" ? "+" : e.key.toLowerCase();   // = suma sin Shift
+      const act = DZ.keyrev[k];
+      if (act) { e.preventDefault(); dzRunAction(act); }
     }
     if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === "z") { e.preventDefault(); dzUndo(); }
     if (e.ctrlKey && (e.key.toLowerCase() === "y" || (e.shiftKey && e.key.toLowerCase() === "z"))) { e.preventDefault(); dzRedo(); }
-    if (e.key === "," && DZ.anim) { e.preventDefault(); dzAnimStopIf(); dzGoFrame(Math.max(0, DZ.anim.idx - 1)); }
-    if (e.key === "." && DZ.anim) { e.preventDefault(); dzAnimStopIf(); dzGoFrame(Math.min(DZ.anim.frames.length - 1, DZ.anim.idx + 1)); }
     if (e.key === "Enter" && PEN) { e.preventDefault(); dzPenFinish(false); }
+    if (e.key === "Backspace" && PEN) { e.preventDefault(); dzPenBackspace(); }
     if (e.key === "Escape" && PEN) {
       // cancela la pluma SIN cerrar el editor (frena el Escape global)
       e.preventDefault(); e.stopImmediatePropagation(); dzPenFinish(true);
@@ -1605,16 +1710,109 @@ function closeDesign() { dzPersist(); $("#designView").hidden = true; DZ.sel = n
 function dzApplyZoom() {
   const svg = $("#dzCanvas").querySelector("svg");
   if (svg) svg.style.transform =
-    `translate(${DZ.panX || 0}px, ${DZ.panY || 0}px) scale(${DZ.zoom})`;
+    `translate(${DZ.panX || 0}px, ${DZ.panY || 0}px) rotate(${DZ.viewRot || 0}deg) scale(${DZ.zoom})`;
   const lbl = $("#dzZoomLbl"); if (lbl) lbl.textContent = Math.round(DZ.zoom * 100) + "%";
+  const rl = $("#dzRotLbl"); if (rl) rl.textContent = Math.round(DZ.viewRot || 0) + "°";
+  const sb = $("#sbZoom"); if (sb) sb.textContent = Math.round(DZ.zoom * 100) + "%" +
+    (DZ.viewRot ? " · " + Math.round(DZ.viewRot) + "°" : "");
   dzPositionHandle();
   if (DZ.nodeEl && DZ.nodeEl.isConnected) dzNodesShow(DZ.nodeEl);   // reubicar nodos
   if (DZ.camMode) dzCamOverlay();                                    // y el encuadre
+  dzPivotMark();
+}
+/* girar la VISTA (como girar la hoja para dibujar cómodo — Krita/OpenToonz):
+   solo cambia cómo se ve; el dibujo y las coordenadas no se tocan */
+function dzRotView(delta) {
+  DZ.viewRot = ((DZ.viewRot || 0) + delta) % 360;
+  dzApplyZoom();
+}
+/* ajustar a pantalla DE VERDAD: calcula el zoom para que el lienzo entre
+   completo en la mesa de trabajo (antes solo reseteaba a 100%) */
+function dzFitView() {
+  const svg = $("#dzCanvas").querySelector("svg");
+  const cont = $("#dzCanvas");
+  if (!svg || !cont) return;
+  DZ.viewRot = 0; DZ.panX = 0; DZ.panY = 0;
+  svg.style.transform = "scale(1)";
+  const r = svg.getBoundingClientRect(), c = cont.getBoundingClientRect();
+  if (r.width > 2 && r.height > 2)
+    DZ.zoom = Math.max(0.05, Math.min(4,
+      Math.min((c.width - 48) / r.width, (c.height - 48) / r.height)));
+  dzApplyZoom();
+}
+/* ── 📄 Documento: tamaño del lienzo, presets y color de fondo ── */
+const DZ_DOC_PRESETS = [
+  ["Cuadrado 1080×1080 (Instagram)", 1080, 1080],
+  ["HD horizontal 1920×1080", 1920, 1080],
+  ["Vertical 1080×1920 (Stories/TikTok)", 1080, 1920],
+  ["Cine 2048×858 (2K scope)", 2048, 858],
+  ["A4 impresión 2480×3508 (300dpi)", 2480, 3508],
+  ["Carta 2550×3300", 2550, 3300],
+];
+function dzDocModal() {
+  const svg = $("#dzCanvas").querySelector("svg");
+  if (!svg) return;
+  const vb = dzVB();
+  // el fondo es el rect que cubre (casi) todo el lienzo, si existe
+  const bg = [...svg.querySelectorAll("rect")].find(rc =>
+    ((+rc.getAttribute("width") || 0) * (+rc.getAttribute("height") || 0)) >= vb[2] * vb[3] * 0.9);
+  const bgColor = bg ? dzHex(bg.getAttribute("fill")) || "#ffffff" : "#ffffff";
+  openModal(`<h2>📄 Documento</h2>
+    <div class="sub">El tamaño define el viewBox del lienzo. Los elementos no se mueven:
+    si achicás el documento pueden quedar afuera (los ves igual y los podés reacomodar).</div>
+    <div class="dz-style-row">
+      <span class="dz-hint">Preset</span>
+      <select id="docPreset" class="langsel" style="flex:1">
+        <option value="">— personalizado —</option>
+        ${DZ_DOC_PRESETS.map((p, i) => `<option value="${i}">${p[0]}</option>`).join("")}
+      </select>
+    </div>
+    <div class="dz-style-row">
+      <span class="dz-hint">Ancho</span><input type="number" id="docW" class="dz-win" style="width:76px" value="${vb[2]}" min="16" max="8000">
+      <span class="dz-hint">Alto</span><input type="number" id="docH" class="dz-win" style="width:76px" value="${vb[3]}" min="16" max="8000">
+      <span class="dz-hint">Fondo</span><input type="color" id="docBg" value="${bgColor}">
+      <label class="dz-hint" style="display:flex;align-items:center;gap:4px">
+        <input type="checkbox" id="docNoBg" ${bg ? "" : "checked"}> sin fondo (transparente)</label>
+    </div>
+    <div class="m-actions">
+      <button class="ghost" id="mCancel">Cancelar</button>
+      <button class="primary" id="docGo">Aplicar</button>
+    </div>`);
+  $("#docPreset").onchange = (e) => {
+    const p = DZ_DOC_PRESETS[+e.target.value];
+    if (p) { $("#docW").value = p[1]; $("#docH").value = p[2]; }
+  };
+  $("#mCancel").onclick = closeModal;
+  $("#docGo").onclick = () => {
+    const W = Math.max(16, +$("#docW").value || vb[2]);
+    const H = Math.max(16, +$("#docH").value || vb[3]);
+    const color = $("#docBg").value, noBg = $("#docNoBg").checked;
+    closeModal();
+    dzSnapshot();
+    svg.setAttribute("viewBox", `${vb[0]} ${vb[1]} ${W} ${H}`);
+    if (svg.getAttribute("width")) svg.setAttribute("width", W);
+    if (svg.getAttribute("height")) svg.setAttribute("height", H);
+    if (noBg) {
+      if (bg) bg.remove();
+    } else if (bg) {
+      bg.setAttribute("x", vb[0]); bg.setAttribute("y", vb[1]);
+      bg.setAttribute("width", W); bg.setAttribute("height", H);
+      bg.setAttribute("fill", color);
+    } else {
+      const rc = document.createElementNS(SVGNS, "rect");
+      rc.setAttribute("x", vb[0]); rc.setAttribute("y", vb[1]);
+      rc.setAttribute("width", W); rc.setAttribute("height", H);
+      rc.setAttribute("fill", color);
+      svg.insertBefore(rc, svg.firstChild);
+    }
+    dzMarkDirty(); dzBuildLayers(); dzFitView();
+    dzSetStatus(`📄 Documento: ${W}×${H}` + (noBg ? " · fondo transparente" : ""));
+  };
 }
 /* paneo del lienzo: espacio+arrastrar o botón del medio (mano de Toon Boom).
    Devuelve true si el evento era un paneo (los demás handlers lo ignoran). */
-function dzPanMaybe(e) {
-  if (!DZ.spaceDown && e.button !== 1) return false;
+function dzPanMaybe(e, force) {
+  if (!force && !DZ.spaceDown && e.button !== 1 && (DZ.tool || "select") !== "hand") return false;
   e.preventDefault(); e.stopPropagation();
   const x0 = e.clientX - (DZ.panX || 0), y0 = e.clientY - (DZ.panY || 0);
   const cv = $("#dzCanvas");
@@ -1638,6 +1836,7 @@ function dzSelect(el) {
   dzPositionHandle();
   dzBuildLayers();
   dzStyleSync(el);
+  dzPivotMark();
   // modo comentario: el dock ahora apunta SOLO a este elemento
   $("#dzPrompt").placeholder = `💬 Comentario sobre <${el.tagName.toLowerCase()}> — Fidel edita SOLO ese elemento`;
 }
@@ -1647,6 +1846,7 @@ function dzDeselect() {
   $("#dzProps").hidden = true; $("#dzEmpty").hidden = false;
   $("#dzHandle").hidden = true; $("#dzPin").hidden = true;
   const rot = $("#dzRotate"); if (rot) rot.hidden = true;
+  const pv = $("#dzPivot"); if (pv) pv.hidden = true;
   dzBuildLayers();
   $("#dzPrompt").placeholder = "Pedile un cambio a Fidel… ej: «hacé el título más grande y centralo»";
 }
@@ -1672,9 +1872,42 @@ function dzPositionHandle() {
   } catch (e) { h.hidden = true; pin.hidden = true; if (rot) rot.hidden = true; }
 }
 
-/* rotación (manija ⟳ arriba de la selección): gira alrededor del centro del
-   elemento; Shift ajusta de a 15°. Reemplaza SOLO el rotate() agregado por
-   este mismo arrastre (los anteriores quedan integrados en el transform). */
+/* ══ rigging (pivotes 📌): fija el eje de rotación de un elemento/parte del
+   cuerpo — el posado cutout de Toon Boom (peg pivots). El pivote se guarda
+   en data-pivot y la rotación gira alrededor de él. ══ */
+function dzPivotClick(e) {
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  if (!el || !el.closest || !el.closest("#dzCanvas svg") || el.closest("g.dz-onion")) return;
+  let target = el;
+  const grp = el.closest && el.closest('#dzCanvas svg > g:not(.dz-onion)');
+  if (grp && !e.altKey) target = grp;            // en un rig, la parte suele ser un grupo
+  if (target.tagName.toLowerCase() === "svg") return;
+  dzSnapshot();
+  if (e.altKey && target.hasAttribute("data-pivot")) {
+    target.removeAttribute("data-pivot");
+    dzSelect(target); dzMarkDirty();
+    dzSetStatus("📌 Pivote quitado — la rotación vuelve al centro");
+    return;
+  }
+  const p = dzToUser(e.clientX, e.clientY);
+  target.setAttribute("data-pivot", `${Math.round(p.x)} ${Math.round(p.y)}`);
+  dzSelect(target); dzMarkDirty();
+  dzSetStatus("📌 Pivote fijado — rotá con la manija ⟳ y gira desde acá (hombro, codo, cadera…). Alt+clic lo quita.");
+}
+function dzPivotMark() {
+  const m = $("#dzPivot");
+  if (!m) return;
+  const pv = DZ.sel && DZ.sel.getAttribute && DZ.sel.getAttribute("data-pivot");
+  if (!pv || !$("#dzCanvas").querySelector("svg")) { m.hidden = true; return; }
+  const [px, py] = pv.split(/[\s,]+/).map(Number);
+  const sp = dzToScreen(px, py);
+  m.style.left = sp.x + "px"; m.style.top = sp.y + "px";
+  m.hidden = false;
+}
+
+/* rotación (manija ⟳ arriba de la selección): gira alrededor del PIVOTE si
+   el elemento tiene uno (rig cutout) o del centro si no; Shift ajusta de a
+   15°. Reemplaza SOLO el rotate() agregado por este mismo arrastre. */
 function dzRotateDown(e) {
   if (!DZ.sel) return;
   e.preventDefault(); e.stopPropagation();
@@ -1682,7 +1915,12 @@ function dzRotateDown(e) {
   const el = DZ.sel;
   const b = el.getBoundingClientRect();
   const cx = (b.left + b.right) / 2, cy = (b.top + b.bottom) / 2;
-  const c = dzToUser(cx, cy);                    // centro en coords de usuario
+  let c = dzToUser(cx, cy);                      // centro en coords de usuario
+  const pv = el.getAttribute("data-pivot");
+  if (pv) {
+    const [px, py] = pv.split(/[\s,]+/).map(Number);
+    if (!isNaN(px) && !isNaN(py)) c = { x: px, y: py };   // rig: gira desde el pivote
+  }
   const a0 = Math.atan2(e.clientY - cy, e.clientX - cx);
   const base = el.getAttribute("transform") || "";
   const move = (ev) => {
@@ -1726,6 +1964,7 @@ function dzToUser(clientX, clientY) {
 
 /* mousedown en el lienzo: selecciona el elemento y prepara arrastre para mover */
 function dzPointerDown(e) {
+  dzReleaseFocus();
   if (dzPanMaybe(e)) return;                           // espacio/botón medio: panear
   if (e.target.id === "dzHandle" || e.target.id === "dzRotate") return;   // tiradores propios
   if (e.target.closest && e.target.closest("#dzCam")) return;             // la cámara maneja lo suyo
@@ -1733,6 +1972,7 @@ function dzPointerDown(e) {
   let el = e.target;
   if (!el || el === $("#dzCanvas") || el.tagName.toLowerCase() === "svg") { dzDeselect(); return; }
   if (el.closest && el.closest("g.dz-onion")) { dzDeselect(); return; }
+  if (el.closest && el.closest("[data-locked]")) { dzDeselect(); return; }   // capa bloqueada 🔒
   // clic dentro de un grupo real (<g> guardado): seleccionar el GRUPO (como
   // Illustrator); doble clic entraría al hijo — acá con Shift+clic alcanza
   const grp = el.closest && el.closest('#dzCanvas svg > g:not(.dz-onion)');
@@ -1756,6 +1996,15 @@ function dzPointerDown(e) {
   const pack = (DZ.multi.length > 1 && DZ.multi.includes(el)) ? DZ.multi : [el];
   const bases = pack.map(n => ({ n, base: dzReadPos(n) }));
   let moved = false;
+  // ⏺ grabación armada: este arrastre ES la actuación — muestrear el gesto
+  let rec = null;
+  if (DZ.rec && DZ.rec.armed) {
+    const path = dzElPath(el);
+    if (path) {
+      rec = { el, path, samples: [[0, 0, 0]], t0: performance.now(), last: [0, 0] };
+      dzSetStatus("⏺ GRABANDO el movimiento… soltá para terminar");
+    }
+  }
   const move = (ev) => {
     const p = dzToUser(ev.clientX, ev.clientY);
     const dx = p.x - start.x, dy = p.y - start.y;
@@ -1763,12 +2012,15 @@ function dzPointerDown(e) {
     if (!moved) dzSnapshot();                          // primer movimiento real
     moved = true;
     bases.forEach(b => dzWritePos(b.n, b.base, dx, dy));
+    if (rec) { rec.last = [dx, dy]; rec.samples.push([dx, dy, performance.now() - rec.t0]); }
     dzPositionHandle();
   };
   const up = () => {
     document.removeEventListener("mousemove", move);
     document.removeEventListener("mouseup", up);
     if (moved) { dzBuildInspector(el); dzMarkDirty(); }
+    if (rec && moved) dzRecFinish(rec);
+    else if (rec) { DZ.rec = { armed: true }; }        // no arrastró: sigue armada
   };
   document.addEventListener("mousemove", move);
   document.addEventListener("mouseup", up);
@@ -2064,26 +2316,40 @@ let DRAW = null;   // trazo a mano alzada en curso
 let PEN = null;    // pluma vectorial en curso
 
 const DZ_CURSORS = { select: "", nodes: "default", eraser: "cell",
-                     dropper: "copy", bucket: "pointer" };
+                     dropper: "copy", bucket: "pointer", hand: "grab",
+                     pivot: "crosshair" };
 function dzSetTool(t) {
   DZ.tool = t;
   document.querySelectorAll(".dz-toolbtn").forEach(b =>
     b.classList.toggle("active", b.dataset.tool === t));
-  $("#dzCanvas").style.cursor = (t in DZ_CURSORS) ? DZ_CURSORS[t] : "crosshair";
+  const cv = $("#dzCanvas");
+  cv.style.cursor = (t in DZ_CURSORS) ? DZ_CURSORS[t] : "crosshair";
+  cv.dataset.tool = t;          // el CSS decide el cursor de los hijos del svg
   if (PEN && t !== "pen") dzPenFinish(true);
   if (t !== "nodes") dzNodesClear();
   // el gotero/balde/nodos trabajan SOBRE la selección o eligiendo elemento: no deseleccionar
   if (!["select", "nodes", "dropper", "bucket"].includes(t)) dzDeselect();
+  dzSbTool(); dzToolOptsRender();
+}
+/* los clics del lienzo hacen preventDefault (para dibujar/arrastrar), y eso
+   BLOQUEA el cambio de foco: si venías de escribir en el chat del dock, el
+   foco quedaba preso en el textarea y los atajos "no andaban" (tipeabas al
+   chat). Soltarlo explícitamente al tocar el lienzo. */
+function dzReleaseFocus() {
+  const a = document.activeElement;
+  if (a && /^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(a.tagName)) a.blur();
 }
 
 function dzDrawDown(e) {
+  dzReleaseFocus();
   const tool = DZ.tool || "select";
-  if (DZ.spaceDown || e.button === 1) return;          // paneo: lo maneja dzPointerDown
+  if (DZ.spaceDown || e.button === 1 || tool === "hand") return;   // paneo: lo maneja dzPointerDown
   if (e.target.closest && e.target.closest("#dzCam")) return;
   if (tool === "select") return;                       // seleccionar: flujo clásico
   const svg = $("#dzCanvas").querySelector("svg");
   if (!svg || e.button !== 0) return;
   e.preventDefault(); e.stopPropagation();             // suprime los mouse events
+  if (tool === "pivot") { dzPivotClick(e); return; }
   if (tool === "nodes") { dzNodesClick(e); return; }
   if (tool === "dropper") { dzDropperPick(e); return; }
   if (tool === "bucket") { dzBucketApply(e); return; }
@@ -2111,6 +2377,7 @@ function dzDrawDown(e) {
 }
 function dzDrawMove(e) {
   if (PEN && PEN.dragging) { dzPenDrag(dzToUser(e.clientX, e.clientY)); return; }
+  if (PEN && !DRAW) { dzPenHover(dzToUser(e.clientX, e.clientY)); return; }
   if (!DRAW) return;
   e.preventDefault();
   // eventos coalescidos: la tableta muestrea a 100-250Hz pero el navegador
@@ -2136,10 +2403,102 @@ function dzDrawMove(e) {
 function dzDrawUp(e) {
   if (PEN && PEN.dragging) { dzPenUp(); return; }
   if (!DRAW) return;
-  if (DRAW.pts.length < 2) DRAW.el.remove();           // clic suelto: nada que dejar
+  if (DRAW.pts.length < 2) {
+    DRAW.el.remove();                                  // clic suelto: nada que dejar
+    DRAW = null;
+    return;
+  }
+  // post-procesado profesional: el preview crudo se reemplaza por la curva
+  // refinada (media móvil + simplificación + bezier) — como OpenToonz
+  const pts = dzRefineStroke(DRAW.pts);
+  let finalEl = DRAW.el;
+  if (DRAW.mode === "pencil") {
+    DRAW.el.setAttribute("d", dzSmoothPath(pts));
+  } else {
+    const ribbon = dzBrushRibbon(pts, DZ.drawW || 6, DZ.drawColor || "#E5322D");
+    if (ribbon) { DRAW.el.replaceWith(ribbon); finalEl = ribbon; }
+    else { DRAW.el.remove(); finalEl = null; }
+  }
+  if (finalEl) dzMirrorClone(finalEl);                 // 🪞 modo espejo
   DRAW = null;
   dzMarkDirty(); dzBuildLayers();
 }
+/* ══ post-procesado del trazo (como OpenToonz al soltar el lápiz):
+   1) media móvil → mata el temblor del pulso;
+   2) Ramer-Douglas-Peucker → deja SOLO los puntos que definen la forma;
+   3) Catmull-Rom → curva bezier limpia por esos puntos.
+   La intensidad la controla el deslizador «Suavizado» (0-100). ══ */
+function dzMovingAvg(pts, win) {
+  if (win < 1 || pts.length < 3) return pts;
+  const out = [pts[0]];
+  for (let i = 1; i < pts.length - 1; i++) {
+    let sx = 0, sy = 0, sp = 0, n = 0;
+    for (let j = Math.max(0, i - win); j <= Math.min(pts.length - 1, i + win); j++) {
+      sx += pts[j][0]; sy += pts[j][1]; sp += pts[j][2] || 0.5; n++;
+    }
+    out.push([sx / n, sy / n, sp / n]);
+  }
+  out.push(pts[pts.length - 1]);
+  return out;
+}
+function dzRDP(pts, eps) {
+  if (pts.length < 3) return pts;
+  const d2line = (p, a, b) => {
+    const dx = b[0] - a[0], dy = b[1] - a[1];
+    const L2 = dx * dx + dy * dy;
+    if (!L2) return Math.hypot(p[0] - a[0], p[1] - a[1]);
+    const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L2));
+    return Math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dy));
+  };
+  const keep = new Array(pts.length).fill(false);
+  keep[0] = keep[pts.length - 1] = true;
+  const stack = [[0, pts.length - 1]];
+  while (stack.length) {
+    const [a, b] = stack.pop();
+    let imax = -1, dmax = 0;
+    for (let i = a + 1; i < b; i++) {
+      const d = d2line(pts[i], pts[a], pts[b]);
+      if (d > dmax) { dmax = d; imax = i; }
+    }
+    if (dmax > eps && imax > 0) { keep[imax] = true; stack.push([a, imax], [imax, b]); }
+  }
+  return pts.filter((_, i) => keep[i]);
+}
+function dzRefineStroke(pts) {
+  const amt = DZ.smooth === undefined ? 40 : DZ.smooth;   // 0-100
+  if (amt <= 0 || pts.length < 4) return pts;
+  const win = Math.round(1 + amt / 30);                    // 1..4
+  const eps = (amt / 100) * 3.5 / (DZ.zoom || 1);          // en unidades de usuario
+  return dzRDP(dzMovingAvg(pts, win), eps);
+}
+/* cinta de ancho variable para el pincel: UN solo path relleno cuyo contorno
+   sigue la presión (como los outline strokes vectoriales de OpenToonz) */
+function dzBrushRibbon(pts, baseW, color) {
+  if (pts.length < 2) return null;
+  const L = [], R = [];
+  for (let i = 0; i < pts.length; i++) {
+    const p0 = pts[Math.max(0, i - 1)], p1 = pts[Math.min(pts.length - 1, i + 1)];
+    let tx = p1[0] - p0[0], ty = p1[1] - p0[1];
+    const len = Math.hypot(tx, ty) || 1;
+    tx /= len; ty /= len;
+    // afinar las puntas: entrada y salida del trazo tienden a 30%
+    const tip = Math.min(1, Math.min(i, pts.length - 1 - i) / 3) * 0.7 + 0.3;
+    const w = Math.max(0.4, baseW * (pts[i][2] || 0.5) * tip);
+    L.push([pts[i][0] - ty * w, pts[i][1] + tx * w]);
+    R.push([pts[i][0] + ty * w, pts[i][1] - tx * w]);
+  }
+  R.reverse();
+  const side = (arr) => dzSmoothPath(arr).replace(/^M [\d.-]+ [\d.-]+ /, "");
+  const d = dzSmoothPath(L) +
+    ` L ${R[0][0].toFixed(1)} ${R[0][1].toFixed(1)} ` + side(R) + " Z";
+  const el = document.createElementNS(SVGNS, "path");
+  el.setAttribute("d", d);
+  el.setAttribute("fill", color);
+  el.setAttribute("stroke", "none");
+  el.setAttribute("data-fidel", "brush");
+  return el;
+}
+
 /* suavizado Catmull-Rom convertido a bezier cúbicas: la curva pasa POR todos
    los puntos con continuidad C1 — trazos fieles y orgánicos */
 function dzSmoothPath(pts) {
@@ -2156,20 +2515,42 @@ function dzSmoothPath(pts) {
   return d;
 }
 
-/* pluma vectorial: clic = punto de esquina, clic y ARRASTRAR = punto suave con
-   manijas simétricas · Enter/doble clic termina · Esc cancela */
+/* ══ pluma vectorial profesional (flecha blanca de Illustrator / pluma de
+   OpenToonz): clic = esquina · clic y ARRASTRAR = curva con manijas visibles ·
+   banda elástica de preview al mover el mouse · clic en el PRIMER punto
+   cierra el trazado · Backspace borra el último punto · Enter termina ·
+   Esc cancela. Las anclas y manijas se dibujan en una capa guía que jamás
+   se guarda en el archivo. ══ */
+function dzPenScale() {
+  // tamaño de las guías en unidades de usuario, compensando el zoom
+  const svg = $("#dzCanvas").querySelector("svg");
+  try { return 1 / (svg.getScreenCTM().a || 1); } catch (e) { return 1; }
+}
 function dzPenDown(p) {
   const svg = $("#dzCanvas").querySelector("svg");
+  if (PEN && PEN.anchors.length >= 2) {
+    // clic sobre el PRIMER punto → cerrar el trazado (como Illustrator)
+    const a0 = PEN.anchors[0], k = dzPenScale();
+    if (Math.hypot(p.x - a0.x, p.y - a0.y) < 10 * k) {
+      PEN.closed = true;
+      dzPenFinish(false);
+      return;
+    }
+  }
   if (!PEN) {
     dzSnapshot();                                      // Ctrl+Z deshace la pluma entera
-    PEN = { anchors: [], el: document.createElementNS(SVGNS, "path"), dragging: false };
+    PEN = { anchors: [], el: document.createElementNS(SVGNS, "path"),
+            guide: document.createElementNS(SVGNS, "g"), dragging: false, closed: false };
     PEN.el.setAttribute("fill", "none");
     PEN.el.setAttribute("stroke", DZ.drawColor || "#E5322D");
     PEN.el.setAttribute("stroke-width", DZ.drawW || 6);
     PEN.el.setAttribute("stroke-linecap", "round");
     PEN.el.setAttribute("stroke-linejoin", "round");
+    PEN.guide.setAttribute("class", "dz-penui");       // capa guía: solo pantalla
+    PEN.guide.setAttribute("pointer-events", "none");
     svg.appendChild(PEN.el);
-    dzSetStatus("✒ Pluma: clic = punto · arrastrar = curva · Enter termina · Esc cancela");
+    svg.appendChild(PEN.guide);
+    dzSetStatus("✒ Pluma: clic = esquina · arrastrar = curva · clic en el 1er punto cierra · Backspace borra el último · Enter termina · Esc cancela");
   }
   PEN.anchors.push({ x: p.x, y: p.y, hx: p.x, hy: p.y });
   PEN.dragging = true;
@@ -2180,10 +2561,20 @@ function dzPenDrag(p) {
   a.hx = p.x; a.hy = p.y;                              // la manija sigue el arrastre
   dzPenRender();
 }
-function dzPenUp() { if (PEN) PEN.dragging = false; }
-function dzPenRender() {
+function dzPenUp() { if (PEN) { PEN.dragging = false; dzPenRender(); } }
+function dzPenHover(p) {
+  // banda elástica: preview del próximo segmento siguiendo el mouse
   if (!PEN || !PEN.anchors.length) return;
-  const A = PEN.anchors;
+  PEN.hover = p;
+  dzPenRender();
+}
+function dzPenBackspace() {
+  if (!PEN) return;
+  PEN.anchors.pop();
+  if (!PEN.anchors.length) { dzPenFinish(true); return; }
+  dzPenRender();
+}
+function dzPenPathD(A, closed) {
   let d = `M ${A[0].x.toFixed(1)} ${A[0].y.toFixed(1)}`;
   for (let i = 1; i < A.length; i++) {
     const prev = A[i - 1], cur = A[i];
@@ -2191,14 +2582,173 @@ function dzPenRender() {
     const inx = 2 * cur.x - cur.hx, iny = 2 * cur.y - cur.hy;
     d += ` C ${prev.hx.toFixed(1)} ${prev.hy.toFixed(1)} ${inx.toFixed(1)} ${iny.toFixed(1)} ${cur.x.toFixed(1)} ${cur.y.toFixed(1)}`;
   }
-  PEN.el.setAttribute("d", d);
+  if (closed && A.length >= 2) {
+    const last = A[A.length - 1], a0 = A[0];
+    const inx = 2 * a0.x - a0.hx, iny = 2 * a0.y - a0.hy;
+    d += ` C ${last.hx.toFixed(1)} ${last.hy.toFixed(1)} ${inx.toFixed(1)} ${iny.toFixed(1)} ${a0.x.toFixed(1)} ${a0.y.toFixed(1)} Z`;
+  }
+  return d;
+}
+function dzPenRender() {
+  if (!PEN || !PEN.anchors.length) return;
+  const A = PEN.anchors;
+  PEN.el.setAttribute("d", dzPenPathD(A, false));
+  // ── capa guía: anclas ▪, manijas ─●, banda elástica ┈ ──
+  const k = dzPenScale();
+  const g = PEN.guide;
+  g.innerHTML = "";
+  const mk = (tag, attrs) => {
+    const n = document.createElementNS(SVGNS, tag);
+    for (const [key, v] of Object.entries(attrs)) n.setAttribute(key, v);
+    g.appendChild(n); return n;
+  };
+  // banda elástica hacia el mouse (cuando no estás arrastrando una manija):
+  // sale con la tangente de la última manija y aterriza recto en el cursor
+  if (PEN.hover && !PEN.dragging) {
+    const last = A[A.length - 1], h = PEN.hover;
+    mk("path", { d: `M ${last.x} ${last.y} C ${last.hx} ${last.hy} ${h.x} ${h.y} ${h.x} ${h.y}`,
+                 fill: "none", stroke: "#2a7fff", "stroke-width": 1.2 * k,
+                 "stroke-dasharray": `${4 * k} ${4 * k}`, opacity: 0.8 });
+  }
+  A.forEach((a, i) => {
+    const hasHandle = Math.hypot(a.hx - a.x, a.hy - a.y) > 0.5;
+    if (hasHandle) {
+      const inx = 2 * a.x - a.hx, iny = 2 * a.y - a.hy;
+      mk("line", { x1: inx, y1: iny, x2: a.hx, y2: a.hy,
+                   stroke: "#2a7fff", "stroke-width": 1 * k, opacity: 0.85 });
+      mk("circle", { cx: a.hx, cy: a.hy, r: 3 * k, fill: "#2a7fff" });
+      mk("circle", { cx: inx, cy: iny, r: 3 * k, fill: "#2a7fff", opacity: 0.7 });
+    }
+    // el primer punto se agranda cuando el mouse está cerca (se puede cerrar)
+    const near0 = i === 0 && PEN.hover && A.length >= 2 &&
+      Math.hypot(PEN.hover.x - a.x, PEN.hover.y - a.y) < 10 * k;
+    const s = (near0 ? 8 : 5) * k;
+    mk("rect", { x: a.x - s / 2, y: a.y - s / 2, width: s, height: s,
+                 fill: near0 ? "#2a7fff" : "#fff", stroke: "#2a7fff",
+                 "stroke-width": 1.4 * k });
+  });
 }
 function dzPenFinish(cancel) {
   if (!PEN) return;
-  if (cancel || PEN.anchors.length < 2) PEN.el.remove();
-  else { dzMarkDirty(); dzBuildLayers(); }
+  PEN.guide.remove();
+  if (cancel || PEN.anchors.length < 2) {
+    PEN.el.remove();
+    if (!cancel && DZ.undo && DZ.undo.length) DZ.undo.pop();   // no dibujó nada
+  } else {
+    PEN.el.setAttribute("d", dzPenPathD(PEN.anchors, PEN.closed));
+    if (PEN.closed && DZ.fillColor) PEN.el.setAttribute("fill", DZ.fillColor);
+    dzMirrorClone(PEN.el);                             // 🪞 modo espejo
+    dzMarkDirty(); dzBuildLayers();
+    dzSetStatus(PEN.closed ? "✒ Trazado cerrado (relleno con el color actual) — editalo con nodos (A)" :
+                             "✒ Trazado listo — editalo con nodos (A)");
+    PEN = null;
+    return;
+  }
   PEN = null;
   dzSetStatus("");
+}
+
+/* ══ atajos de teclado configurables (Preferencias ⚙ del estudio) ══ */
+const DZ_KEY_DEFAULTS = {
+  select: "v", hand: "h", nodes: "a", pencil: "n", brush: "b", pen: "p",
+  eraser: "e", dropper: "i", bucket: "g", camera: "c", pivot: "j",
+  rect: "r", ellipse: "o", text: "t", line: "l",
+  zoomin: "+", zoomout: "-", zoom100: "0", zoomfit: "f",
+  rotl: "[", rotr: "]", mirror: "m",
+  prevframe: ",", nextframe: ".",
+};
+const DZ_KEY_LABELS = {
+  select: "Seleccionar (flecha)", hand: "Mano (navegar)", nodes: "Nodos (flecha blanca)",
+  pencil: "Lápiz", brush: "Pincel", pen: "Pluma vectorial", eraser: "Borrador",
+  dropper: "Cuentagotas", bucket: "Balde de pintura", camera: "Cámara",
+  pivot: "Pivote de rig", rect: "Rectángulo", ellipse: "Elipse",
+  text: "Texto", line: "Línea", zoomin: "Acercar", zoomout: "Alejar",
+  zoom100: "Zoom 100%", zoomfit: "Ajustar a pantalla", rotl: "Girar vista ⟲",
+  rotr: "Girar vista ⟳", mirror: "Modo espejo", prevframe: "Cuadro anterior",
+  nextframe: "Cuadro siguiente",
+};
+function dzKeysLoad() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem("fidel.dzkeys") || "{}"); } catch (e) { /* */ }
+  DZ.keymap = { ...DZ_KEY_DEFAULTS, ...saved };
+  DZ.keyrev = {};
+  for (const [act, k] of Object.entries(DZ.keymap)) if (k) DZ.keyrev[k] = act;
+}
+function dzKeysSave() {
+  try { localStorage.setItem("fidel.dzkeys", JSON.stringify(DZ.keymap)); } catch (e) { /* */ }
+  dzKeysLoad();
+}
+function dzRunAction(act) {
+  const TOOLS = ["select", "hand", "nodes", "pencil", "brush", "pen", "eraser",
+                 "dropper", "bucket", "pivot"];
+  if (TOOLS.includes(act)) return dzSetTool(act);
+  if (act === "camera") return dzCamToggle();
+  if (["rect", "ellipse", "text", "line"].includes(act)) return dzAddShape(act);
+  if (act === "zoomin") return dzZoom(0.15);
+  if (act === "zoomout") return dzZoom(-0.15);
+  if (act === "zoom100") { DZ.zoom = 1; DZ.panX = DZ.panY = 0; DZ.viewRot = 0; return dzApplyZoom(); }
+  if (act === "zoomfit") return dzFitView();
+  if (act === "rotl") return dzRotView(-15);
+  if (act === "rotr") return dzRotView(15);
+  if (act === "mirror") return dzMirrorToggle();
+  if (act === "prevframe" && DZ.anim) { dzAnimStopIf(); return dzGoFrame(Math.max(0, DZ.anim.idx - 1)); }
+  if (act === "nextframe" && DZ.anim) { dzAnimStopIf(); return dzGoFrame(Math.min(DZ.anim.frames.length - 1, DZ.anim.idx + 1)); }
+}
+/* ⚙ Preferencias del estudio: reasignar atajos (clic en el campo y apretá la
+   tecla nueva) + suavizado por defecto */
+function dzPrefsModal() {
+  dzKeysLoad();
+  const rows = Object.keys(DZ_KEY_DEFAULTS).map(act =>
+    `<div class="krow"><label>${DZ_KEY_LABELS[act] || act}</label>` +
+    `<input class="dz-keycap" data-act="${act}" value="${(DZ.keymap[act] || "").toUpperCase()}" readonly ` +
+    `placeholder="(sin atajo)" title="Clic y apretá la tecla nueva · Supr la borra"></div>`).join("");
+  openModal(`<h2>⚙ Preferencias del estudio</h2>
+    <div class="sub">Clic en un campo y apretá la tecla nueva (una letra, número o símbolo).
+    Supr/Retroceso deja la acción sin atajo. Los atajos funcionan cuando no estás escribiendo texto.</div>
+    ${rows}
+    <div class="dz-style-row" style="margin-top:12px">
+      <span class="dz-hint">Suavizado por defecto del lápiz/pincel</span>
+      <input type="range" id="prefSmooth" min="0" max="100" value="${DZ.smooth === undefined ? 40 : DZ.smooth}">
+      <span class="dz-hint" id="prefSmoothLbl">${DZ.smooth === undefined ? 40 : DZ.smooth}</span>
+    </div>
+    <div class="m-actions">
+      <button class="ghost" id="prefReset">Restaurar por defecto</button>
+      <button class="primary" id="mCancel">Listo</button>
+    </div>`);
+  document.querySelectorAll(".dz-keycap").forEach(inp => {
+    inp.onkeydown = (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const act = inp.dataset.act;
+      if (e.key === "Delete" || e.key === "Backspace") {
+        DZ.keymap[act] = ""; inp.value = "";
+      } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        const k = e.key.toLowerCase();
+        // si otra acción tenía esta tecla, se la saca (sin duplicados)
+        for (const [a2, k2] of Object.entries(DZ.keymap))
+          if (k2 === k && a2 !== act) {
+            DZ.keymap[a2] = "";
+            const otro = document.querySelector(`.dz-keycap[data-act="${a2}"]`);
+            if (otro) otro.value = "";
+          }
+        DZ.keymap[act] = k; inp.value = k.toUpperCase();
+      }
+      dzKeysSave();
+    };
+    inp.onfocus = () => inp.select();
+  });
+  $("#prefSmooth").oninput = (e) => {
+    DZ.smooth = +e.target.value;
+    $("#prefSmoothLbl").textContent = e.target.value;
+    const s = $("#dzSmooth"); if (s) { s.value = e.target.value; $("#dzSmoothLbl").textContent = e.target.value; }
+    try { localStorage.setItem("fidel.dzsmooth", String(DZ.smooth)); } catch (err) { /* */ }
+  };
+  $("#prefReset").onclick = () => {
+    DZ.keymap = { ...DZ_KEY_DEFAULTS };
+    dzKeysSave();
+    document.querySelectorAll(".dz-keycap").forEach(i2 =>
+      i2.value = (DZ.keymap[i2.dataset.act] || "").toUpperCase());
+  };
+  $("#mCancel").onclick = closeModal;
 }
 
 /* ══ nodos (A): editar los puntos de un trazado, como la flecha blanca
@@ -2372,6 +2922,7 @@ function dzEraseStart(e) {
   const eraseAt = (x, y) => {
     const el = document.elementFromPoint(x, y);
     if (!el || !el.closest || el.closest("g.dz-onion")) return;
+    if (el.closest("[data-locked]")) return;           // capa bloqueada 🔒
     const inSvg = el.closest("#dzCanvas svg");
     if (!inSvg || el === svg) return;
     const t = el.tagName.toLowerCase();
@@ -2415,6 +2966,7 @@ function dzDropperPick(e) {
 function dzBucketApply(e) {
   const el = document.elementFromPoint(e.clientX, e.clientY);
   if (!el || !el.closest || !el.closest("#dzCanvas svg") || el.closest("g.dz-onion")) return;
+  if (el.closest("[data-locked]")) return;             // capa bloqueada 🔒
   const t = el.tagName.toLowerCase();
   if (t === "svg") return;
   dzSnapshot();
@@ -2430,6 +2982,7 @@ async function dzAnimToggle() {
   const bar = $("#dzTimeline");
   if (!bar.hidden) {
     dzAnimStop(); bar.hidden = true; DZ.anim = null; dzOnionClear();
+    $("#dzOnionPanel").hidden = true;
     if (DZ.camMode) { DZ.camMode = false; $("#dzCamBtn").classList.remove("active"); $("#dzCam").hidden = true; $("#tlCamKey").hidden = true; }
     return;
   }
@@ -2441,8 +2994,8 @@ async function dzAnimToggle() {
     try { S.tree = (await api.refresh_tree()).tree; renderTree(); } catch (e) { /* */ }
     await openDesign(r.path);
   }
-  DZ.anim = { frames: [], idx: 0, playing: false, onion: true, cache: {},
-              skin: +($("#tlSkin") && $("#tlSkin").value) || 2 };
+  DZ.anim = { frames: [], idx: 0, playing: false, onion: true, cache: {} };
+  $("#dzOnionPanel").hidden = false;   // el panel 🧅 aparece con la timeline
   // cargar la escena (claves de cámara/dibujo, easing) que vive junto a los cuadros
   const sc = await api.scene_get(DZ.path);
   DZ.scene = (sc && sc.scene) || {};
@@ -2468,6 +3021,8 @@ async function dzTimelineRefresh() {
   });
   $("#tlInfo").textContent = DZ.anim.frames.length + " cuadro(s)";
   dzTimelineBadges();
+  dzSbFrame();
+  dzXsRender();
 }
 /* miniatura del cuadro dentro del chip de la timeline (estilo X-sheet) */
 async function dzThumbInto(chip, f, i) {
@@ -2818,6 +3373,24 @@ function dzOnionGhost(svgText, tintId, rgb, opacity) {
   g.appendChild(inner);
   return g;
 }
+/* configuración del papel cebolla (panel 🧅 flotante): cuadros antes/después,
+   colores de tinte y opacidad — persistente entre sesiones */
+function dzOnionCfg() {
+  if (!DZ.onionCfg) {
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem("fidel.dzonion") || "{}"); } catch (e) { /* */ }
+    DZ.onionCfg = { before: 2, after: 1, alpha: 38,
+                    colorB: "#8c0000", colorA: "#00731a", ...saved };
+  }
+  return DZ.onionCfg;
+}
+function dzOnionCfgSave() {
+  try { localStorage.setItem("fidel.dzonion", JSON.stringify(DZ.onionCfg)); } catch (e) { /* */ }
+}
+function dzHexToRgbF(hex) {
+  const n = parseInt((dzHex(hex) || "#888888").slice(1), 16);
+  return [(n >> 16) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+}
 let ONION_RUN = 0;   // token anti-carrera: navegar rápido no duplica fantasmas
 async function dzOnionUpdate() {
   const run = ++ONION_RUN;
@@ -2825,13 +3398,16 @@ async function dzOnionUpdate() {
   if (!DZ.anim || !DZ.anim.onion) return;
   const svg = $("#dzCanvas").querySelector("svg");
   if (!svg) return;
-  const skin = DZ.anim.skin || 2;
+  const cfg = dzOnionCfg();
+  const rgbB = dzHexToRgbF(cfg.colorB), rgbA = dzHexToRgbF(cfg.colorA);
+  const base = (cfg.alpha || 38) / 100;
   const jobs = [];
-  for (let k = 1; k <= skin; k++)               // anteriores: rojo, cada vez más tenue
+  for (let k = 1; k <= (cfg.before || 0); k++)   // anteriores, cada vez más tenues
     if (DZ.anim.frames[DZ.anim.idx - k])
-      jobs.push({ f: DZ.anim.frames[DZ.anim.idx - k], rgb: [0.55, 0, 0], op: 0.38 / k, id: "dzTintP" + k });
-  if (DZ.anim.frames[DZ.anim.idx + 1])          // siguiente: verde
-    jobs.push({ f: DZ.anim.frames[DZ.anim.idx + 1], rgb: [0, 0.45, 0.1], op: 0.3, id: "dzTintN1" });
+      jobs.push({ f: DZ.anim.frames[DZ.anim.idx - k], rgb: rgbB, op: base / k, id: "dzTintP" + k });
+  for (let k = 1; k <= (cfg.after || 0); k++)    // siguientes
+    if (DZ.anim.frames[DZ.anim.idx + k])
+      jobs.push({ f: DZ.anim.frames[DZ.anim.idx + k], rgb: rgbA, op: base * 0.8 / k, id: "dzTintN" + k });
   for (const j of jobs) {
     const r = await api.image_data(j.f);
     if (run !== ONION_RUN) return;              // vino una pasada más nueva: abortar
@@ -3033,6 +3609,411 @@ function dzTimelineBadges() {
   });
 }
 
+/* ══ animación de ELEMENTOS (pegs de Toon Boom, versión Fidel) ═══════════
+   🏃 interpolación de movimiento: fijás inicio, movés el elemento al final
+   y Fidel genera los cuadros del recorrido con la curva elegida.
+   ⏺ grabación en vivo: arrastrás el elemento y el recorrido REAL de tu mano
+   (con sus tiempos) se convierte en cuadros — actuación en vivo. ══ */
+function dzElPath(el) {
+  // ruta de índices desde el svg raíz (las capas de UI van siempre al final,
+  // así que los índices del contenido se mantienen entre vivo y serializado)
+  const svg = $("#dzCanvas").querySelector("svg");
+  const path = [];
+  let n = el;
+  while (n && n !== svg) {
+    const p = n.parentNode;
+    if (!p) return null;
+    path.unshift([...p.children].indexOf(n));
+    n = p;
+  }
+  return n === svg ? path : null;
+}
+function dzElAt(root, path) {
+  let n = root;
+  for (const i of path) { n = n.children[i]; if (!n) return null; }
+  return n;
+}
+function dzPosDelta(a, b) {
+  if (a.mode === "c") return [b.cx - a.cx, b.cy - a.cy];
+  if (a.mode === "xy") return [b.x - a.x, b.y - a.y];
+  return [b.tx - a.tx, b.ty - a.ty];
+}
+async function dzTweenFrames(baseSvgText, elPath, offsets) {
+  // genera un cuadro por offset [dx,dy] (en orden) insertándolos tras el actual
+  for (let k = offsets.length - 1; k >= 0; k--) {
+    const tmp = document.createElement("div"); tmp.innerHTML = baseSvgText;
+    const svg2 = tmp.querySelector("svg");
+    const el2 = dzElAt(svg2, elPath);
+    if (!el2) return "no encontré el elemento en el cuadro clonado";
+    dzWritePos(el2, dzReadPos(el2), offsets[k][0], offsets[k][1]);
+    const r = await api.insert_frame(DZ.path, svg2.outerHTML);
+    if (r && r.error) return r.error;
+  }
+  return null;
+}
+async function dzMoveTween() {
+  if (!DZ.anim) return sysMsg("🏃 Abrí la animación (🎞) primero");
+  if (!DZ.moveT) {
+    if (!DZ.sel) return dzSetStatus("🏃 Seleccioná el elemento a animar y tocá 🏃 para fijar el INICIO");
+    const path = dzElPath(DZ.sel);
+    if (!path) return dzSetStatus("🏃 Ese elemento no se puede animar (no cuelga del lienzo)");
+    DZ.moveT = { el: DZ.sel, path, start: dzReadPos(DZ.sel) };
+    $("#tlMove").classList.add("rec");
+    dzSetStatus("🏃 INICIO fijado. Arrastrá el elemento a su posición FINAL y tocá 🏃 otra vez.");
+    return;
+  }
+  const t = DZ.moveT; DZ.moveT = null; $("#tlMove").classList.remove("rec");
+  if (!t.el.isConnected) return dzSetStatus("🏃 El elemento ya no está — cancelo");
+  const [dx, dy] = dzPosDelta(t.start, dzReadPos(t.el));
+  if (Math.abs(dx) + Math.abs(dy) < 2)
+    return dzSetStatus("🏃 No lo moviste de lugar — cancelo. Fijá inicio, arrastrá y volvé a tocar 🏃.");
+  openModal(`<h2>🏃 Interpolación de movimiento</h2>
+    <div class="sub">Recorrido: ${Math.round(Math.hypot(dx, dy))} unidades. El elemento vuelve al inicio
+    y se generan los cuadros del viaje (el último queda en la posición final).</div>
+    <div class="dz-style-row">
+      <span class="dz-hint">Cuadros</span>
+      <input type="number" id="mtN" class="dz-win" value="6" min="2" max="24">
+      <span class="dz-hint">Curva</span>
+      <select id="mtEase" class="langsel">
+        <option value="linear">Lineal</option>
+        <option value="in">Ease in (acelera)</option>
+        <option value="out">Ease out (frena)</option>
+        <option value="inout" selected>Ease in-out (natural)</option>
+      </select>
+    </div>
+    <div class="m-actions">
+      <button class="ghost" id="mCancel">Cancelar</button>
+      <button class="primary" id="mtGo">🏃 Generar</button>
+    </div>`);
+  $("#mCancel").onclick = () => { closeModal(); };
+  $("#mtGo").onclick = async () => {
+    const n = Math.max(2, Math.min(24, +$("#mtN").value || 6));
+    const fn = DZ_EASES[$("#mtEase").value] || DZ_EASES.inout;
+    closeModal();
+    // el elemento vuelve al INICIO en este cuadro; los nuevos hacen el viaje
+    dzWritePos(t.el, dzReadPos(t.el), -dx, -dy);
+    dzMarkDirty();
+    await dzPersist();
+    const base = dzSerialize($("#dzCanvas").querySelector("svg"));
+    dzSetStatus("🏃 Generando " + n + " cuadros del recorrido…");
+    const offs = [];
+    for (let k = 1; k <= n; k++) offs.push([dx * fn(k / n), dy * fn(k / n)]);
+    const err = await dzTweenFrames(base, t.path, offs);
+    if (err) return dzSetStatus("❌ " + err);
+    DZ.anim.cache = {};
+    try { S.tree = (await api.refresh_tree()).tree; renderTree(); } catch (e) { /* */ }
+    await dzTimelineRefresh(); dzOnionUpdate(); dzTimelineBadges();
+    dzSetStatus("🏃 " + n + " cuadros generados — reproducí (▶) para ver el movimiento.");
+  };
+}
+/* ⏺ grabación en vivo: armás la grabación, arrastrás el elemento y el
+   recorrido con SUS TIEMPOS reales se muestrea al fps de la timeline */
+function dzRecToggle() {
+  if (!DZ.anim) return sysMsg("⏺ Abrí la animación (🎞) primero");
+  if (DZ.rec) { DZ.rec = null; $("#tlRec").classList.remove("rec"); dzSetStatus("⏺ Grabación desarmada"); return; }
+  DZ.rec = { armed: true };
+  $("#tlRec").classList.add("rec");
+  dzSetStatus("⏺ Grabación ARMADA: agarrá un elemento y arrastralo actuando el movimiento — al soltar, cada instante se vuelve un cuadro.");
+}
+async function dzRecFinish(rec) {
+  $("#tlRec").classList.remove("rec");
+  DZ.rec = null;
+  const fps = Math.max(1, Math.min(60, +$("#tlFps").value || 12));
+  const dur = rec.samples.length ? rec.samples[rec.samples.length - 1][2] : 0;
+  let nFrames = Math.min(48, Math.max(2, Math.round(dur / 1000 * fps)));
+  if (rec.samples.length < 2 || dur < 120)
+    return dzSetStatus("⏺ Muy corto — arrastrá el recorrido completo con el mouse apretado.");
+  // remuestrear el gesto al fps de la timeline (interpolando entre muestras)
+  const at = (ms) => {
+    let i = rec.samples.findIndex(s => s[2] >= ms);
+    if (i < 0) return rec.samples[rec.samples.length - 1];
+    if (i === 0) return rec.samples[0];
+    const a = rec.samples[i - 1], b = rec.samples[i];
+    const f = (ms - a[2]) / Math.max(1, b[2] - a[2]);
+    return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+  };
+  const offs = [];
+  for (let k = 1; k <= nFrames; k++) offs.push(at(dur * k / nFrames));
+  // el elemento vuelve al inicio del gesto en el cuadro actual
+  dzWritePos(rec.el, dzReadPos(rec.el), -rec.last[0], -rec.last[1]);
+  dzMarkDirty();
+  await dzPersist();
+  const base = dzSerialize($("#dzCanvas").querySelector("svg"));
+  dzSetStatus("⏺ Convirtiendo tu actuación en " + nFrames + " cuadros…");
+  const err = await dzTweenFrames(base, rec.path, offs);
+  if (err) return dzSetStatus("❌ " + err);
+  DZ.anim.cache = {};
+  try { S.tree = (await api.refresh_tree()).tree; renderTree(); } catch (e) { /* */ }
+  await dzTimelineRefresh(); dzOnionUpdate(); dzTimelineBadges();
+  dzSetStatus("⏺ Actuación grabada: " + nFrames + " cuadros a " + fps + " fps — dale ▶.");
+}
+
+/* ══ 🎭 DIORAMA: compositing sin nodos ═══════════════════════════════════
+   En vez del mapa de nodos de Harmony/OpenToonz, una vista LATERAL física
+   del multiplano (el diorama de la cámara multiplano de Disney): la cámara
+   a la izquierda, el plano de acción en el medio, el fondo a la derecha, y
+   cada capa es una tarjeta que arrastrás en profundidad. El grafo ya existe
+   en la escena (orden = compositing, grupos = jerarquía, data-z = plano) —
+   esto solo lo hace tangible. ══ */
+const DZ_Z_MIN = -60, DZ_Z_MAX = 400;
+function dzZToX(z, W) {
+  // -60 (pegado a cámara) … 0 (acción) … 400 (fondo) → posición en el riel
+  return ((z - DZ_Z_MIN) / (DZ_Z_MAX - DZ_Z_MIN)) * (W - 46) + 6;
+}
+function dzXToZ(x, W) {
+  const z = ((x - 6) / (W - 46)) * (DZ_Z_MAX - DZ_Z_MIN) + DZ_Z_MIN;
+  return Math.max(DZ_Z_MIN, Math.min(DZ_Z_MAX, Math.round(z)));
+}
+function dzZPanelToggle() {
+  const p = $("#dzZPanel");
+  p.hidden = !p.hidden;
+  $("#dzZBtn").classList.toggle("active", !p.hidden);
+  if (!p.hidden) dzZPanelRender();
+}
+function dzZPanelRender() {
+  const rail = $("#dzZRail");
+  if (!rail || $("#dzZPanel").hidden) return;
+  const svg = $("#dzCanvas").querySelector("svg");
+  if (!svg) { rail.innerHTML = ""; return; }
+  const W = rail.clientWidth || 260;
+  rail.innerHTML = `<div class="dz-zaction" style="left:${dzZToX(0, W)}px" title="Plano de acción (z = 0)"></div>`;
+  const kids = [...svg.children].filter(n => !DZ_SKIP_TAGS.includes(n.tagName.toLowerCase())
+    && !(n.classList && (n.classList.contains("dz-onion") || n.classList.contains("dz-penui"))));
+  kids.forEach((el, i) => {
+    const z = Math.max(DZ_Z_MIN, Math.min(DZ_Z_MAX, parseFloat(el.getAttribute("data-z")) || 0));
+    const card = document.createElement("div");
+    card.className = "dz-zcard" + (el === DZ.sel ? " sel" : "");
+    card.style.left = dzZToX(z, W) + "px";
+    card.style.top = (6 + (i % 5) * 13) + "px";        // escalonadas para leerlas
+    const name = el.id || dzLayerLabel(el);
+    card.innerHTML = `<span class="dz-zname">${name.slice(0, 12)}</span><span class="dz-zz">${z}</span>`;
+    card.title = name + " · z=" + z + " — arrastrá: izquierda acerca, derecha aleja";
+    card.onmousedown = (e) => {
+      e.preventDefault(); e.stopPropagation();
+      dzSnapshot();
+      const railR = rail.getBoundingClientRect();
+      const move = (ev) => {
+        const zNew = dzXToZ(ev.clientX - railR.left, W);
+        if (zNew === 0) el.removeAttribute("data-z");   // 0 = plano de acción, sin attr
+        else el.setAttribute("data-z", zNew);
+        card.style.left = dzZToX(zNew, W) + "px";
+        card.querySelector(".dz-zz").textContent = zNew;
+      };
+      const up = () => {
+        document.removeEventListener("mousemove", move);
+        document.removeEventListener("mouseup", up);
+        dzMarkDirty();
+        if (DZ.sel === el) dzBuildInspector(el);        // sincronizar el campo Z
+        dzSetStatus("🎭 «" + name.slice(0, 20) + "» a z=" + (el.getAttribute("data-z") || 0) +
+                    " — mové la cámara (📹) y mirá el parallax en ▶");
+      };
+      document.addEventListener("mousemove", move);
+      document.addEventListener("mouseup", up);
+    };
+    card.onclick = (e) => { e.stopPropagation(); if (!el.hasAttribute("data-locked")) dzSelect(el); };
+    rail.appendChild(card);
+  });
+}
+
+/* ══ CHROME DE ESTUDIO: menubar, barra de estado, opciones de herramienta,
+   splitter del inspector y X-sheet — la cara de software en serio ══ */
+const DZ_TOOL_NAMES = { select: "seleccionar", hand: "mano", nodes: "nodos",
+  pencil: "lápiz", brush: "pincel", pen: "pluma", eraser: "borrador",
+  dropper: "cuentagotas", bucket: "balde", pivot: "pivote de rig" };
+function dzMenuAction(act) {
+  const A = {
+    nuevo: () => api.new_design().then(r => { if (r && r.path) openDesign(r.path); }),
+    documento: dzDocModal, guardar: () => dzSave(), importar: dzImportImage,
+    exportar: dzExportModal, exportanim: dzExportModal,
+    navegador: () => { if (DZ.path) api.preview_html(DZ.path, $("#dzCanvas").innerHTML); },
+    cerrar: () => closeDesign(),
+    deshacer: dzUndo, rehacer: dzRedo, duplicar: dzDuplicate, borrar: dzDeleteSelected,
+    agrupar: () => dzGroupSel(false), desagrupar: () => dzGroupSel(true),
+    preferencias: dzPrefsModal, atajos: dzPrefsModal,
+    zoomin: () => dzZoom(0.15), zoomout: () => dzZoom(-0.15),
+    zoom100: () => dzRunAction("zoom100"), fit: dzFitView,
+    rotl: () => dzRotView(-15), rotr: () => dzRotView(15),
+    enderezar: () => { DZ.viewRot = 0; dzApplyZoom(); },
+    diorama: dzZPanelToggle, profundidad: dzZPanelToggle,
+    cebolla: () => { const p = $("#dzOnionPanel"); p.hidden = !p.hidden; },
+    xsheet: dzXsToggle, codigo: dzToggleCode,
+    alfrente: () => { if (!DZ.sel) return dzSetStatus("Seleccioná un elemento primero");
+      dzSnapshot(); DZ.sel.parentNode.appendChild(DZ.sel); dzMarkDirty(); dzBuildLayers(); },
+    atras: () => { if (!DZ.sel) return dzSetStatus("Seleccioná un elemento primero");
+      dzSnapshot(); DZ.sel.parentNode.insertBefore(DZ.sel, DZ.sel.parentNode.firstChild); dzMarkDirty(); dzBuildLayers(); },
+    bloquear: () => { if (!DZ.sel) return dzSetStatus("Seleccioná un elemento primero");
+      dzSnapshot();
+      if (DZ.sel.hasAttribute("data-locked")) DZ.sel.removeAttribute("data-locked");
+      else { DZ.sel.setAttribute("data-locked", "1"); const el = DZ.sel; dzDeselect(); }
+      dzMarkDirty(); dzBuildLayers(); },
+    renombrar: () => { if (!DZ.sel) return dzSetStatus("Seleccioná un elemento primero");
+      const name = prompt("Nombre de la capa:", DZ.sel.id || "");
+      if (name === null) return;
+      dzSnapshot();
+      const clean = name.trim().replace(/[^\w\-áéíóúñÁÉÍÓÚÑ]/g, "_");
+      if (clean) DZ.sel.id = clean; else DZ.sel.removeAttribute("id");
+      dzMarkDirty(); dzBuildLayers(); },
+    pivote: () => dzSetTool("pivot"),
+    timeline: dzAnimToggle, cuadro: dzFrameAdd, insertar: () => dzFrameInsert(false),
+    clave: dzKeyToggle, intercalar: dzTweenModal, interpolar: dzMoveTween,
+    grabar: dzRecToggle, claveia: dzAIKeyModal, camara: dzCamToggle, clavecam: dzCamKeyToggle,
+    acerca: () => {
+      openModal(`<h2>Fidel Estudio</h2>
+        <div class="sub">Editor de vectores y animación 2D con IA integrada, dentro de Fidel v${S.version || ""}.
+        Dibujo con presión, X-sheet, papel cebolla, cámara multiplano, rigging con pivotes,
+        intercalado automático y fotogramas clave generados por IA.<br><br>
+        Hecho por Mauro Gatti con Fidel — código abierto.</div>
+        <div class="m-actions"><button class="primary" id="mCancel">Cerrar</button></div>`);
+      $("#mCancel").onclick = closeModal;
+    },
+  };
+  if (A[act]) A[act]();
+}
+function dzMenubarWire() {
+  const menus = document.querySelectorAll("#dzMenubar .dz-menu");
+  const closeAll = () => menus.forEach(m => m.classList.remove("open"));
+  menus.forEach(m => {
+    m.addEventListener("mousedown", (e) => {
+      if (e.target.closest(".dz-dd")) return;
+      e.preventDefault();
+      const was = m.classList.contains("open");
+      closeAll();
+      if (!was) m.classList.add("open");
+    });
+    m.addEventListener("mouseenter", () => {
+      // si hay un menú abierto, pasar el mouse cambia de menú (comportamiento clásico)
+      if ([...menus].some(x => x.classList.contains("open"))) { closeAll(); m.classList.add("open"); }
+    });
+    m.querySelectorAll("[data-act]").forEach(item =>
+      item.addEventListener("mousedown", (e) => {
+        e.preventDefault(); e.stopPropagation();
+        closeAll();
+        dzMenuAction(item.dataset.act);
+      }));
+  });
+  document.addEventListener("mousedown", (e) => {
+    if (!e.target.closest || !e.target.closest("#dzMenubar")) closeAll();
+  });
+}
+/* barra de estado: herramienta · posición del cursor · zoom · cuadro · hint */
+function dzSbTool() {
+  const el = $("#sbTool");
+  if (el) el.textContent = DZ_TOOL_NAMES[DZ.tool || "select"] || DZ.tool;
+}
+function dzSbFrame() {
+  const el = $("#sbFrame");
+  if (!el) return;
+  el.textContent = DZ.anim ? `cuadro ${DZ.anim.idx + 1}/${DZ.anim.frames.length}` : "";
+}
+/* opciones contextuales de la herramienta activa (franja bajo la barra) */
+function dzToolOptsRender() {
+  const box = $("#dzToolOpts");
+  if (!box) return;
+  const t = DZ.tool || "select";
+  const sm = DZ.smooth === undefined ? 40 : DZ.smooth;
+  let html = `<span class="dz-to-name">${DZ_TOOL_NAMES[t] || t}</span>`;
+  if (["pencil", "brush", "pen"].includes(t)) {
+    html += `<label>Trazo <input type="color" id="toColor" value="${dzHex(DZ.drawColor) || "#1a1a1a"}"></label>
+      <label>Grosor <input type="number" id="toW" min="1" max="120" value="${DZ.drawW || 6}" class="dz-win"></label>` +
+      (t !== "pen" ? `<label>Suavizado <input type="range" id="toSmooth" min="0" max="100" value="${sm}"><span id="toSmoothLbl">${sm}</span></label>` : "") +
+      (t === "brush" ? `<span class="dz-hint">el grosor sigue la presión de la tableta</span>` : "") +
+      (DZ.mirror ? `<span class="dz-hint">🪞 espejo activo</span>` : "");
+  } else if (t === "bucket") {
+    html += `<label>Relleno <input type="color" id="toFill" value="${dzHex(DZ.fillColor) || "#E5322D"}"></label>
+      <span class="dz-hint">clic pinta el relleno · Shift+clic pinta el trazo</span>`;
+  } else if (t === "eraser") {
+    html += `<span class="dz-hint">pasá por encima y borra trazos enteros — las capas con candado no se tocan</span>`;
+  } else if (t === "nodes") {
+    html += `<span class="dz-hint">clic en un trazado muestra sus puntos · arrastralos · doble clic borra un punto</span>`;
+  } else if (t === "dropper") {
+    html += `<span class="dz-hint">clic en cualquier elemento toma su relleno, trazo y grosor</span>`;
+  } else if (t === "pivot") {
+    html += `<span class="dz-hint">clic fija el eje de rotación de la pieza (hombro, codo…) · Alt+clic lo quita</span>`;
+  } else if (t === "hand") {
+    html += `<span class="dz-hint">arrastrá para navegar · también espacio+arrastrar o botón del medio</span>`;
+  } else {
+    html += `<span class="dz-hint">clic selecciona · arrastrá mueve · Shift+clic suma a la selección · Alt+clic entra al grupo</span>`;
+  }
+  box.innerHTML = html;
+  const oc = $("#toColor"); if (oc) oc.oninput = e => { DZ.drawColor = e.target.value; const p = $("#dzPStroke"); if (p) p.value = e.target.value; };
+  const ow = $("#toW"); if (ow) ow.oninput = e => { DZ.drawW = +e.target.value || 6; const p = $("#dzDrawW"); if (p) p.value = DZ.drawW; };
+  const os = $("#toSmooth"); if (os) os.oninput = e => {
+    DZ.smooth = +e.target.value; $("#toSmoothLbl").textContent = e.target.value;
+    const p = $("#dzSmooth"); if (p) { p.value = e.target.value; $("#dzSmoothLbl").textContent = e.target.value; }
+    try { localStorage.setItem("fidel.dzsmooth", String(DZ.smooth)); } catch (err) { /* */ }
+  };
+  const of2 = $("#toFill"); if (of2) of2.oninput = e => { DZ.fillColor = e.target.value; const p = $("#dzPFill"); if (p) p.value = e.target.value; };
+}
+/* splitter: redimensionar el inspector arrastrando (persistente) */
+function dzSplitWire() {
+  const sp = $("#dzSplit"), insp = document.querySelector(".dz-inspector");
+  if (!sp || !insp) return;
+  const saved = +localStorage.getItem("fidel.dzinsw");
+  if (saved >= 200 && saved <= 520) insp.style.width = saved + "px";
+  sp.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    const move = (ev) => {
+      const w = Math.max(200, Math.min(520, window.innerWidth - ev.clientX));
+      insp.style.width = w + "px";
+    };
+    const up = () => {
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
+      try { localStorage.setItem("fidel.dzinsw", parseInt(insp.style.width) || 260); } catch (err) { /* */ }
+      dzPositionHandle();
+    };
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+  });
+}
+/* X-sheet: planilla de exposición vertical (número · nombre · claves) */
+function dzXsToggle() {
+  const p = $("#dzXsheet");
+  p.hidden = !p.hidden;
+  const b = $("#tlXs"); if (b) b.classList.toggle("active", !p.hidden);
+  if (!p.hidden) {
+    if (!DZ.anim) dzAnimToggle();
+    dzXsRender();
+  }
+}
+function dzXsRender() {
+  const box = $("#dzXsRows");
+  if (!box || $("#dzXsheet").hidden || !DZ.anim) return;
+  const keys = (DZ.scene && DZ.scene.keys) || [];
+  const cams = (DZ.scene && DZ.scene.cam) || {};
+  box.innerHTML = "";
+  DZ.anim.frames.forEach((f, i) => {
+    const num = dzFrameNum(f);
+    const row = document.createElement("div");
+    row.className = "dz-xs-row" + (i === DZ.anim.idx ? " cur" : "");
+    row.innerHTML = `<span class="dz-xs-n">${i + 1}</span>` +
+      `<span class="dz-xs-name">${f.split(/[\\/]/).pop().replace(".svg", "")}</span>` +
+      `<span class="dz-xs-b">${keys.includes(num) ? "🔑" : ""}${cams[num] ? "📹" : ""}</span>`;
+    row.onclick = () => { dzAnimStopIf(); dzGoFrame(i); };
+    box.appendChild(row);
+  });
+}
+
+/* ══ 🪞 modo espejo: lápiz/pincel/pluma dibujan también reflejados sobre el
+   eje vertical del lienzo — para personajes y diseños simétricos ══ */
+function dzMirrorToggle() {
+  DZ.mirror = !DZ.mirror;
+  const b = $("#dzMirror"); if (b) b.classList.toggle("active", DZ.mirror);
+  dzSetStatus(DZ.mirror ?
+    "🪞 Modo espejo ACTIVADO: cada trazo se duplica reflejado (eje vertical del lienzo)" :
+    "🪞 Modo espejo desactivado");
+}
+function dzMirrorClone(el) {
+  if (!DZ.mirror || !el || !el.parentNode) return null;
+  const vb = dzVB();
+  const c = el.cloneNode(true);
+  const own = el.getAttribute("transform") || "";
+  c.setAttribute("transform",
+    `translate(${(2 * (vb[0] + vb[2] / 2)).toFixed(1)} 0) scale(-1 1)` + (own ? " " + own : ""));
+  el.parentNode.insertBefore(c, el.nextSibling);
+  return c;
+}
+
 /* ── ✨ fotograma clave con IA: describís el movimiento, el modelo dibuja la pose ── */
 function dzAIKeyModal() {
   if (!DZ.anim) return;
@@ -3127,21 +4108,49 @@ function dzBuildLayers() {
   const svg = $("#dzCanvas").querySelector("svg");
   if (!svg) { box.innerHTML = ""; return; }
   const kids = [...svg.children].filter(n => !DZ_SKIP_TAGS.includes(n.tagName.toLowerCase())
-    && !(n.classList && n.classList.contains("dz-onion")));
+    && !(n.classList && (n.classList.contains("dz-onion") || n.classList.contains("dz-penui"))));
   if (!kids.length) { box.innerHTML = ""; return; }
-  box.innerHTML = '<div class="dz-layers-h">CAPAS <span class="dz-hint">(arriba = al frente)</span></div>';
+  box.innerHTML = '<div class="dz-layers-h">CAPAS <span class="dz-hint">arrastrá: reordena · Alt+soltar: emparenta (rig) · doble clic: renombra</span></div>';
   // en DOM el último dibuja arriba → mostramos al frente primero, como en Illustrator
   [...kids].reverse().forEach(el => {
     const row = document.createElement("div");
     row.className = "dz-layer" + (el === DZ.sel ? " sel" : "");
+    row.draggable = true;
+    // ojo 👁 mostrar/ocultar
     const eye = document.createElement("span");
     const hidden = el.getAttribute("display") === "none";
     eye.className = "dz-eye"; eye.textContent = hidden ? "◌" : "👁"; eye.title = hidden ? "Mostrar" : "Ocultar";
     eye.onclick = (e) => { e.stopPropagation(); dzSnapshot();
       hidden ? el.removeAttribute("display") : el.setAttribute("display", "none");
       dzMarkDirty(); dzBuildLayers(); };
+    // candado 🔒: bloquea selección/borrador/balde (no se toca sin querer)
+    const locked = el.hasAttribute("data-locked");
+    const lock = document.createElement("span");
+    lock.className = "dz-eye"; lock.textContent = locked ? "🔒" : "🔓";
+    lock.title = locked ? "Desbloquear" : "Bloquear (no se puede seleccionar ni borrar)";
+    lock.style.opacity = locked ? "1" : "0.45";
+    lock.onclick = (e) => { e.stopPropagation(); dzSnapshot();
+      if (locked) el.removeAttribute("data-locked"); else el.setAttribute("data-locked", "1");
+      if (locked === false && el === DZ.sel) dzDeselect();
+      dzMarkDirty(); dzBuildLayers(); };
+    // chip del color principal
+    const chip = document.createElement("span");
+    chip.className = "dz-chipcolor";
+    const f = el.getAttribute("fill"), st = el.getAttribute("stroke");
+    chip.style.background = (f && f !== "none" ? f : st && st !== "none" ? st : "transparent");
+    // nombre (id si tiene) — doble clic renombra
     const lbl = document.createElement("span");
-    lbl.className = "dz-layer-t"; lbl.textContent = dzLayerLabel(el);
+    lbl.className = "dz-layer-t";
+    lbl.textContent = el.id ? el.id : dzLayerLabel(el);
+    lbl.ondblclick = (e) => {
+      e.stopPropagation();
+      const name = prompt("Nombre de la capa (para vos y para el rig):", el.id || "");
+      if (name === null) return;
+      dzSnapshot();
+      const clean = name.trim().replace(/[^\w\-áéíóúñÁÉÍÓÚÑ]/g, "_");
+      if (clean) el.id = clean; else el.removeAttribute("id");
+      dzMarkDirty(); dzBuildLayers();
+    };
     const up = document.createElement("span");
     up.className = "dz-ord"; up.textContent = "▲"; up.title = "Traer al frente";
     up.onclick = (e) => { e.stopPropagation(); dzSnapshot();
@@ -3152,10 +4161,39 @@ function dzBuildLayers() {
     dn.onclick = (e) => { e.stopPropagation(); dzSnapshot();
       if (el.previousElementSibling) el.parentNode.insertBefore(el, el.previousElementSibling);
       dzMarkDirty(); dzBuildLayers(); dzPositionHandle(); };
-    row.appendChild(eye); row.appendChild(lbl); row.appendChild(up); row.appendChild(dn);
-    row.onclick = () => dzSelect(el);
+    row.appendChild(eye); row.appendChild(lock); row.appendChild(chip);
+    row.appendChild(lbl); row.appendChild(up); row.appendChild(dn);
+    row.onclick = () => { if (!el.hasAttribute("data-locked")) dzSelect(el); };
+    // drag & drop para reordenar (arriba en la lista = al frente en el dibujo)
+    row.ondragstart = (e) => { DZ.dragLayer = el; e.dataTransfer.effectAllowed = "move"; };
+    row.ondragover = (e) => { e.preventDefault(); row.classList.add("dz-dropover"); };
+    row.ondragleave = () => row.classList.remove("dz-dropover");
+    row.ondrop = (e) => {
+      e.preventDefault(); row.classList.remove("dz-dropover");
+      const src = DZ.dragLayer; DZ.dragLayer = null;
+      if (!src || src === el || el.contains(src) || src.contains(el)) return;
+      dzSnapshot();
+      if (e.altKey) {
+        // Alt+soltar = EMPARENTAR (rig cutout): src pasa a ser hijo de el.
+        // Si el destino no es un grupo, se envuelven los dos en uno nuevo.
+        if (el.tagName.toLowerCase() === "g") {
+          el.appendChild(src);
+          dzSetStatus("⧉ «" + (src.id || src.tagName) + "» ahora es parte de «" + (el.id || "grupo") + "» — rota y se mueve con él");
+        } else {
+          const g = document.createElementNS(SVGNS, "g");
+          el.parentNode.insertBefore(g, el);
+          g.appendChild(el); g.appendChild(src);
+          dzSetStatus("⧉ Grupo nuevo con ambos — nombralo con doble clic (Ctrl+Shift+G desagrupa)");
+        }
+      } else {
+        // soltar SOBRE una fila = quedar justo AL FRENTE de ese elemento
+        el.parentNode.insertBefore(src, el.nextSibling);
+      }
+      dzMarkDirty(); dzBuildLayers(); dzPositionHandle();
+    };
     box.appendChild(row);
   });
+  dzZPanelRender();   // el diorama refleja los cambios de capas al instante
 }
 
 /* ── alinear el elemento seleccionado respecto del lienzo (viewBox) ── */
@@ -3274,6 +4312,7 @@ function dzRedo() {
 function dzSerialize(svg) {
   const c = svg.cloneNode(true);
   c.querySelectorAll("g.dz-onion").forEach(n => n.remove());   // papel cebolla: solo UI
+  c.querySelectorAll("g.dz-penui").forEach(n => n.remove());   // guías de la pluma: solo UI
   c.querySelectorAll(".dz-sel").forEach(n => n.classList.remove("dz-sel"));
   c.querySelectorAll(".dz-msel").forEach(n => n.classList.remove("dz-msel"));
   c.querySelectorAll("[class='']").forEach(n => n.removeAttribute("class"));
@@ -3285,6 +4324,8 @@ function dzSerialize(svg) {
 /* ── chat del diseño: pedirle una corrección al agente sin salir del editor ── */
 function dzSetStatus(txt) {
   const el = $("#dzStatus");
+  const sb = $("#sbHint");
+  if (sb) sb.textContent = txt || "";
   if (!txt) { el.hidden = true; el.textContent = ""; return; }
   el.hidden = false; el.textContent = txt;
 }

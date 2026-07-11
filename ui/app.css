@@ -630,6 +630,147 @@ footer {
 .dz-node:hover { background: #2a7fff; }
 /* selección múltiple (Shift+clic) */
 .dz-msel { outline: 1.5px dashed #2a7fff; outline-offset: 2px; }
+/* campos de captura de atajo (⚙ Preferencias) */
+.dz-keycap {
+  width: 90px !important; text-align: center; cursor: pointer;
+  font: 600 12px 'JetBrains Mono', monospace; letter-spacing: 1px;
+}
+.dz-keycap:focus { outline: 2px solid var(--red); }
+/* panel 🧅 de papel cebolla: chico, flotante y arrastrable */
+.dz-onionpanel {
+  position: absolute; right: 290px; top: 56px; z-index: 8; width: 172px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0,0,0,.45); font-size: 11px; overflow: hidden;
+}
+.dz-onionpanel[hidden] { display: none; }
+.dz-op-head {
+  padding: 5px 9px; font: 600 11px Figtree, sans-serif; color: var(--txt);
+  background: var(--panel2); cursor: move; user-select: none;
+  display: flex; align-items: center; gap: 6px;
+}
+.dz-op-x { margin-left: auto; cursor: pointer; opacity: .6; font-size: 13px; }
+.dz-op-x:hover { opacity: 1; color: var(--red); }
+.dz-op-row {
+  display: flex; align-items: center; gap: 6px; padding: 4px 9px; color: var(--mut);
+}
+.dz-op-row span { width: 52px; flex: none; }
+.dz-op-row input[type=number] { width: 44px; background: var(--panel2); color: var(--txt);
+  border: 1px solid var(--line); border-radius: 6px; padding: 2px 4px; }
+.dz-op-row input[type=color] { width: 24px; height: 20px; padding: 1px;
+  border: 1px solid var(--line); border-radius: 5px; background: var(--panel2); cursor: pointer; }
+.dz-op-row input[type=range] { flex: 1; accent-color: var(--red); }
+/* marcador de pivote de rig (📌) */
+.dz-pivotmark {
+  position: absolute; z-index: 6; transform: translate(-50%, -50%);
+  color: #f5a623; font-size: 17px; font-weight: 700; pointer-events: none;
+  text-shadow: 0 0 3px #000, 0 0 6px #000;
+}
+.dz-pivotmark[hidden] { display: none; }
+/* capas v2: chip de color + zona de drop */
+.dz-chipcolor {
+  width: 12px; height: 12px; border-radius: 3px; flex: none;
+  border: 1px solid var(--line);
+}
+.dz-layer.dz-dropover { outline: 1.5px dashed var(--red); outline-offset: -2px; }
+/* botones armados/grabando (🏃 esperando final, ⏺ grabación) */
+.ibtn.rec { background: var(--red); color: #fff; animation: dz-pulse 1.1s infinite; }
+@keyframes dz-pulse { 50% { opacity: .55; } }
+/* ── chrome de estudio: menubar, statusbar, splitter, tool-opts, x-sheet ── */
+.ico .fill { fill: currentColor; stroke: none; }
+.dz-menubar {
+  flex: none; display: flex; align-items: center; gap: 2px;
+  background: var(--panel2); border-bottom: 1px solid var(--line);
+  padding: 0 10px; height: 28px; user-select: none;
+}
+.dz-mb-brand { font: 700 11px Figtree, sans-serif; color: var(--mut); margin-right: 10px; letter-spacing: .4px; }
+.dz-menu {
+  position: relative; padding: 5px 10px; font: 500 12px Figtree, sans-serif;
+  color: var(--txt); cursor: default; border-radius: 6px 6px 0 0;
+}
+.dz-menu:hover, .dz-menu.open { background: var(--panel); }
+.dz-dd {
+  display: none; position: absolute; left: 0; top: 100%; z-index: 40; min-width: 230px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 0 8px 8px 8px;
+  box-shadow: 0 10px 34px rgba(0,0,0,.5); padding: 5px;
+}
+.dz-menu.open .dz-dd { display: block; }
+.dz-dd span {
+  display: flex; align-items: center; justify-content: space-between; gap: 18px;
+  padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap;
+}
+.dz-dd span:hover { background: var(--panel2); color: #fff; }
+.dz-dd kbd {
+  font: 500 10px 'JetBrains Mono', monospace; color: var(--mut);
+  background: none; border: none; padding: 0;
+}
+.dz-dd hr { border: none; border-top: 1px solid var(--line); margin: 4px 6px; }
+/* franja de opciones de la herramienta activa */
+.dz-toolopts {
+  flex: none; display: flex; align-items: center; gap: 14px; height: 30px;
+  padding: 0 12px; background: var(--panel); border-bottom: 1px solid var(--line);
+  font-size: 11.5px; color: var(--mut);
+}
+.dz-toolopts .dz-to-name { font-weight: 700; color: var(--txt); text-transform: capitalize; min-width: 80px; }
+.dz-toolopts label { display: flex; align-items: center; gap: 6px; }
+.dz-toolopts input[type=color] { width: 26px; height: 20px; padding: 1px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel2); cursor: pointer; }
+.dz-toolopts input[type=range] { width: 110px; accent-color: var(--red); }
+/* barra de estado */
+.dz-statusbar {
+  flex: none; display: flex; align-items: center; gap: 0; height: 22px;
+  background: var(--panel2); border-top: 1px solid var(--line);
+  font: 500 10.5px 'JetBrains Mono', monospace; color: var(--mut);
+}
+.dz-statusbar > span { padding: 0 12px; border-right: 1px solid var(--line); line-height: 21px; white-space: nowrap; }
+.dz-statusbar .dz-sb-hint { border-right: none; flex: 1; overflow: hidden; text-overflow: ellipsis; font-family: Figtree, sans-serif; }
+/* splitter del inspector */
+.dz-split { flex: none; width: 5px; cursor: col-resize; background: transparent; }
+.dz-split:hover { background: var(--red); opacity: .5; }
+/* X-sheet flotante: planilla de exposición vertical */
+.dz-xsheet {
+  position: absolute; left: 60px; top: 56px; z-index: 8; width: 210px; max-height: 60%;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0,0,0,.45); overflow: hidden; display: flex; flex-direction: column;
+}
+.dz-xsheet[hidden] { display: none; }
+.dz-xs-rows { overflow-y: auto; padding: 4px; }
+.dz-xs-row {
+  display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 6px;
+  font-size: 11px; color: var(--mut); cursor: pointer;
+}
+.dz-xs-row:hover { background: var(--panel2); color: var(--txt); }
+.dz-xs-row.cur { background: var(--red); color: #fff; }
+.dz-xs-n { font: 700 10.5px 'JetBrains Mono', monospace; min-width: 20px; text-align: right; }
+.dz-xs-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dz-xs-b { flex: none; font-size: 10px; }
+/* 🎭 diorama: vista lateral del multiplano — compositing sin nodos */
+.dz-zpanel {
+  position: absolute; left: 60px; bottom: 120px; z-index: 8; width: 340px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0,0,0,.45); overflow: hidden;
+}
+.dz-zpanel[hidden] { display: none; }
+.dz-zstage {
+  position: relative; height: 86px; margin: 8px;
+  background: linear-gradient(90deg, rgba(245,166,35,.10), transparent 30%);
+  border: 1px solid var(--line); border-radius: 8px; display: flex; align-items: center;
+}
+.dz-zcam { flex: none; font-size: 17px; padding: 0 5px; filter: drop-shadow(0 0 4px rgba(245,166,35,.6)); }
+.dz-zrail { position: relative; flex: 1; height: 100%; }
+.dz-zaction {
+  position: absolute; top: 0; bottom: 0; width: 0;
+  border-left: 1.5px dashed var(--red); opacity: .55;
+}
+.dz-zcard {
+  position: absolute; transform: translateX(-50%); cursor: ew-resize;
+  background: var(--panel2); border: 1px solid var(--line); border-radius: 5px;
+  padding: 1px 6px; font: 600 10px Figtree, sans-serif; color: var(--txt);
+  white-space: nowrap; display: flex; gap: 5px; align-items: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,.4); user-select: none;
+}
+.dz-zcard:hover { border-color: var(--mut); }
+.dz-zcard.sel { border-color: var(--red); box-shadow: 0 0 0 1px var(--red); }
+.dz-zz { color: var(--mut); font-family: 'JetBrains Mono', monospace; font-size: 9.5px; }
+.dz-zhint { padding: 0 10px 8px; font-size: 10px; color: var(--mut); text-align: center; line-height: 1.5; }
 /* panel de código SVG (open code design) */
 .dz-code { width: 42%; flex: none; display: flex; flex-direction: column; border-left: 1px solid var(--line); background: var(--bg); }
 .dz-code[hidden] { display: none; }
@@ -638,8 +779,10 @@ footer {
   font: 400 12px/1.5 'JetBrains Mono', monospace; padding: 12px;
 }
 .dz-code-bar { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-top: 1px solid var(--line); }
-/* elemento seleccionable / seleccionado */
-.dz-canvas svg * { cursor: pointer; }
+/* cursor por herramienta: la manito SOLO con la flecha de selección —
+   con lápiz/pincel/pluma/etc los hijos heredan el cursor de la herramienta */
+.dz-canvas svg * { cursor: inherit; }
+.dz-canvas[data-tool="select"] svg * { cursor: pointer; }
 .dz-sel { outline: 1.5px dashed var(--red); outline-offset: 2px; }
 .dz-inspector {
   width: 260px; flex: none; background: var(--panel); border-left: 1px solid var(--line);
