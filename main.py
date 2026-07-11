@@ -41,7 +41,7 @@ ASSET_EXT = {".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp",
 LANG_BY_EXT = {".py": "python", ".js": "javascript", ".ts": "javascript",
                ".sh": "bash", ".ps1": "powershell"}
 
-FIDEL_VERSION = "2.16.0"
+FIDEL_VERSION = "2.17.0"
 
 # Desafío por defecto del comparador: verificable automáticamente
 DEFAULT_TASK = ("Escribe un programa Python que imprima los primeros 10 numeros "
@@ -60,6 +60,20 @@ DEFAULT_SP = ("Eres Fidel, programador senior. Tienes HERRAMIENTAS: read_file, "
               "sobre el cuadro anterior (nunca generes de cero cada plano); 3) anima un "
               "cuadro con animate_image describiendo el movimiento (camara y accion); "
               "4) generate_video solo cuando no haya cuadro de referencia. "
+              "PERSONAJES — REGLA DE ORO (el error tipico es que el personaje CAMBIE de "
+              "aspecto entre imagenes/videos; evitalo siempre asi): 1) apenas exista un "
+              "personaje (o el usuario apruebe un diseno), guarda su hoja de modelo con "
+              "save_character: descripcion COMPLETA en ingles (cara, cuerpo, proporciones, "
+              "colores EXACTOS, ropa, estilo de dibujo) — se inyecta sola en los prompts "
+              "que lo nombren; 2) nombra SIEMPRE al personaje por su nombre en los prompts "
+              "de generacion; 3) para un plano nuevo del mismo personaje usa edit_image "
+              "sobre una imagen YA aprobada de el ('same character, new pose: ...') — "
+              "NUNCA generate_image de cero, que inventa otro diseno; 4) para video usa "
+              "animate_image partiendo de un cuadro del personaje (la imagen ancla el "
+              "diseno) — generate_video de texto pierde el personaje; 5) si el personaje "
+              "salio mal en una generacion, NO avances: regenerala hasta que coincida con "
+              "la ficha. En SVG: reutiliza los mismos paths del personaje entre cuadros, "
+              "cambiando solo posiciones/transform. "
               "Para documentos de texto (informes, cartas, presupuestos) usa write_doc: "
               "crea un .docx real que se abre en Word. "
               "Tenes INTERNET: si necesitas info actual, documentacion, precios o algo que no sabes, "
@@ -314,6 +328,75 @@ class Api:
             # defensa amplia a propósito: aprender NUNCA debe romper un turno exitoso
             log(f"learn_skill fallo: {e}")
         return None
+
+    # ── Fichas de personaje (hojas de modelo): la referencia canónica ──
+    # El "drift" de personaje (que cambie de cara/ropa/proporciones entre
+    # imágenes o videos) se corta con una FICHA fija que viaja en cada prompt
+    # de generación. Viven en .fidel/personajes.json del workspace.
+    def _chars_file(s):
+        if not s.ws:
+            return None
+        return Path(s.ws) / ".fidel" / "personajes.json"
+
+    def _load_characters(s):
+        f = s._chars_file()
+        if not f or not f.exists():
+            return []
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+            return data if isinstance(data, list) else []
+        except (OSError, ValueError):
+            return []
+
+    def characters(s):
+        """Para el frontend: fichas de personaje del proyecto."""
+        return s._load_characters()
+
+    def save_character(s, name, desc):
+        name, desc = (name or "").strip(), (desc or "").strip()
+        if not name or not desc:
+            return "❌ Falta el nombre o la descripción del personaje"
+        f = s._chars_file()
+        if not f:
+            return "❌ No hay proyecto abierto"
+        chars = [c for c in s._load_characters()
+                 if c.get("name", "").lower() != name.lower()]
+        chars.append({"name": name[:60], "desc": desc[:1200],
+                      "ts": datetime.datetime.now().isoformat()})
+        try:
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text(json.dumps(chars[-20:], ensure_ascii=False, indent=1),
+                         encoding="utf-8")
+        except OSError as e:
+            return f"❌ {e}"
+        s._push("sys", f"👤 Ficha de personaje guardada: {name}")
+        return (f"✅ Ficha de «{name}» guardada — se va a inyectar en TODOS los prompts "
+                "de imagen/video que lo mencionen, para que no cambie entre generaciones")
+
+    def delete_character(s, name):
+        chars = [c for c in s._load_characters()
+                 if c.get("name", "").lower() != (name or "").lower()]
+        f = s._chars_file()
+        if f:
+            try:
+                f.write_text(json.dumps(chars, ensure_ascii=False, indent=1),
+                             encoding="utf-8")
+            except OSError:
+                pass
+        return {"characters": chars}
+
+    def _chars_for_prompt(s, prompt):
+        """Fichas cuyos nombres aparecen en el prompt (o todas si hay una sola
+        y el pedido menciona 'personaje'). Es el ancla anti-drift."""
+        chars = s._load_characters()
+        if not chars:
+            return []
+        low = (prompt or "").lower()
+        hit = [c for c in chars if c.get("name", "").lower() in low]
+        if not hit and len(chars) == 1 and any(
+                w in low for w in ("personaje", "protagonista", "character", "él", "ella")):
+            hit = chars
+        return hit
 
     # ── Memoria del proyecto: hechos durables por workspace ────────
     # Vive en .fidel/memoria.md DENTRO del proyecto (portable, editable, versionable
@@ -801,21 +884,31 @@ class Api:
             src = p.read_text(encoding="utf-8", errors="replace")[:14000]
         except OSError as e:
             return {"error": str(e)}
+        chars = s._load_characters()
+        sheet = ("\nFICHAS DE PERSONAJE (canónicas, NO se negocian):\n" +
+                 "\n".join(f"- {c['name']}: {c['desc']}" for c in chars) + "\n"
+                 if chars else "")
         try:
             r = s.prov.chat(
                 [{"role": "user", "content":
                   "Este SVG es un FOTOGRAMA de una animación 2D cuadro a cuadro:\n\n" + src +
                   "\n\nDibujá el SIGUIENTE FOTOGRAMA CLAVE de la animación según esta "
                   "indicación del animador: «" + (prompt or "continuá el movimiento natural") + "».\n"
-                  "Reglas de animación:\n"
-                  "- Mantené EXACTAMENTE el mismo viewBox, fondo y estilo visual.\n"
-                  "- Mantené la misma cantidad, orden y tipo de elementos siempre que puedas "
-                  "(mové/deformá los existentes en vez de crear otros): así el intercalado "
+                  + sheet +
+                  "Reglas de animación (respetalas TODAS):\n"
+                  "- REUTILIZÁ los elementos existentes: COPIÁ cada path/forma del personaje "
+                  "tal cual está y modificá SOLO las coordenadas/transform de las partes que "
+                  "se mueven. NO redibujes el personaje de cero.\n"
+                  "- PROHIBIDO cambiar del personaje: colores (ni un hex), proporciones, "
+                  "grosores de trazo, cantidad de elementos, orden de capas, estilo. Un "
+                  "espectador tiene que jurar que es EL MISMO personaje en otra pose.\n"
+                  "- Mantené EXACTAMENTE el mismo viewBox y el fondo idéntico.\n"
+                  "- Mantené la misma cantidad, orden y tipo de elementos: así el intercalado "
                   "automático entre claves funciona.\n"
                   "- El cambio debe leerse como UNA pose nueva clara (pose-a-pose), no un ajuste sutil.\n"
                   "Respondé SOLO con el código SVG completo del cuadro nuevo, sin markdown."}],
-                system_prompt="Sos un animador 2D senior (flujo pose a pose estilo Toon Boom/OpenToonz). Respondés únicamente con SVG válido.",
-                temperature=0.7, max_tokens=8000)
+                system_prompt="Sos un animador 2D senior (flujo pose a pose estilo Toon Boom/OpenToonz). Tu regla de oro es LA CONSISTENCIA DEL PERSONAJE: mismo diseño exacto en cada cuadro, solo cambia la pose. Respondés únicamente con SVG válido.",
+                temperature=0.5, max_tokens=8000)
         except Exception as e:
             return {"error": f"el modelo falló: {e}"}
         m = re.search(r"<svg.*?</svg>", r.content or "", re.DOTALL)
@@ -1234,6 +1327,7 @@ class Api:
             {"type": "function", "function": {"name": "scp_upload", "description": "Sube un archivo o carpeta local a un servidor remoto por scp. 'host' = alias guardado o usuario@ip.", "parameters": {"type": "object", "properties": {"host": {"type": "string"}, "local": {"type": "string", "description": "ruta local (relativa al workspace o absoluta)"}, "remote": {"type": "string", "description": "ruta destino en el servidor"}}, "required": ["host", "local", "remote"]}}},
             {"type": "function", "function": {"name": "generate_image", "description": "Genera una imagen a partir de una descripcion (DALL-E de OpenAI, o SiliconFlow si no hay key de OpenAI) y la guarda en el workspace. Requiere API key de OpenAI o SiliconFlow cargada en Configuracion.", "parameters": {"type": "object", "properties": {"prompt": {"type": "string", "description": "descripcion de la imagen a generar, en ingles da mejor resultado"}, "path": {"type": "string", "description": "ruta donde guardarla dentro del workspace, ej assets/logo.png. Si se omite usa assets/img_<fecha>.png"}, "size": {"type": "string", "description": "tamano, ej 1024x1024 (default) — no todos los tamanos existen en todos los proveedores"}}, "required": ["prompt"]}}},
             {"type": "function", "function": {"name": "remember", "description": "Guarda un HECHO DURABLE de ESTE proyecto en la memoria del workspace (.fidel/memoria.md) para tenerlo en futuras sesiones: stack y versiones, comandos de build/test/deploy, servidores y rutas, convenciones de código, decisiones tomadas. Usalo cuando descubras algo del proyecto que valga la pena recordar. NO lo uses para cosas triviales o de un solo uso.", "parameters": {"type": "object", "properties": {"note": {"type": "string", "description": "el hecho a recordar, en una frase concreta"}}, "required": ["note"]}}},
+            {"type": "function", "function": {"name": "save_character", "description": "Guarda la FICHA DE PERSONAJE (hoja de modelo) del proyecto. La ficha se inyecta AUTOMATICAMENTE en todos los prompts de generate_image/edit_image/animate_image/generate_video que mencionen al personaje — es el ancla para que NO cambie de aspecto entre imagenes y videos. Usala apenas se defina un personaje (o cuando el usuario apruebe un diseno) y actualizala si el diseno evoluciona. La descripcion en INGLES da mejor resultado con los modelos generativos.", "parameters": {"type": "object", "properties": {"name": {"type": "string", "description": "nombre corto del personaje, ej 'Rita'"}, "description": {"type": "string", "description": "hoja de modelo COMPLETA y concreta en ingles: especie/edad, forma de cara y cuerpo, proporciones (ej 'large round head, small body, 3-heads tall'), pelo, ojos, piel/pelaje con COLORES EXACTOS (hex si aplica), ropa detallada, accesorios, estilo de dibujo (ej 'flat vector, thick outlines'). Todo lo que no quieras que cambie."}}, "required": ["name", "description"]}}},
             {"type": "function", "function": {"name": "check_design", "description": "VE un archivo .svg: lo rasteriza y lo revisa con un modelo de visión, devolviendo qué está visualmente mal o mejorable (proporciones, alineación, elementos fuera del lienzo, texto desbordado, colores). Usalo DESPUÉS de escribir un SVG para no dibujar a ciegas — corregí según la devolución y volvé a chequear.", "parameters": {"type": "object", "properties": {"path": {"type": "string", "description": "ruta al .svg a revisar"}}, "required": ["path"]}}},
             {"type": "function", "function": {"name": "social_export", "description": "Genera versiones de una imagen/diseño (png/jpg/svg) en el TAMAÑO EXACTO de cada red social, con recorte centrado, y las guarda en social/. Plataformas: instagram_post (1080x1080), instagram_story (1080x1920), facebook_post (1200x630), x_post (1600x900), linkedin_post (1200x627), tiktok, youtube_thumbnail, pinterest, whatsapp_status; o alias instagram/facebook/x/linkedin/youtube; o 'all'. El COPY y los hashtags escribilos vos aparte en social/post.md.", "parameters": {"type": "object", "properties": {"image": {"type": "string", "description": "ruta a la imagen/diseño fuente"}, "platforms": {"type": "array", "items": {"type": "string"}, "description": "lista de plataformas o formatos; default ['all']"}}, "required": ["image"]}}},
             {"type": "function", "function": {"name": "write_doc", "description": "Crea un DOCUMENTO Word (.docx) real, que se abre en Word/LibreOffice/Google Docs. El contenido va en markdown simple: # titulo, ## subtitulo, - viñetas, **negrita**, y párrafos separados por línea en blanco. Usalo cuando pidan un documento de texto, informe, carta, presupuesto, etc.", "parameters": {"type": "object", "properties": {"path": {"type": "string", "description": "ruta destino, ej docs/informe.docx"}, "content": {"type": "string", "description": "contenido en markdown simple"}}, "required": ["path", "content"]}}},
@@ -1501,6 +1595,9 @@ class Api:
                     except (OSError, UnicodeDecodeError):
                         pass
                 return "\n".join(hits) or f"(sin coincidencias para «{q}»)"
+            if name == "save_character":
+                return s.save_character(args.get("name", ""),
+                                        args.get("description") or args.get("desc") or "")
             if name == "generate_image":
                 prompt = (args.get("prompt") or "").strip()
                 if not prompt:
@@ -1654,12 +1751,17 @@ class Api:
     def _enhance_gen_prompt(s, prompt, kind="imagen"):
         """Los modelos generativos (FLUX/Qwen/Wan) son chinos y entienden MUCHO
         mejor un prompt detallado en inglés que un pedido suelto en español.
-        Reescribe el pedido preservando toda la intención de estilo. Desactivable
+        Reescribe el pedido preservando toda la intención de estilo. Si el pedido
+        menciona un personaje con FICHA guardada, la ficha viaja en el prompt
+        (anti-drift: mismo personaje en todas las generaciones). Desactivable
         con agent.enhance_prompts=false. Si falla, usa el original."""
-        if not s.cfg.data.get("agent", {}).get("enhance_prompts", True):
-            return prompt
-        if not s.prov or len(prompt) > 900:
-            return prompt
+        chars = s._chars_for_prompt(prompt)
+        sheet = "\n".join(f"- {c['name']}: {c['desc']}" for c in chars)
+        if not s.cfg.data.get("agent", {}).get("enhance_prompts", True) \
+                or not s.prov or len(prompt) > 900:
+            # sin enhancer igual anclamos el personaje, pegando la ficha al final
+            return prompt + (f"\n\nCharacter reference (MUST match exactly): {sheet}"
+                             if sheet else "")
         try:
             r = s.prov.chat(
                 [{"role": "user", "content":
@@ -1668,17 +1770,25 @@ class Api:
                   "models. Include: subject, art style, lighting, composition, colors"
                   + (", camera movement and motion" if "video" in kind else "") +
                   ". PRESERVE every stylistic intent of the original. "
+                  + ("These CHARACTER MODEL SHEETS are canonical and NON-NEGOTIABLE: "
+                     "the rewritten prompt MUST describe each character EXACTLY as their "
+                     "sheet says (same face, hair, colors, clothing, proportions, style) "
+                     "— never invent or alter their features:\n" + sheet + "\n"
+                     if sheet else "") +
                   "Reply ONLY with the prompt, no quotes.\n\n"
                   f"Request (Spanish): {prompt}"}],
                 system_prompt="You write world-class generation prompts for diffusion and video models.",
-                temperature=0.4, max_tokens=280)
+                temperature=0.4, max_tokens=280 + (220 if sheet else 0))
             out = re.sub(r"<think>.*?</think>", "", r.content or "", flags=re.DOTALL).strip().strip('"')
-            if 15 < len(out) < 1500:
-                s._push("sys", f"🈯 Prompt optimizado ({kind}): {out[:150]}…")
+            if 15 < len(out) < 2200:
+                s._push("sys", f"🈯 Prompt optimizado ({kind})"
+                        + (f" con ficha de {', '.join(c['name'] for c in chars)} 👤" if chars else "")
+                        + f": {out[:130]}…")
                 return out
         except Exception as e:
             log(f"enhance_prompt falló: {e}")
-        return prompt
+        return prompt + (f"\n\nCharacter reference (MUST match exactly): {sheet}"
+                         if sheet else "")
 
     # ── video (Wan 2.2 en SiliconFlow): texto→video y IMAGEN→video (animar) ──
     VIDEO_T2V = "Wan-AI/Wan2.2-T2V-A14B"
@@ -2537,6 +2647,13 @@ class Api:
             if pmem:
                 sp += ("\n\nMEMORIA DE ESTE PROYECTO (contexto persistente, tenelo en cuenta):\n"
                        + pmem[:3000])
+            # Fichas de personaje: el agente las conoce SIEMPRE (para nombrarlos en
+            # los prompts, actualizarlas si el diseño evoluciona y no redibujarlos)
+            pchars = s._load_characters()
+            if pchars:
+                sp += ("\n\nPERSONAJES DEL PROYECTO (hojas de modelo canónicas — su aspecto "
+                       "NO cambia jamás entre generaciones; nombralos en cada prompt):\n"
+                       + "\n".join(f"• {c['name']}: {c['desc'][:400]}" for c in pchars[-8:]))
             # imagen adjunta (visión): arma el content multimodal formato OpenAI
             # ({"type":"image_url",...}); cada provider lo traduce si hace falta
             # (ver _msgs_to_anthropic). No se guarda en la memoria del turno para
