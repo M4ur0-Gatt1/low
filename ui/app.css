@@ -988,3 +988,8 @@ footer {
   border-radius: 8px; padding: 5px 11px; font: 600 11px 'Figtree', sans-serif; cursor: pointer;
 }
 .dz-zen-exit:hover { color: var(--txt); border-color: var(--red); }
+
+/* 🎥 actuación (titiritero digital) */
+.dz-perf-sep { border-top: 1px solid var(--line); padding-top: 8px; margin-top: 4px; }
+#perfRec.rec { color: #fff; background: #E5322D; border-color: #E5322D; animation: perf-blink 1s ease-in-out infinite; }
+@keyframes perf-blink { 0%,100% { opacity: 1; } 50% { opacity: .55; } }

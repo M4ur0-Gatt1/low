@@ -682,6 +682,10 @@ function bind() {
   $("#rigDel").onclick = () => {
     if (DZ.sel && DZ.sel.id) dzRigDelKey(DZ.sel.id, dzRigCur());
   };
+  $("#perfRec").onclick = dzPerfRec;
+  $("#perfPlay").onclick = dzPerfPlay;
+  $("#perfSmooth").onclick = dzPerfSmooth;
+  $("#perfBake").onclick = dzPerfBake;
   $("#dzAddRect").onclick = () => dzAddShape("rect");
   $("#dzAddCircle").onclick = () => dzAddShape("circle");
   $("#dzAddEllipse").onclick = () => dzAddShape("ellipse");
@@ -2112,9 +2116,18 @@ function dzPointerDown(e) {
   const pack = (DZ.multi.length > 1 && DZ.multi.includes(el)) ? DZ.multi : [el];
   const bases = pack.map(n => ({ n, base: dzReadPos(n) }));
   let moved = false;
-  // ◆ modo rig + pieza con nombre: el arrastre POSA (clave), no toca el dibujo
-  const rigDrag = (DZ.rigMode && pack.length === 1 && el.id)
-    ? { id: el.id, k0: dzRigAt(el.id, dzRigCur()) || { x: 0, y: 0, r: 0, s: 1 } } : null;
+  // ◆ modo rig + pieza con nombre: el arrastre POSA (clave), no toca el dibujo.
+  // Grabando (🎥): el arrastre ES la actuación — se muestrea con su tiempo real.
+  let rigDrag = null;
+  if (DZ.rigMode && pack.length === 1 && el.id) {
+    const recNow = DZ.perf && DZ.perf.rec;
+    const num = recNow ? 1 + (performance.now() - recNow.t0) / 1000 * recNow.fps : dzRigCur();
+    const pv = dzRigPivotOf(el);
+    rigDrag = { id: el.id, pv,
+                k0: dzRigAt(el.id, num) || { x: 0, y: 0, r: 0, s: 1 },
+                a0: Math.atan2(start.y - pv.y, start.x - pv.x) };
+    if (recNow) { recNow.active = el.id; recNow.take[el.id] = recNow.take[el.id] || []; }
+  }
   // ⏺ grabación armada: este arrastre ES la actuación — muestrear el gesto
   let rec = null;
   if (DZ.rec && DZ.rec.armed) {
@@ -2131,8 +2144,18 @@ function dzPointerDown(e) {
     if (!moved && !rigDrag) dzSnapshot();              // primer movimiento real
     moved = true;
     if (rigDrag) {
-      dzRigApplyTo(el, { ...rigDrag.k0, x: rigDrag.k0.x + dx, y: rigDrag.k0.y + dy });
-      rigDrag.last = [dx, dy];
+      let pose;
+      if (ev.shiftKey) {                       // bastón del títere: rotar desde el pivote
+        const a = Math.atan2(p.y - rigDrag.pv.y, p.x - rigDrag.pv.x);
+        pose = { ...rigDrag.k0, r: (rigDrag.k0.r || 0) + (a - rigDrag.a0) * 180 / Math.PI };
+      } else {
+        pose = { ...rigDrag.k0, x: rigDrag.k0.x + dx, y: rigDrag.k0.y + dy };
+      }
+      dzRigApplyTo(el, pose);
+      rigDrag.pose = pose;
+      const rec = DZ.perf && DZ.perf.rec;
+      if (rec) rec.take[rigDrag.id].push({ t: (performance.now() - rec.t0) / 1000,
+                                           x: pose.x, y: pose.y, r: pose.r || 0, s: pose.s });
     } else {
       bases.forEach(b => dzWritePos(b.n, b.base, dx, dy));
     }
@@ -2142,10 +2165,11 @@ function dzPointerDown(e) {
   const up = () => {
     document.removeEventListener("mousemove", move);
     document.removeEventListener("mouseup", up);
-    if (moved && rigDrag && rigDrag.last) {
-      dzRigSetKey(rigDrag.id, dzRigCur(),
-        { ...rigDrag.k0, x: rigDrag.k0.x + rigDrag.last[0], y: rigDrag.k0.y + rigDrag.last[1] });
-      dzSetStatus("◆ pose clavada en el cuadro " + dzRigCur() + " (arrastre = posar)");
+    if (rigDrag && DZ.perf && DZ.perf.rec) {
+      DZ.perf.rec.active = null;               // la pieza vuelve al replay de su pista
+    } else if (moved && rigDrag && rigDrag.pose) {
+      dzRigSetKey(rigDrag.id, dzRigCur(), rigDrag.pose);
+      dzSetStatus("◆ pose clavada en el cuadro " + dzRigCur() + " (Shift al arrastrar = rotar)");
     }
     if (moved) { dzBuildInspector(el); if (!rigDrag) dzMarkDirty(); }
     if (rec && moved) dzRecFinish(rec);
@@ -3887,6 +3911,139 @@ function dzRigToggle() {
   } else {
     dzRigStrip($("#dzCanvas").querySelector("svg"));
   }
+}
+
+
+/* ══ 🎥 ACTUACIÓN — titiritero digital (Momo/motion-sketch) ═══════════════
+   Marcás el lapso, ⏺, y ACTUÁS el movimiento arrastrando la pieza en vivo
+   (Shift = rotarla desde su pivote, como el bastón del títere). Las pasadas
+   anteriores SE REPRODUCEN mientras grabás la nueva — animación por capas,
+   una pieza por toma. Al cortar, la actuación se vuelve claves de rig. */
+function dzPerfFps() { return Math.max(1, Math.min(60, +($("#tlFps") && $("#tlFps").value) || 12)); }
+function dzPerfDur() { return Math.max(0.5, Math.min(30, +($("#perfDur") && $("#perfDur").value) || 3)); }
+
+function dzPerfRec() {
+  if (DZ.perf && DZ.perf.rec) { dzPerfRecEnd(true); return; }   // cortar antes
+  if (!DZ.rigMode) return dzSetStatus("🎥 Activá el modo rig (◆) primero");
+  if (!DZ.scene) DZ.scene = {};
+  let n = 3;
+  $("#perfRec").classList.add("rec");
+  dzSetStatus("🎥 " + n + "…");
+  const cd = setInterval(() => {
+    n--;
+    if (n > 0) { dzSetStatus("🎥 " + n + "…"); return; }
+    clearInterval(cd);
+    const dur = dzPerfDur(), fps = dzPerfFps();
+    DZ.perf = { rec: { t0: performance.now(), dur, fps, take: {}, active: null } };
+    const loop = () => {
+      if (!DZ.perf || !DZ.perf.rec) return;
+      const t = (performance.now() - DZ.perf.rec.t0) / 1000;
+      if (t >= dur) { dzPerfRecEnd(); return; }
+      // replay de las pistas ya grabadas (menos la pieza que estás actuando)
+      const num = 1 + t * fps;
+      const svg = $("#dzCanvas").querySelector("svg");
+      const rig = (DZ.scene || {}).rig || {};
+      for (const id of Object.keys(rig)) {
+        if (id === DZ.perf.rec.active) continue;
+        const el2 = svg && svg.querySelector('[id="' + id.replace(/"/g, '') + '"]');
+        const k = el2 && dzRigAt(id, num);
+        if (k) dzRigApplyTo(el2, k);
+      }
+      dzSetStatus("⏺ " + t.toFixed(1) + " / " + dur + "s — ¡actuá! (arrastrá la pieza · Shift rota)");
+      DZ.perf.rec.raf = requestAnimationFrame(loop);
+    };
+    DZ.perf.rec.raf = requestAnimationFrame(loop);
+  }, 700);
+}
+function dzPerfRecEnd(early) {
+  const rec = DZ.perf && DZ.perf.rec;
+  if (!rec) return;
+  cancelAnimationFrame(rec.raf);
+  DZ.perf = null;
+  $("#perfRec").classList.remove("rec");
+  const ids = Object.keys(rec.take).filter(id => rec.take[id].length > 1);
+  if (!ids.length) { dzSetStatus("🎥 Toma vacía — no moviste ninguna pieza. ⏺ y arrastrá durante la cuenta."); return; }
+  // remuestrear la actuación a una clave por cuadro del lapso
+  const N = Math.max(2, Math.round(rec.dur * rec.fps));
+  for (const id of ids) {
+    const ss = rec.take[id];
+    DZ.scene.rig = DZ.scene.rig || {};
+    DZ.scene.rig[id] = DZ.scene.rig[id] || {};
+    for (let f = 1; f <= N + 1; f++) {
+      const tf = (f - 1) / rec.fps;
+      let a = ss[0], b = ss[ss.length - 1];
+      if (tf <= a.t) b = a;
+      else if (tf >= b.t) a = b;
+      else for (let i = 0; i < ss.length - 1; i++)
+        if (ss[i].t <= tf && ss[i + 1].t >= tf) { a = ss[i]; b = ss[i + 1]; break; }
+      const u = (b.t === a.t) ? 0 : (tf - a.t) / (b.t - a.t);
+      DZ.scene.rig[id][f] = {
+        x: Math.round(dzLerp(a.x, b.x, u) * 10) / 10,
+        y: Math.round(dzLerp(a.y, b.y, u) * 10) / 10,
+        r: Math.round(dzLerp(a.r || 0, b.r || 0, u) * 10) / 10,
+        s: a.s == null ? 1 : a.s,
+      };
+    }
+  }
+  dzSceneSave(); dzTimelineBadges(); dzRigPanelSync();
+  dzSetStatus("🎥 Toma lista: " + ids.join(", ") + " (" + N + " claves). Otra ⏺ suma la próxima pieza. ▶ para verla.");
+  dzPerfPlay();
+}
+/* reproducir la actuación completa (reloj virtual, claves fraccionales) */
+function dzPerfPlay() {
+  if (DZ.perfPlaying) { DZ.perfPlaying = false; return; }
+  const dur = dzPerfDur(), fps = dzPerfFps();
+  DZ.perfPlaying = true;
+  const t0 = performance.now();
+  const loop = () => {
+    if (!DZ.perfPlaying) { dzRigApplyLive(dzRigCur()); return; }
+    const t = (performance.now() - t0) / 1000;
+    if (t >= dur) { DZ.perfPlaying = false; dzRigApplyLive(dzRigCur()); dzSetStatus("🎥 fin de la actuación"); return; }
+    dzRigApplyLive(1 + t * fps);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+/* ✨ suavizado: promedio móvil sobre las claves — saca el temblor del pulso */
+function dzPerfSmooth() {
+  const rig = (DZ.scene || {}).rig || {};
+  let done = 0;
+  for (const id of Object.keys(rig)) {
+    const ks = Object.keys(rig[id]).map(Number).sort((a, b) => a - b);
+    if (ks.length < 3) continue;
+    const orig = ks.map(k => ({ ...rig[id][k] }));
+    for (let i = 1; i < ks.length - 1; i++) {
+      const p = orig[i - 1], c = orig[i], nx = orig[i + 1];
+      rig[id][ks[i]] = {
+        x: Math.round((p.x + 2 * c.x + nx.x) / 4 * 10) / 10,
+        y: Math.round((p.y + 2 * c.y + nx.y) / 4 * 10) / 10,
+        r: Math.round(((p.r || 0) + 2 * (c.r || 0) + (nx.r || 0)) / 4 * 10) / 10,
+        s: c.s == null ? 1 : c.s,
+      };
+    }
+    done++;
+  }
+  dzSceneSave(); dzRigApplyLive(dzRigCur()); dzRigPanelSync();
+  dzSetStatus(done ? "✨ actuación suavizada (" + done + " pista(s)) — repetí para más suave" : "✨ no hay pistas para suavizar");
+}
+/* 🔥 generar los cuadros del lapso (mismo dibujo; el rig se aplica al exportar) */
+async function dzPerfBake() {
+  if (!DZ.anim) return dzSetStatus("🔥 Abrí la animación (🎞) primero");
+  const N = Math.max(2, Math.round(dzPerfDur() * dzPerfFps()));
+  if (N > 200) return dzSetStatus("🔥 Demasiados cuadros (" + N + ") — bajá duración o fps");
+  await dzPersist();
+  let cur = DZ.anim.frames.length;
+  dzSetStatus("🔥 generando cuadros… (" + cur + "/" + N + ")");
+  let last = DZ.anim.frames[DZ.anim.frames.length - 1];
+  while (cur < N) {
+    const r = await api.dup_frame(last);
+    if (r && r.error) return dzSetStatus("🔥 " + r.error);
+    last = r.path; cur++;
+    if (cur % 6 === 0) dzSetStatus("🔥 generando cuadros… (" + cur + "/" + N + ")");
+  }
+  try { S.tree = (await api.refresh_tree()).tree; renderTree(); } catch (e) { /* */ }
+  await dzTimelineRefresh();
+  dzSetStatus("🔥 " + cur + " cuadros listos — la actuación sale en el export (GIF/video)");
 }
 
 /* ══ animación de ELEMENTOS (pegs de Toon Boom, versión LOW) ═══════════

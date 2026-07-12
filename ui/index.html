@@ -411,6 +411,16 @@
           <button class="ghost" id="rigDel" title="Quitar la clave de este cuadro">✕</button>
         </div>
         <div class="dz-op-row"><div class="dz-suggest" id="rigChips"></div></div>
+        <div class="dz-op-row dz-perf-sep"><span>🎥 Actuación</span>
+          <input type="number" id="perfDur" value="3" min="0.5" max="30" step="0.5" title="Duración de la toma (segundos)">
+          <span class="dz-hint">seg</span>
+        </div>
+        <div class="dz-op-row">
+          <button class="ghost" id="perfRec" title="⏺ Grabar una TOMA: cuenta 3-2-1 y actuá el movimiento arrastrando la pieza (Shift = rotarla desde el pivote). Las pasadas anteriores se reproducen mientras grabás — como un titiritero por capas.">⏺ actuar</button>
+          <button class="ghost" id="perfPlay" title="Ver la actuación completa">▶</button>
+          <button class="ghost" id="perfSmooth" title="✨ Suavizar la toma (limpia el temblor del pulso sin perder la intención)">✨</button>
+          <button class="ghost" id="perfBake" title="🔥 Generar los cuadros del lapso (para exportar GIF/video)">🔥</button>
+        </div>
         <div class="dz-hint" id="rigHint">posá → ◆ → otro cuadro → posá → ◆ · LOW interpola entre claves</div>
       </div>
       <div class="dz-pin" id="dzPin" hidden>💬</div>

@@ -1221,6 +1221,7 @@ class Api:
         "qwen": "qwen-plus",
         "glm": "glm-4-flash",
         "xai": "grok-2",
+        "digitalocean": "llama-3.3-70b-instruct",
     }
 
     def _chain(s):
@@ -1231,7 +1232,7 @@ class Api:
         active = s.cfg.get_active_provider()
         # Prioridad: deepseek, siliconflow, nvidia, groq, openai, anthropic, …, custom
         pref = ["deepseek", "siliconflow", "nvidia", "groq", "openai",
-                "anthropic", "qwen", "glm", "xai", "custom"]
+                "anthropic", "qwen", "glm", "xai", "digitalocean", "custom"]
         rest = sorted((p for p in provs if p != active and p not in s.MEDIA_ONLY),
                       key=lambda p: pref.index(p) if p in pref else 99)
         chain = []

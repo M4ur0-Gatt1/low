@@ -9,11 +9,13 @@ from providers.qwen_provider import QwenProvider
 from providers.glm_provider import GLMProvider, XAIProvider
 from providers.nvidia_provider import NVIDIAProvider
 from providers.siliconflow_provider import SiliconFlowProvider
+from providers.digitalocean_provider import DigitalOceanProvider
 
 PROVIDERS = {
     "groq": GroqProvider, "openai": OpenAIProvider, "anthropic": AnthropicProvider,
     "deepseek": DeepSeekProvider, "qwen": QwenProvider, "glm": GLMProvider,
     "xai": XAIProvider, "nvidia": NVIDIAProvider, "siliconflow": SiliconFlowProvider,
+    "digitalocean": DigitalOceanProvider,
     "custom": CustomProvider,
 }
 

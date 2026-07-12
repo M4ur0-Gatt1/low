@@ -58,6 +58,12 @@ DEFAULT_CONFIG = {
         "qwen": {"api_key": "", "model": "qwen-plus", "base_url": ""},
         "glm": {"api_key": "", "model": "glm-4", "base_url": ""},
         "xai": {"api_key": "", "model": "grok-2", "base_url": ""},
+        # Digital Ocean (Paperspace) — modelos open-source via API compatible OpenAI.
+        # Key: https://cloud.digitalocean.com/account/api/tokens  (DO token)
+        #      o https://console.paperspace.io/settings/apikeys (PS key)
+        # Endpoint por defecto: https://api.paperspace.io/v1
+        # Si usás Digital Ocean directamente: https://gateway.digitalocean.ai/v1
+        "digitalocean": {"api_key": "", "model": "llama-3.3-70b-instruct", "base_url": "https://api.paperspace.io/v1"},
         # LTX (Lightricks) — SOLO video (text→video / imagen→video con audio).
         # No es un modelo de chat: no entra en la cadena de failover del agente.
         # Key: https://console.ltx.video/api-keys
