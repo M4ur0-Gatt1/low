@@ -2,7 +2,7 @@
 ; Compilar: ISCC.exe fidel_installer.iss
 
 #define AppName "LOW"
-#define AppVersion "3.1.0"
+#define AppVersion "3.2.0"
 #define AppExe "LOW.exe"
 
 [Setup]

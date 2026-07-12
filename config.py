@@ -1,4 +1,4 @@
-"""Configuración de Fidel: API keys, tema, zoom.
+"""Configuración de LOW: API keys, tema, zoom.
 
 Vive en el directorio de datos del usuario según el sistema operativo:
 Windows %APPDATA%/Fidel · macOS ~/Library/Application Support/Fidel ·
@@ -11,7 +11,7 @@ from pathlib import Path
 
 
 def data_dir() -> Path:
-    """Directorio de datos de Fidel según el SO (config, historial, log)."""
+    """Directorio de datos de LOW según el SO (config, historial, log)."""
     if os.name == "nt":
         base = Path(os.environ.get("APPDATA", Path.home()))
     elif sys.platform == "darwin":
@@ -19,6 +19,9 @@ def data_dir() -> Path:
     else:
         base = Path(os.environ.get("XDG_CONFIG_HOME",
                                    Path.home() / ".config"))
+    # La carpeta de datos sigue llamándose "Fidel" A PROPÓSITO: LOW es el mismo
+    # producto renombrado y así conserva config, keys e historial de quienes
+    # venían usando Fidel (renombrarla los orfanaría). Es interna, no se ve.
     d = base / "Fidel"
     d.mkdir(parents=True, exist_ok=True)
     return d
@@ -31,7 +34,7 @@ DEFAULT_CONFIG = {
     "active_provider": "deepseek",
     "theme": "dark",
     "font_size": 12,
-    # límites del agente — ajustables desde ⚙. La idea de Fidel es NO ponerle
+    # límites del agente — ajustables desde ⚙. La idea de LOW es NO ponerle
     # techos al trabajo salvo los que impone la API/costo. Subilos si querés
     # que insista más en tareas grandes; el único freno duro es que deje de
     # avanzar (repetir sin progreso) para no quemar tokens en un bucle.

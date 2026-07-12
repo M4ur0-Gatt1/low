@@ -1,4 +1,4 @@
-/* Fidel — tokens y componentes según design_handoff_fidel_editor */
+/* LOW — tokens y componentes (paleta de marca: negro/naranja/cyan) */
 @font-face {
   font-family: 'Figtree';
   src: url('fonts/Figtree-VF.ttf') format('truetype');
@@ -25,7 +25,9 @@ body {
   --bg:#0B0B0C; --panel:#131315; --panel2:#19191C;
   --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.05);
   --txt:#F4F4F2; --mut:#98988F; --faint:#5C5C57;
-  --red:#E5322D; --redh:#F0453F; --redsoft:rgba(229,50,45,.13);
+  /* paleta LOW: acento = naranja del rayo; cyan = 2º acento (nodos/selección fina) */
+  --red:#F0450E; --redh:#FF5A22; --redsoft:rgba(240,69,14,.14);
+  --cyan:#33B5E8; --cyanh:#5AC6EF; --cyansoft:rgba(51,181,232,.14);
   --green:#4E8C5F; --greensoft:rgba(78,140,95,.15);
   --code-kw:#F07E79; --code-str:#93C6A4; --code-com:#63635E;
   --code-fn:#E3C989; --code-num:#C9A0DC;
@@ -37,7 +39,8 @@ body.light {
   --bg:#F5F4F1; --panel:#FFFFFF; --panel2:#EDECE8;
   --line:rgba(0,0,0,.09); --line2:rgba(0,0,0,.05);
   --txt:#171716; --mut:#6E6E67; --faint:#A5A59D;
-  --red:#D22823; --redh:#B91F1B; --redsoft:rgba(210,40,35,.09);
+  --red:#E0400C; --redh:#C2360A; --redsoft:rgba(224,64,12,.10);
+  --cyan:#1E93C6; --cyanh:#1877A0; --cyansoft:rgba(30,147,198,.12);
   --green:#3E7A4F; --greensoft:rgba(62,122,79,.12);
   --code-kw:#C03530; --code-str:#2F7A47; --code-com:#9A9A92;
   --code-fn:#9A6F00; --code-num:#7B3FA0;
@@ -324,7 +327,7 @@ header {
 .m-ava {
   width: 18px; height: 18px; border-radius: 6px; background: var(--green);
   display: flex; align-items: center; justify-content: center;
-  color: #E5322D; font-size: 9px; flex: none;
+  color: var(--bg); font-size: 9px; flex: none;
 }
 .m-who { font-size: 11px; color: var(--mut); }
 .m-txt { font-size: 12.5px; line-height: 1.55; color: var(--txt); user-select: text; white-space: pre-wrap; }
@@ -623,13 +626,13 @@ footer {
 /* nodos editables (herramienta ⬦): un tirador por punto del trazado */
 .dz-node {
   position: absolute; width: 9px; height: 9px; z-index: 6;
-  background: #fff; border: 1.5px solid #2a7fff; border-radius: 2px;
+  background: #fff; border: 1.5px solid #33B5E8; border-radius: 2px;
   transform: translate(-50%, -50%) rotate(45deg); cursor: move;
   box-shadow: 0 1px 3px rgba(0,0,0,.5);
 }
-.dz-node:hover { background: #2a7fff; }
+.dz-node:hover { background: #33B5E8; }
 /* selección múltiple (Shift+clic) */
-.dz-msel { outline: 1.5px dashed #2a7fff; outline-offset: 2px; }
+.dz-msel { outline: 1.5px dashed #33B5E8; outline-offset: 2px; }
 /* campos de captura de atajo (⚙ Preferencias) */
 .dz-keycap {
   width: 90px !important; text-align: center; cursor: pointer;

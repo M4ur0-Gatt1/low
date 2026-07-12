@@ -1,4 +1,4 @@
-/* Fidel — frontend. Toda la lógica pesada vive en Python (main.py, js_api). */
+/* LOW — frontend. Toda la lógica pesada vive en Python (main.py, js_api). */
 "use strict";
 
 const $ = s => document.querySelector(s);
@@ -60,7 +60,7 @@ window.addEventListener("unhandledrejection", e =>
   reportErr("promesa rechazada: " + (e.reason && e.reason.message || e.reason)));
 
 /* ── eventos que empuja Python ── */
-window.Fidel = {
+window.LOW = {
   onPy(m) {
     try {
       if (m.event === "tool") toolStep(m.data.name, m.data.res);
@@ -234,7 +234,7 @@ async function init() {
   applyState(st);
   newTab();
   await loadChatTabs().catch(() => {});
-  // retomar SOLA la última conversación: al reabrir Fidel seguís donde quedaste,
+  // retomar SOLA la última conversación: al reabrir LOW seguís donde quedaste,
   // con el agente recordando el hilo (antes arrancaba con memoria vacía y decía
   // "no tengo contexto de una sesión previa")
   try {
@@ -320,7 +320,7 @@ function applyState(st) {
   S.sshHosts = st.ssh_hosts || [];
   if (st.session_id) S.chatId = st.session_id;
   S.version = st.version || "";
-  if (st.version) $("#ver").textContent = "Fidel v" + st.version;
+  if (st.version) $("#ver").textContent = "LOW v" + st.version;
   applyZoom(st.zoom || 1.0, true);
   document.body.classList.toggle("light", st.theme === "light");
   $("#btnTheme").innerHTML = icoUse(st.theme === "dark" ? "i-sun" : "i-moon");
@@ -880,7 +880,7 @@ function highlightRange(start, end) {
   } catch (e) { /* fuera de rango: sin drama */ }
 }
 
-/* ── visor de imágenes / SVG dentro de Fidel (reusa el panel de artefactos) ── */
+/* ── visor de imágenes / SVG dentro de LOW (reusa el panel de artefactos) ── */
 async function openImage(path, alsoChat) {
   const r = await api.image_data(path);
   if (!r || r.error) return sysMsg("❌ No pude abrir la imagen: " + ((r && r.error) || path));
@@ -950,11 +950,11 @@ async function run() {
   const t = curTab();
   try {
     if (esHtml(t)) {
-      // HTML no se "ejecuta": se renderiza EN VIVO adentro de Fidel (artefacto)
+      // HTML no se "ejecuta": se renderiza EN VIVO adentro de LOW (artefacto)
       const name = t && t.name ? t.name : "vista previa.html";
       addArtifact(name, cm.getValue(), t && t.path ? t.path : "");
       showArtifacts();
-      termLine("🎨 Artefacto renderizado dentro de Fidel (botón ⧉ para el navegador)", "t-ok");
+      termLine("🎨 Artefacto renderizado dentro de LOW (botón ⧉ para el navegador)", "t-ok");
       setStatus("🎨 Vista previa en vivo");
       return;
     }
@@ -1502,7 +1502,7 @@ function modalCompare() {
   if (!withKey.length) rows = '<div class="sub">Ningún proveedor tiene API key configurada</div>';
   openModal(`
     <h2>Desafío de código</h2>
-    <div class="sub">La misma consigna a cada modelo. Fidel compila, ejecuta y verifica
+    <div class="sub">La misma consigna a cada modelo. LOW compila, ejecuta y verifica
     la salida: gana el código que funciona, no el más rápido.</div>
     <textarea id="cmpTask" class="cmp-field" rows="3" spellcheck="false"></textarea>
     <input id="cmpExp" class="cmp-field" spellcheck="false"
@@ -1538,11 +1538,11 @@ function modalKeys() {
     <div class="sub" id="cfgPath"></div>
     ${rows}
     <h2 style="margin-top:16px">Instrucciones del agente</h2>
-    <div class="sub">El system prompt completo que recibe el modelo — Fidel no
+    <div class="sub">El system prompt completo que recibe el modelo — LOW no
     agrega nada más, ni filtros ni instrucciones ocultas. Vacío = usar el de fábrica.</div>
     <textarea id="sysP" class="cmp-field" rows="4" spellcheck="false"></textarea>
     <h2 style="margin-top:16px">Límites del agente</h2>
-    <div class="sub">Fidel no le pone techo al trabajo salvo lo que elijas acá (y el
+    <div class="sub">LOW no le pone techo al trabajo salvo lo que elijas acá (y el
     de la API). Subilos para tareas grandes; el único freno duro es que el agente
     deje de avanzar.</div>
     <div class="agrow"><label>Pasos por tramo</label>
@@ -1621,7 +1621,7 @@ function modalModelSearch() {
   $("#mCancel").onclick = closeModal;
 }
 
-/* ══ Artefactos: vista previa en vivo del HTML/web generado, DENTRO de Fidel ══ */
+/* ══ Artefactos: vista previa en vivo del HTML/web generado, DENTRO de LOW ══ */
 function addArtifact(name, html, path) {
   S.artifacts = S.artifacts || [];
   const ex = S.artifacts.find(a => a.path === path && path);
@@ -1871,7 +1871,7 @@ function dzSelect(el) {
   dzStyleSync(el);
   dzPivotMark();
   // modo comentario: el dock ahora apunta SOLO a este elemento
-  $("#dzPrompt").placeholder = `💬 Comentario sobre <${el.tagName.toLowerCase()}> — Fidel edita SOLO ese elemento`;
+  $("#dzPrompt").placeholder = `💬 Comentario sobre <${el.tagName.toLowerCase()}> — LOW edita SOLO ese elemento`;
 }
 function dzDeselect() {
   if (DZ.sel) { DZ.sel.classList.remove("dz-sel"); DZ.sel = null; }
@@ -2158,7 +2158,7 @@ function dzAddShape(kind) {
   const vb = (svg.getAttribute("viewBox") || "0 0 1080 1080").split(/\s+/).map(Number);
   const W = vb[2] || 1080, H = vb[3] || 1080, cx = W / 2, cy = H / 2;
   const NS = "http://www.w3.org/2000/svg";
-  const FILL = DZ.fillColor || "#E5322D";
+  const FILL = DZ.fillColor || "#F0450E";
   const R = Math.min(W, H) * 0.15;
   // polígono regular / estrella: puntos alrededor del centro (editables con ⬦)
   const ring = (n, r1, r2) => {
@@ -2197,7 +2197,7 @@ function dzAddShape(kind) {
     el = document.createElementNS(NS, "line");
     el.setAttribute("x1", cx - W * 0.15); el.setAttribute("y1", cy);
     el.setAttribute("x2", cx + W * 0.15); el.setAttribute("y2", cy);
-    el.setAttribute("stroke", DZ.drawColor || "#E5322D"); el.setAttribute("stroke-width", Math.max(2, DZ.drawW || Math.round(H * 0.008)));
+    el.setAttribute("stroke", DZ.drawColor || "#F0450E"); el.setAttribute("stroke-width", Math.max(2, DZ.drawW || Math.round(H * 0.008)));
   } else {
     el = document.createElementNS(NS, "text");
     el.setAttribute("x", cx); el.setAttribute("y", cy); el.setAttribute("text-anchor", "middle");
@@ -2394,14 +2394,14 @@ function dzDrawDown(e) {
   if (DZ.tool === "pencil") {
     DRAW.el = document.createElementNS(SVGNS, "path");
     DRAW.el.setAttribute("fill", "none");
-    DRAW.el.setAttribute("stroke", DZ.drawColor || "#E5322D");
+    DRAW.el.setAttribute("stroke", DZ.drawColor || "#F0450E");
     DRAW.el.setAttribute("stroke-width", DZ.drawW || 6);
     DRAW.el.setAttribute("stroke-linecap", "round");
     DRAW.el.setAttribute("stroke-linejoin", "round");
   } else {                                             // pincel: grosor por presión
     DRAW.el = document.createElementNS(SVGNS, "g");
     DRAW.el.setAttribute("data-fidel", "brush");
-    DRAW.el.setAttribute("stroke", DZ.drawColor || "#E5322D");
+    DRAW.el.setAttribute("stroke", DZ.drawColor || "#F0450E");
     DRAW.el.setAttribute("fill", "none");
     DRAW.el.setAttribute("stroke-linecap", "round");
   }
@@ -2448,7 +2448,7 @@ function dzDrawUp(e) {
   if (DRAW.mode === "pencil") {
     DRAW.el.setAttribute("d", dzSmoothPath(pts));
   } else {
-    const ribbon = dzBrushRibbon(pts, DZ.drawW || 6, DZ.drawColor || "#E5322D");
+    const ribbon = dzBrushRibbon(pts, DZ.drawW || 6, DZ.drawColor || "#F0450E");
     if (ribbon) { DRAW.el.replaceWith(ribbon); finalEl = ribbon; }
     else { DRAW.el.remove(); finalEl = null; }
   }
@@ -2575,7 +2575,7 @@ function dzPenDown(p) {
     PEN = { anchors: [], el: document.createElementNS(SVGNS, "path"),
             guide: document.createElementNS(SVGNS, "g"), dragging: false, closed: false };
     PEN.el.setAttribute("fill", "none");
-    PEN.el.setAttribute("stroke", DZ.drawColor || "#E5322D");
+    PEN.el.setAttribute("stroke", DZ.drawColor || "#F0450E");
     PEN.el.setAttribute("stroke-width", DZ.drawW || 6);
     PEN.el.setAttribute("stroke-linecap", "round");
     PEN.el.setAttribute("stroke-linejoin", "round");
@@ -2640,7 +2640,7 @@ function dzPenRender() {
   if (PEN.hover && !PEN.dragging) {
     const last = A[A.length - 1], h = PEN.hover;
     mk("path", { d: `M ${last.x} ${last.y} C ${last.hx} ${last.hy} ${h.x} ${h.y} ${h.x} ${h.y}`,
-                 fill: "none", stroke: "#2a7fff", "stroke-width": 1.2 * k,
+                 fill: "none", stroke: "#33B5E8", "stroke-width": 1.2 * k,
                  "stroke-dasharray": `${4 * k} ${4 * k}`, opacity: 0.8 });
   }
   A.forEach((a, i) => {
@@ -2648,16 +2648,16 @@ function dzPenRender() {
     if (hasHandle) {
       const inx = 2 * a.x - a.hx, iny = 2 * a.y - a.hy;
       mk("line", { x1: inx, y1: iny, x2: a.hx, y2: a.hy,
-                   stroke: "#2a7fff", "stroke-width": 1 * k, opacity: 0.85 });
-      mk("circle", { cx: a.hx, cy: a.hy, r: 3 * k, fill: "#2a7fff" });
-      mk("circle", { cx: inx, cy: iny, r: 3 * k, fill: "#2a7fff", opacity: 0.7 });
+                   stroke: "#33B5E8", "stroke-width": 1 * k, opacity: 0.85 });
+      mk("circle", { cx: a.hx, cy: a.hy, r: 3 * k, fill: "#33B5E8" });
+      mk("circle", { cx: inx, cy: iny, r: 3 * k, fill: "#33B5E8", opacity: 0.7 });
     }
     // el primer punto se agranda cuando el mouse está cerca (se puede cerrar)
     const near0 = i === 0 && PEN.hover && A.length >= 2 &&
       Math.hypot(PEN.hover.x - a.x, PEN.hover.y - a.y) < 10 * k;
     const s = (near0 ? 8 : 5) * k;
     mk("rect", { x: a.x - s / 2, y: a.y - s / 2, width: s, height: s,
-                 fill: near0 ? "#2a7fff" : "#fff", stroke: "#2a7fff",
+                 fill: near0 ? "#33B5E8" : "#fff", stroke: "#33B5E8",
                  "stroke-width": 1.4 * k });
   });
 }
@@ -3004,7 +3004,7 @@ function dzBucketApply(e) {
   if (t === "svg") return;
   dzSnapshot();
   if (e.shiftKey) el.setAttribute("stroke", DZ.drawColor || "#1a1a1a");
-  else el.setAttribute("fill", DZ.fillColor || "#E5322D");
+  else el.setAttribute("fill", DZ.fillColor || "#F0450E");
   dzMarkDirty(); dzBuildLayers();
 }
 
@@ -3642,9 +3642,9 @@ function dzTimelineBadges() {
   });
 }
 
-/* ══ animación de ELEMENTOS (pegs de Toon Boom, versión Fidel) ═══════════
+/* ══ animación de ELEMENTOS (pegs de Toon Boom, versión LOW) ═══════════
    🏃 interpolación de movimiento: fijás inicio, movés el elemento al final
-   y Fidel genera los cuadros del recorrido con la curva elegida.
+   y LOW genera los cuadros del recorrido con la curva elegida.
    ⏺ grabación en vivo: arrastrás el elemento y el recorrido REAL de tu mano
    (con sus tiempos) se convierte en cuadros — actuación en vivo. ══ */
 function dzElPath(el) {
@@ -3891,11 +3891,11 @@ function dzMenuAction(act) {
     clave: dzKeyToggle, intercalar: dzTweenModal, interpolar: dzMoveTween,
     grabar: dzRecToggle, claveia: dzAIKeyModal, camara: dzCamToggle, clavecam: dzCamKeyToggle,
     acerca: () => {
-      openModal(`<h2>Fidel Estudio</h2>
-        <div class="sub">Editor de vectores y animación 2D con IA integrada, dentro de Fidel v${S.version || ""}.
+      openModal(`<h2>LOW Estudio</h2>
+        <div class="sub">Editor de vectores y animación 2D con IA integrada, dentro de LOW v${S.version || ""}.
         Dibujo con presión, X-sheet, papel cebolla, cámara multiplano, rigging con pivotes,
         intercalado automático y fotogramas clave generados por IA.<br><br>
-        Hecho por Mauro Gatti con Fidel — código abierto.</div>
+        Hecho por Mauro Gatti con LOW — código abierto.</div>
         <div class="m-actions"><button class="primary" id="mCancel">Cerrar</button></div>`);
       $("#mCancel").onclick = closeModal;
     },
@@ -3952,7 +3952,7 @@ function dzToolOptsRender() {
       (t === "brush" ? `<span class="dz-hint">el grosor sigue la presión de la tableta</span>` : "") +
       (DZ.mirror ? `<span class="dz-hint">🪞 espejo activo</span>` : "");
   } else if (t === "bucket") {
-    html += `<label>Relleno <input type="color" id="toFill" value="${dzHex(DZ.fillColor) || "#E5322D"}"></label>
+    html += `<label>Relleno <input type="color" id="toFill" value="${dzHex(DZ.fillColor) || "#F0450E"}"></label>
       <span class="dz-hint">clic pinta el relleno · Shift+clic pinta el trazo</span>`;
   } else if (t === "eraser") {
     html += `<span class="dz-hint">pasá por encima y borra trazos enteros — las capas con candado no se tocan</span>`;
@@ -4430,7 +4430,7 @@ async function designPrompt() {
   ta.value = "";
   DZ.busy = true;
   const tag = DZ.sel ? DZ.sel.tagName.toLowerCase() : null;
-  dzSetStatus(tag ? `✍ Fidel edita el <${tag}>…` : "✍ Fidel está ajustando el diseño…");
+  dzSetStatus(tag ? `✍ LOW edita el <${tag}>…` : "✍ LOW está ajustando el diseño…");
   userMsg("🎨 " + (tag ? `[${tag}] ` : "") + text); persist("user", "(diseño) " + text);
   try {
     let msg;
@@ -4438,14 +4438,14 @@ async function designPrompt() {
       // MODO COMENTARIO/PIN: el cambio aplica SOLO al elemento marcado. Le paso el
       // código exacto del elemento como ancla para que edit_file sea preciso.
       const exact = dzElementCode(DZ.sel);
-      msg = "Estás editando el SVG «" + DZ.path + "» en el editor de diseño de Fidel. " +
+      msg = "Estás editando el SVG «" + DZ.path + "» en el editor de diseño de LOW. " +
         "El usuario dejó un comentario sobre UN elemento puntual. Modificá SOLO ese elemento " +
         "(no toques el resto del SVG) con edit_file, usando este fragmento exacto como old_text:\n" +
         "```\n" + exact + "\n```\n" +
         "Comentario del usuario: " + text +
         "\nMantené el viewBox y que quede dentro del lienzo. Confirmá en una línea qué cambiaste.";
     } else {
-      msg = "Estás editando el SVG «" + DZ.path + "» abierto en el editor de diseño de Fidel. " +
+      msg = "Estás editando el SVG «" + DZ.path + "» abierto en el editor de diseño de LOW. " +
         "Aplicá SOLO este cambio con edit_file (mantené el viewBox y todo dentro del lienzo, " +
         "prolijo y alineado): " + text +
         "\nConfirmá en una línea qué cambiaste.";
@@ -4638,7 +4638,7 @@ function modalTools() {
     `<div class="listrow"><span class="lr-name">${t.name}</span>` +
     `<span class="lr-desc">${(t.desc || "").replace(/</g, "&lt;")}</span></div>`).join("");
   openModal(`<h2>Herramientas del agente</h2>
-    <div class="sub">Lo que Fidel puede hacer por su cuenta cuando le pedís algo. No hay filtros ocultos.</div>
+    <div class="sub">Lo que LOW puede hacer por su cuenta cuando le pedís algo. No hay filtros ocultos.</div>
     ${rows || '<div class="sub">—</div>'}
     <div class="m-actions"><button class="primary" id="mCancel">Cerrar</button></div>`);
   $("#mCancel").onclick = closeModal;

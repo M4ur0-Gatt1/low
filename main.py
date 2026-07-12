@@ -1,4 +1,4 @@
-"""Fidel — editor de código con agente IA multi-proveedor.
+"""LOW — editor de código con agente IA multi-proveedor.
 
 UI web (pywebview + WebView2) que implementa design_handoff_fidel_editor 1:1.
 Este módulo es el puente: expone la lógica Python (providers, runner, config)
@@ -41,14 +41,14 @@ ASSET_EXT = {".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp",
 LANG_BY_EXT = {".py": "python", ".js": "javascript", ".ts": "javascript",
                ".sh": "bash", ".ps1": "powershell"}
 
-FIDEL_VERSION = "3.1.0"
+FIDEL_VERSION = "3.2.0"
 
 # Desafío por defecto del comparador: verificable automáticamente
 DEFAULT_TASK = ("Escribe un programa Python que imprima los primeros 10 numeros "
                 "primos en una sola linea separados por coma.")
 DEFAULT_EXPECTED = "2, 3, 5, 7, 11, 13, 17, 19, 23, 29"
 
-# System prompt por defecto del agente. Editable desde ⚙ — Fidel no agrega
+# System prompt por defecto del agente. Editable desde ⚙ — LOW no agrega
 # ningún filtro ni instrucción oculta más allá de esto.
 DEFAULT_SP = ("Eres LOW, agente creativo y programador senior orientado a diseño, video y animacion. Tienes HERRAMIENTAS: read_file, "
               "write_file, edit_file, exec_cmd, run_code, list_files, search_code, "
@@ -90,7 +90,7 @@ DEFAULT_SP = ("Eres LOW, agente creativo y programador senior orientado a diseñ
               "lo que pida. Para generar assets/ilustraciones raster usa generate_image "
               "(requiere key de OpenAI o SiliconFlow cargada en Configuracion). "
               "Para logos, iconos, diagramas o cualquier DISENO editable, escribi un "
-              ".svg con write_file: se abre solo en el entorno de diseno de Fidel, donde "
+              ".svg con write_file: se abre solo en el entorno de diseno de LOW, donde "
               "el usuario selecciona y edita cada elemento. Usa SVG limpio: viewBox "
               "explicito y TODO dentro de el; un elemento por forma/texto con "
               "fill/stroke/font-family explicitos; alinea y espacia prolijo; para texto "
@@ -453,7 +453,7 @@ class Api:
             return "✓ Ya estaba en la memoria del proyecto"
         try:
             f.parent.mkdir(parents=True, exist_ok=True)
-            header = "" if prev else "# Memoria del proyecto (Fidel)\n"
+            header = "" if prev else "# Memoria del proyecto (LOW)\n"
             with open(f, "a", encoding="utf-8") as fh:
                 if header:
                     fh.write(header)
@@ -469,7 +469,7 @@ class Api:
             return
         payload = json.dumps({"event": event, "data": data}, ensure_ascii=False)
         try:
-            s._window.evaluate_js(f"Fidel.onPy({payload})")
+            s._window.evaluate_js(f"LOW.onPy({payload})")
         except Exception as e:
             log(f"_push({event}) fallo: {e}")
 
@@ -571,7 +571,7 @@ class Api:
         s.cfg.save()
 
     def save_agent_config(s, steps, conts, mem, verify_runtime=None, verify_design=None):
-        """Guarda los límites del agente (⚙). Fidel no le pone techo al trabajo
+        """Guarda los límites del agente (⚙). LOW no le pone techo al trabajo
         salvo el que elijas acá y el de la API."""
         a = s.cfg.data.setdefault("agent", {})
 
@@ -627,7 +627,7 @@ class Api:
             return {"error": str(e)}
 
     def image_data(s, path):
-        """Imagen (o SVG) como data URL, para verla DENTRO de Fidel sin romper el
+        """Imagen (o SVG) como data URL, para verla DENTRO de LOW sin romper el
         editor de código con bytes binarios."""
         p = Path(path)
         ext = p.suffix.lower()
@@ -925,7 +925,7 @@ class Api:
         starter = (
             '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">\n'
             '  <rect x="0" y="0" width="1080" height="1080" fill="#0B0B0C"/>\n'
-            '  <rect x="90" y="90" width="900" height="900" rx="24" fill="#E5322D"/>\n'
+            '  <rect x="90" y="90" width="900" height="900" rx="24" fill="#F0450E"/>\n'
             '  <text x="540" y="560" font-family="Figtree" font-size="120" font-weight="800" '
             'fill="#ffffff" text-anchor="middle">Tu diseño</text>\n'
             '  <text x="540" y="660" font-family="Figtree" font-size="40" '
@@ -2735,7 +2735,7 @@ class Api:
                     else:
                         s._push("sys", "⚠ Tu modelo no ve imágenes y no hay ninguno con visión configurado — la imagen puede ser ignorada")
             # Límites del agente: configurables desde ⚙ (config "agent"). La filosofía
-            # de Fidel es NO ponerle techo al trabajo — el único freno real es que el
+            # de LOW es NO ponerle techo al trabajo — el único freno real es que el
             # agente deje de AVANZAR (bucle) o el costo/límite de la API. max_steps =
             # rondas de tools por tramo; max_continuations = cuántas veces sigue solo.
             ag = s.cfg.data.get("agent", {})
