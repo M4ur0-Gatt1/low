@@ -41,7 +41,7 @@ ASSET_EXT = {".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp",
 LANG_BY_EXT = {".py": "python", ".js": "javascript", ".ts": "javascript",
                ".sh": "bash", ".ps1": "powershell"}
 
-FIDEL_VERSION = "3.2.0"
+FIDEL_VERSION = "3.3.0"
 
 # Desafío por defecto del comparador: verificable automáticamente
 DEFAULT_TASK = ("Escribe un programa Python que imprima los primeros 10 numeros "
@@ -920,16 +920,11 @@ class Api:
         return s.insert_frame(path, m.group(0))
 
     def new_design(s):
-        """Crea un lienzo SVG inicial (con elementos editables) y devuelve su ruta,
-        para que el entorno de diseño abra con algo para tocar."""
+        """Crea un lienzo SVG en blanco (artboard blanco 1080²) y devuelve su ruta.
+        Página en blanco de verdad, lista para dibujar — sin carteles."""
         starter = (
             '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">\n'
-            '  <rect x="0" y="0" width="1080" height="1080" fill="#0B0B0C"/>\n'
-            '  <rect x="90" y="90" width="900" height="900" rx="24" fill="#F0450E"/>\n'
-            '  <text x="540" y="560" font-family="Figtree" font-size="120" font-weight="800" '
-            'fill="#ffffff" text-anchor="middle">Tu diseño</text>\n'
-            '  <text x="540" y="660" font-family="Figtree" font-size="40" '
-            'fill="#ffffff" text-anchor="middle" opacity="0.85">editá cada elemento a la derecha</text>\n'
+            '  <rect x="0" y="0" width="1080" height="1080" fill="#ffffff"/>\n'
             '</svg>\n')
         d = s._base() / "disenos"
         d.mkdir(parents=True, exist_ok=True)

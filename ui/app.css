@@ -554,13 +554,16 @@ footer {
 #designView[hidden] { display: none; }
 .dz-body { flex: 1; display: flex; min-height: 0; }
 /* barra de herramientas lateral (estilo Toon Boom): columna fija a la izquierda */
+/* barra lateral en DOS columnas (estilo Photoshop): envuelve y nunca corta.
+   Los separadores ocupan el ancho completo y fuerzan salto de fila. */
 .dz-tools {
-  flex: none; width: 44px; display: flex; flex-direction: column; align-items: center;
-  gap: 3px; padding: 8px 4px; background: var(--panel); border-right: 1px solid var(--line);
-  overflow-y: auto;
+  flex: none; width: 94px; display: flex; flex-flow: row wrap; align-content: flex-start;
+  justify-content: center; gap: 4px 6px; padding: 8px 7px;
+  background: var(--panel); border-right: 1px solid var(--line);
+  overflow-y: auto; scrollbar-gutter: stable;
 }
 .dz-tools .ibtn { width: 32px; height: 32px; font-size: 15px; }
-.dz-tools .hsep { width: 24px; height: 1px; background: var(--line); margin: 5px 0; flex: none; }
+.dz-tools .hsep { width: 100%; height: 1px; background: var(--line); margin: 4px 6px; flex: none; }
 /* cámara: encuadre animable sobre el lienzo */
 .dz-cam {
   position: absolute; z-index: 4; border: 2px solid #f5a623; border-radius: 4px;
@@ -963,3 +966,25 @@ footer {
 .dz-empty { display: flex; flex-direction: column; align-items: center; gap: 16px; }
 .dz-empty-logo { width: 190px; height: auto; opacity: .9; }
 .dz-empty-logo .sp-l { fill: var(--txt); font: 900 128px 'Figtree', 'Arial Black', sans-serif; }
+
+/* ── campos compactos de la línea de tiempo (fps / In / Out) ── */
+.tl-field {
+  display: inline-flex; align-items: center; gap: 4px; flex: none;
+  font: 600 10px 'Figtree', sans-serif; color: var(--mut); text-transform: uppercase; letter-spacing: .5px;
+}
+.tl-field .dz-win { width: 46px; }
+/* ── modo dibujo (zen): pantalla limpia, solo lienzo + herramientas ── */
+#designView.dz-zen .dz-menubar,
+#designView.dz-zen .dz-inspector,
+#designView.dz-zen .dz-split,
+#designView.dz-zen .dz-toolopts,
+#designView.dz-zen .dz-timeline,
+#designView.dz-zen .dz-dock,
+#designView.dz-zen .dz-statusbar { display: none !important; }
+#designView.dz-zen .dz-canvas { background: #101012; }
+.dz-zen-exit {
+  position: absolute; top: 10px; right: 12px; z-index: 30;
+  background: var(--panel2); border: 1px solid var(--line); color: var(--mut);
+  border-radius: 8px; padding: 5px 11px; font: 600 11px 'Figtree', sans-serif; cursor: pointer;
+}
+.dz-zen-exit:hover { color: var(--txt); border-color: var(--red); }

@@ -121,7 +121,7 @@
       <button class="abtn" id="abGit" title="Control de versiones"><svg class="ico"><use href="#i-git"/></svg></button>
       <button class="abtn star" id="abAgent" title="Agente"><svg class="ico ico-fill"><use href="#i-star"/></svg></button>
       <div class="act-sep"></div>
-      <button class="abtn" id="abDesign" title="Diseño (editor de vectores SVG)"><svg class="ico"><use href="#i-pen"/></svg></button>
+      <button class="abtn" id="abDesign" title="Diseño (estudio de diseño y animación)"><svg class="ico"><use href="#i-pen"/></svg></button>
       <button class="abtn" id="abArtifacts" title="Artefactos (vista previa en vivo)"><svg class="ico"><use href="#i-artifact"/></svg></button>
       <button class="abtn" id="abRoutines" title="Rutinas (órdenes guardadas)"><svg class="ico"><use href="#i-routine"/></svg></button>
       <button class="abtn" id="abTools" title="Herramientas del agente"><svg class="ico"><use href="#i-tool"/></svg></button>
@@ -307,6 +307,7 @@
     <button class="ibtn" id="dzZoomIn" title="Acercar (+)">+</button>
     <button class="ibtn" id="dzZoomFit" title="Ajustar a pantalla (F) · 0 = 100% · espacio o mano (H) panea">⤢</button>
     <div class="vsep"></div>
+    <button class="ibtn" id="dzZen" title="Modo dibujo (Tab): oculta paneles y menús para dibujar sin distracción"><svg class="ico"><use href="#i-tool"/></svg></button>
     <button class="ibtn" id="dzPrefs" title="Preferencias del estudio: atajos de teclado y suavizado"><svg class="ico"><use href="#i-gear"/></svg></button>
     <button class="ibtn" id="dzCodeBtn" title="Ver/editar el código SVG">&lt;/&gt;</button>
     <button class="ibtn" id="dzSave" title="Guardar cambios al .svg"><svg class="ico"><use href="#i-save"/></svg></button>
@@ -446,7 +447,10 @@
     <button class="ibtn" id="tlPlay" title="Reproducir / parar">▶</button>
     <button class="ibtn" id="tlNext" title="Cuadro siguiente (.)">▸</button>
     <button class="ibtn" id="tlLast" title="Último cuadro">⏭</button>
-    <input type="number" id="tlFps" value="12" min="1" max="60" title="Cuadros por segundo" class="dz-win">
+    <label class="tl-field" title="Cuadros por segundo">fps<input type="number" id="tlFps" value="12" min="1" max="60" class="dz-win"></label>
+    <button class="ibtn active" id="tlLoop" title="Loop: repetir en bucle al reproducir"><svg class="ico"><use href="#i-routine"/></svg></button>
+    <label class="tl-field" title="Primer cuadro que se reproduce/exporta (In)">In<input type="number" id="tlIn" value="1" min="1" class="dz-win"></label>
+    <label class="tl-field" title="Último cuadro que se reproduce/exporta (Out) · 0 = hasta el final">Out<input type="number" id="tlOut" value="0" min="0" class="dz-win"></label>
     <div class="vsep"></div>
     <button class="ibtn active" id="tlOnion" title="Papel cebolla: mostrar/ocultar (el panel flotante lo personaliza)"><svg class="ico"><use href="#i-onion"/></svg></button>
     <button class="ibtn" id="tlXs" title="X-sheet: planilla de exposición vertical (cuadros, claves y cámara)"><svg class="ico"><use href="#i-xsheet"/></svg></button>

@@ -513,6 +513,14 @@ function bind() {
   // animación
   $("#dzAnim").onclick = dzAnimToggle;
   $("#tlPlay").onclick = dzAnimPlay;
+  $("#tlLoop").onclick = () => {
+    if (!DZ.anim) return;
+    DZ.anim.loop = !(DZ.anim.loop !== false);   // toggle (default true)
+    $("#tlLoop").classList.toggle("active", DZ.anim.loop);
+    dzSetStatus(DZ.anim.loop ? "🔁 Loop activado" : "▶ Reproducción única (sin loop)");
+  };
+  // modo dibujo (zen): pantalla limpia, solo lienzo + herramientas
+  $("#dzZen").onclick = dzZenToggle;
   $("#tlAdd").onclick = dzFrameAdd;
   $("#tlFirst").onclick = () => { dzAnimStopIf(); dzGoFrame(0); };
   $("#tlPrev").onclick = () => { dzAnimStopIf(); dzGoFrame(Math.max(0, (DZ.anim ? DZ.anim.idx : 0) - 1)); };
@@ -662,6 +670,7 @@ function bind() {
   // atajos del editor de diseño (si no estás escribiendo en un campo)
   document.addEventListener("keydown", e => {
     if ($("#designView").hidden || /^(INPUT|TEXTAREA|SELECT)$/.test((e.target.tagName || ""))) return;
+    if (e.key === "Tab") { e.preventDefault(); dzZenToggle(); return; }   // modo dibujo
     if ((e.key === "Delete" || e.key === "Backspace") && DZ.sel) {
       e.preventDefault(); dzDeleteSelected();
     }
@@ -1734,6 +1743,23 @@ function dzApplyZoom() {
   if (DZ.camMode) dzCamOverlay();                                    // y el encuadre
   dzPivotMark();
 }
+/* modo dibujo (Tab): oculta menús, paneles, timeline y dock — solo lienzo +
+   herramientas, para dibujar sin distracción (como el Tab de Photoshop). */
+function dzZenToggle() {
+  const dv = $("#designView");
+  const on = dv.classList.toggle("dz-zen");
+  $("#dzZen").classList.toggle("active", on);
+  let exit = $("#dzZenExit");
+  if (on && !exit) {
+    exit = document.createElement("button");
+    exit.id = "dzZenExit"; exit.className = "dz-zen-exit";
+    exit.textContent = "✕ salir del modo dibujo (Tab)";
+    exit.onclick = dzZenToggle;
+    dv.appendChild(exit);
+  }
+  if (exit) exit.style.display = on ? "block" : "none";
+  setTimeout(() => { try { dzFitView(); } catch (e) { /* */ } }, 60);
+}
 /* girar la VISTA (como girar la hoja para dibujar cómodo — Krita/OpenToonz):
    solo cambia cómo se ve; el dibujo y las coordenadas no se tocan */
 function dzRotView(delta) {
@@ -1982,8 +2008,8 @@ async function designEntry() {
   if (r && r.path) {
     try { S.tree = (await api.refresh_tree()).tree; renderTree(); } catch (e) { /* */ }
     await openDesign(r.path);
-    sysMsg("🎨 Lienzo nuevo: " + (r.name || "") + " — hacé clic en cualquier elemento para " +
-           "editarlo (relleno, tipografía, posición…). También podés pedirle al agente que dibuje un SVG.");
+    try { dzFitView(); } catch (e) { /* */ }
+    dzSetStatus("🎨 Página en blanco lista — dibujá con las herramientas de la izquierda o pedile un diseño a LOW abajo. 📄 cambia el tamaño del lienzo.");
   }
 }
 
@@ -3295,7 +3321,8 @@ function dzExportModal() {
 }
 async function dzDoExport(kind) {
   await dzPersist();
-  const frames = DZ.anim.frames;
+  const [lo, hi] = dzPlayRange();                // exporta solo el rango In/Out
+  const frames = DZ.anim.frames.slice(lo, hi + 1);
   dzSetStatus("🎬 Rasterizando " + frames.length + " cuadros…");
   const pngs = [];
   const throughCam = dzHasCam();                 // hay claves de cámara → sale POR cámara
@@ -4099,11 +4126,16 @@ async function dzAnimPlay() {
   $("#dzCam").hidden = true;                     // el encuadre no se dibuja: SE VE por él
   DZ.anim.playing = true;
   $("#tlPlay").textContent = "⏸";
-  let i = DZ.anim.idx;
+  const [lo, hi] = dzPlayRange();                // rango In/Out (0-based, inclusive)
+  const loop = DZ.anim.loop !== false;
+  let i = (DZ.anim.idx >= lo && DZ.anim.idx <= hi) ? DZ.anim.idx : lo;
   const fps = Math.max(1, Math.min(60, +($("#tlFps") && $("#tlFps").value) || 12));
   const throughCam = dzHasCam();                 // hay claves de cámara → play POR cámara
   DZ.anim.timer = setInterval(() => {
-    i = (i + 1) % DZ.anim.frames.length;
+    if (i >= hi) {                               // llegó al final del rango
+      if (!loop) { dzAnimStop(); return; }
+      i = lo;
+    } else i++;
     let svgTxt = DZ.anim.cache[DZ.anim.frames[i]];
     if (svgTxt && throughCam)
       svgTxt = dzCamView(svgTxt, dzCamAt(dzFrameNum(DZ.anim.frames[i])));
@@ -4115,6 +4147,17 @@ async function dzAnimPlay() {
     }
     document.querySelectorAll("#tlFrames .tl-frame").forEach((c, k) => c.classList.toggle("cur", k === i));
   }, 1000 / fps);
+}
+/* rango de reproducción/export [lo,hi] 0-based inclusive, según In/Out de la
+   barra (In 1-based; Out 1-based, 0 = hasta el final), clamp a los cuadros */
+function dzPlayRange() {
+  const n = DZ.anim ? DZ.anim.frames.length : 1;
+  let lo = (+($("#tlIn") && $("#tlIn").value) || 1) - 1;
+  let out = +($("#tlOut") && $("#tlOut").value) || 0;
+  let hi = out > 0 ? out - 1 : n - 1;
+  lo = Math.max(0, Math.min(lo, n - 1));
+  hi = Math.max(lo, Math.min(hi, n - 1));
+  return [lo, hi];
 }
 function dzAnimStopIf() { if (DZ.anim && DZ.anim.playing) dzAnimStop(); }
 function dzAnimStop() {
