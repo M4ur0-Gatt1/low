@@ -1,12 +1,12 @@
-# Handoff: Fidel — Editor de código con agente IA
+# Handoff: LOW — Editor de código con agente IA
 
 ## Overview
-Fidel es un editor de código con un agente de IA integrado que trabaja con múltiples proveedores (Anthropic, OpenAI, Google, Mistral, DeepSeek, Groq, Llama/local). Este paquete documenta el diseño de la pantalla principal del editor: layout, tema dark/light, panel del agente, y sistema visual completo.
+LOW es un editor de código con un agente de IA integrado que trabaja con múltiples proveedores (Anthropic, OpenAI, Groq, DeepSeek, NVIDIA NIM, etc.). Este paquete documenta el diseño de la pantalla principal del editor: layout, tema dark/light, panel del agente, y sistema visual completo.
 
 ## About the Design Files
 Los archivos de este paquete son **referencias de diseño creadas en HTML** — prototipos que muestran la apariencia y comportamiento previstos, NO código de producción para copiar directamente. La tarea es **recrear estos diseños en el entorno del codebase existente** usando sus patrones y librerías establecidos. El proyecto original del usuario ya tiene lógica funcional (chat, comandos, providers); este handoff cubre solo los estilos y estructura visual.
 
-`Fidel Editor.dc.html` usa un formato propietario de componentes; ignora el scaffolding (`<x-dc>`, `support.js`, atributos `style-hover`) y lee los estilos inline + el bloque `<style>` de variables CSS, que es la fuente de verdad de los tokens.
+`LOW Editor.dc.html` usa un formato propietario de componentes; ignora el scaffolding (`<x-dc>`, `support.js`, atributos `style-hover`) y lee los estilos inline + el bloque `<style>` de variables CSS, que es la fuente de verdad de los tokens.
 
 ## Fidelity
 **High-fidelity (hifi)**. Colores, tipografía, espaciado y estados son finales. Recrear pixel-perfect con las librerías del codebase.
@@ -26,7 +26,7 @@ Los archivos de este paquete son **referencias de diseño creadas en HTML** — 
 
 #### Header
 - Logo: cuadrado `26×26px`, `border-radius: 8px`, fondo `--green`, estrella ★ roja `#E5322D` centrada, 13px
-- Wordmark "Fidel": Figtree 700, 15px, `letter-spacing: -0.2px`
+- Wordmark "LOW": Figtree 700, 15px, `letter-spacing: -0.2px`
 - Separador vertical: `1px × 20px`, `var(--line)`
 - Selector de modelo: pill con fondo `--panel2`, borde `--line`, `border-radius: 9px`, `padding: 6px 12px`, punto verde de estado `7px`, texto Figtree 500 12.5px, caret ▾
 - Buscador ⌘K: mismo estilo pero fondo transparente, texto `--mut`, `min-width: 220px`, kbd badge `⌘K` en JetBrains Mono 10.5px con fondo `--panel2` y `border-radius: 5px`
@@ -51,10 +51,10 @@ Botones `32×32px`, `border-radius: 9px`. Activo: fondo `--panel2`, color `--txt
 #### Panel del agente (360px)
 - Header: "Agente" Figtree 600 13px + badge "activo" (JetBrains Mono 10.5px, color `--green`, fondo `--greensoft`, pill `border-radius: 99px`, `padding: 2px 8px`) + iconos historial ⟲ y nueva conversación ＋
 - Burbuja del usuario: alineada a la derecha, `max-width: 85%`, fondo `--panel2`, `border-radius: 12px 12px 4px 12px`, `padding: 9px 13px`, 12.5px
-- Respuesta del agente: avatar mini-logo `18×18px` (`border-radius: 6px`) + "Fidel · nombre-modelo" en 11px `--mut`; texto 12.5px `line-height: 1.55`
+- Respuesta del agente: avatar mini-logo `18×18px` (`border-radius: 6px`) + "LOW · nombre-modelo" en 11px `--mut`; texto 12.5px `line-height: 1.55`
 - Tarjeta Plan: borde `--line`, `border-radius: 11px`; header con fondo `--panel2`, "Plan 3/3" + barra de progreso (`height: 3px`, pill, relleno `--green`); pasos con ✓ en `--green`, texto 12px `--mut`
 - Tarjeta de cambios: borde `--line`, `border-radius: 11px`; fila con ✎ rojo + nombre de archivo (JetBrains Mono 11.5px) + `+3` verde / `−1` rojo + link "Ver diff"; botones Aceptar (fondo `--red`, texto blanco, `border-radius: 8px`, Figtree 600 12px) y Rechazar (transparente, borde `--line`, texto `--mut`)
-- Zona de entrada: chips de comandos (`/compare`, `/run`, `/files`) en JetBrains Mono 10.5px, pill con borde `--line`, color `--mut`, hover → `--txt`; caja de texto con fondo `--panel2`, borde `--line`, `border-radius: 12px`, placeholder "Ordena algo a Fidel…" en `--faint`; botón enviar → `32×32px`, fondo `--red`, `border-radius: 9px`
+- Zona de entrada: chips de comandos (`/compare`, `/run`, `/files`) en JetBrains Mono 10.5px, pill con borde `--line`, color `--mut`, hover → `--txt`; caja de texto con fondo `--panel2`, borde `--line`, `border-radius: 12px`, placeholder "Ordena algo a LOW…" en `--faint`; botón enviar → `32×32px`, fondo `--red`, `border-radius: 9px`
 
 #### Barra de estado
 11px, color `--mut`: "● 3 APIs conectadas" (punto verde), "⑂ main" | derecha: "TypeScript · UTF-8", "Ln 16, Col 42"

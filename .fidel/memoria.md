@@ -1,2 +1,0 @@
-# Memoria del proyecto (LOW)
-- Proyecto Fidel/LOW: editor de código con agente IA multi-proveedor. Stack: Python + pywebview + CodeMirror. Providers en providers/ heredan de OpenAICompatProvider o AIProvider. Config en config.py con estructura providers[nombre] = {api_key, model, base_url}. Para agregar provider: crear clase en providers/, registrar en providers/__init__.py, agregar a DEFAULT_CONFIG["providers"] en config.py, y en main.py agregar a la cadena de failover si corresponde.

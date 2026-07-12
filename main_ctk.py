@@ -1,6 +1,6 @@
-"""Fidel — editor de código con agente IA multi-proveedor.
+"""LOW — editor de código con agente IA multi-proveedor (versión CustomTkinter).
 
-UI según design_handoff_fidel_editor sobre CustomTkinter: layout tipo VS Code,
+UI según design_handoff_low_editor sobre CustomTkinter: layout tipo VS Code,
 tokens dark/light, bordes redondeados (pills, tarjetas, burbujas), panel del
 agente con tarjetas Aceptar/Rechazar.
 """
@@ -44,7 +44,7 @@ CODE_EXT = {".py", ".js", ".ts", ".tsx", ".jsx", ".md", ".txt", ".json",
             ".sql", ".c", ".cpp", ".h", ".rs", ".go", ".java"}
 LANG_BY_EXT = {".py": "python", ".js": "javascript", ".ts": "javascript",
                ".sh": "bash", ".ps1": "powershell"}
-PH_INP = "Ordena algo a Fidel…"
+PH_INP = "Ordena algo a LOW…"
 PH_Q = "⌕  Buscar o dar una orden…  (Ctrl+K)"
 
 RE_KW = re.compile(r"\b(def|class|return|import|from|as|if|elif|else|for|while|try|except|finally|with|lambda|pass|break|continue|yield|async|await|raise|assert|del|in|is|not|and|or|None|True|False|self|const|let|var|function|new|this|typeof|export|default|extends|interface|type|public|private|static|void|switch|case|null|undefined|true|false)\b")
@@ -87,14 +87,14 @@ class LineNumbers(tk.Canvas):
             line_count += 1
 
 
-class Fidel:
+class LOWApp:
     def __init__(s):
         ctk.set_appearance_mode("dark")
         s.root = ctk.CTk()
-        s.root.title("Fidel")
+        s.root.title("LOW")
         try:
             base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
-            ico = os.path.join(base, "fidel.ico")
+            ico = os.path.join(base, "low.ico")
             if os.path.exists(ico):
                 s.root.iconbitmap(ico)
         except tk.TclError:
@@ -119,7 +119,7 @@ class Fidel:
         s._loading = False; s._inp_ph = False
         s.tree_paths = {}
 
-        s.ses_dir = Path(os.environ.get('APPDATA', '.')) / 'Fidel/historial'
+        s.ses_dir = Path(os.environ.get('APPDATA', '.')) / 'LOW/historial'
         s.ses_dir.mkdir(parents=True, exist_ok=True)
         s.ses_id = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         s.ses_msgs = []
@@ -127,7 +127,7 @@ class Fidel:
 
         s._initp(); s._ui(); s._apply_theme()
         s._new_tab()
-        s.amsg("system", "Bienvenido a Fidel — ⚙ para las API keys · 📁 para abrir un proyecto\n"
+        s.amsg("system", "Bienvenido a LOW — ⚙ para las API keys · 📁 para abrir un proyecto\n"
                          "Comandos: /compare /history /resume /browse /form /scrape /preview "
                          "/ssh /upload /read /write /exec /run /files")
         s.root.protocol("WM_DELETE_WINDOW", s._close)
@@ -175,11 +175,11 @@ class Fidel:
                 w.configure(**{k: s._c(v) for k, v in roles.items()})
             except (tk.TclError, ValueError):
                 pass
-        s.sty.configure("Fidel.Treeview", background=t["panel"], fieldbackground=t["panel"],
+        s.sty.configure("LOW.Treeview", background=t["panel"], fieldbackground=t["panel"],
                         foreground=t["mut"], borderwidth=0, relief="flat",
                         bordercolor=t["panel"], lightcolor=t["panel"], darkcolor=t["panel"],
                         rowheight=26, font=(s.UI, 9))
-        s.sty.map("Fidel.Treeview", background=[("selected", t["panel2"])],
+        s.sty.map("LOW.Treeview", background=[("selected", t["panel2"])],
                   foreground=[("selected", t["txt"])])
         # sintaxis
         s.ed.tag_configure("kw", foreground=t["kw"])
@@ -257,7 +257,7 @@ class Fidel:
         s.logo = tk.Canvas(hdi, width=26, height=26, highlightthickness=0)
         s._reg(s.logo, bg="panel")
         s.logo.pack(side="left")
-        s._reg(ctk.CTkLabel(hdi, text="Fidel", font=(s.UI, 13, "bold")),
+        s._reg(ctk.CTkLabel(hdi, text="LOW", font=(s.UI, 13, "bold")),
                fg_color="transparent", text_color="txt").pack(side="left", padx=(9, 12))
         s._reg(ctk.CTkFrame(hdi, width=1, height=20, corner_radius=0),
                fg_color="line").pack(side="left", padx=(0, 12))
@@ -330,7 +330,7 @@ class Fidel:
                                          font=(s.UI, 8, "bold")),
                             fg_color="transparent", text_color="faint")
         s.proj_lbl.pack(fill="x", padx=12, pady=(12, 6))
-        s.tree = ttk.Treeview(s.treewrap, show="tree", style="Fidel.Treeview",
+        s.tree = ttk.Treeview(s.treewrap, show="tree", style="LOW.Treeview",
                               selectmode="browse")
         s.tree.pack(fill="both", expand=True, padx=8, pady=(0, 10))
         s.tree.bind("<<TreeviewSelect>>", s._tree_open)
@@ -659,7 +659,7 @@ class Fidel:
             ext = os.path.splitext(tab["path"])[1].lower()
             if ext in LANG_BY_EXT:
                 s.lv.set(LANG_BY_EXT[ext])
-        s.root.title(f"Fidel — {tab['name']}")
+        s.root.title(f"LOW — {tab['name']}")
         s._retabs(); s._highlight(); s._linecol(); s.ln._redraw()
 
     def _retabs(s):
@@ -674,7 +674,7 @@ class Fidel:
         if not tab:
             return
         if tab["modified"] and not messagebox.askyesno(
-                "Fidel", f"{tab['name']} tiene cambios sin guardar. ¿Cerrar igual?"):
+                "LOW", f"{tab['name']} tiene cambios sin guardar. ¿Cerrar igual?"):
             return
         tab["frame"].destroy()
         del s.tabs[tid]; s.order.remove(tid)

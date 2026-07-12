@@ -41,7 +41,7 @@ ASSET_EXT = {".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp",
 LANG_BY_EXT = {".py": "python", ".js": "javascript", ".ts": "javascript",
                ".sh": "bash", ".ps1": "powershell"}
 
-FIDEL_VERSION = "3.5.0"
+LOW_VERSION = "3.5.0"
 
 # Desafío por defecto del comparador: verificable automáticamente
 DEFAULT_TASK = ("Escribe un programa Python que imprima los primeros 10 numeros "
@@ -125,7 +125,7 @@ DEFAULT_SP = ("Eres LOW, agente creativo y programador senior orientado a diseñ
               "espanol, breve.")
 
 
-LOG_PATH = data_dir() / 'fidel.log'
+LOG_PATH = data_dir() / 'low.log'
 
 
 def log(msg):
@@ -335,11 +335,11 @@ class Api:
     # ── Fichas de personaje (hojas de modelo): la referencia canónica ──
     # El "drift" de personaje (que cambie de cara/ropa/proporciones entre
     # imágenes o videos) se corta con una FICHA fija que viaja en cada prompt
-    # de generación. Viven en .fidel/personajes.json del workspace.
+    # de generación. Viven en .low/personajes.json del workspace.
     def _chars_file(s):
         if not s.ws:
             return None
-        return Path(s.ws) / ".fidel" / "personajes.json"
+        return Path(s.ws) / ".low" / "personajes.json"
 
     def _load_characters(s):
         f = s._chars_file()
@@ -402,13 +402,13 @@ class Api:
         return hit
 
     # ── Memoria del proyecto: hechos durables por workspace ────────
-    # Vive en .fidel/memoria.md DENTRO del proyecto (portable, editable, versionable
+    # Vive en .low/memoria.md DENTRO del proyecto (portable, editable, versionable
     # si el usuario quiere). El árbol y search ya ignoran carpetas que empiezan con
     # "." así que no ensucia el listado del proyecto.
     def _mem_file(s):
         if not s.ws:
             return None
-        return Path(s.ws) / ".fidel" / "memoria.md"
+        return Path(s.ws) / ".low" / "memoria.md"
 
     def _load_project_memory(s):
         f = s._mem_file()
@@ -438,7 +438,7 @@ class Api:
             return {"error": str(e)}
 
     def _remember(s, note):
-        """Agrega un hecho durable a .fidel/memoria.md (sin duplicar). Devuelve
+        """Agrega un hecho durable a .low/memoria.md (sin duplicar). Devuelve
         el texto de resultado para la tool `remember`."""
         note = (note or "").strip().lstrip("-•").strip()
         if not note:
@@ -474,15 +474,15 @@ class Api:
             log(f"_push({event}) fallo: {e}")
 
     def log_js(s, msg):
-        """El frontend reporta acá sus errores y el boot — queda en fidel.log."""
+        """El frontend reporta acá sus errores y el boot — queda en low.log."""
         log(f"[js] {msg}")
 
     def _base(s):
         """Workspace efectivo para las tools. Si no hay, crea uno por defecto
-        en Documentos/Fidel y avisa al frontend para que muestre el árbol."""
+        en Documentos/LOW y avisa al frontend para que muestre el árbol."""
         if not s.ws:
             try:
-                d = Path.home() / "Documents" / "Fidel"
+                d = Path.home() / "Documents" / "LOW"
                 d.mkdir(parents=True, exist_ok=True)
                 s.ws = str(d)
                 s._push("ws", {"ws": s.ws, "tree": s._tree(), "branch": ""})
@@ -490,7 +490,7 @@ class Api:
                 log(f"Error creando workspace por defecto: {e}")
                 # Fallback a directorio temporal si Documents no está disponible
                 import tempfile
-                d = Path(tempfile.gettempdir()) / "Fidel"
+                d = Path(tempfile.gettempdir()) / "LOW"
                 d.mkdir(parents=True, exist_ok=True)
                 s.ws = str(d)
                 s._push("ws", {"ws": s.ws, "tree": s._tree(), "branch": ""})
@@ -552,7 +552,7 @@ class Api:
             "zoom": s.cfg.data.get("zoom", 1.0),
             "system_prompt": s.cfg.data.get("system_prompt", ""),
             "default_sp": DEFAULT_SP,
-            "version": FIDEL_VERSION,
+            "version": LOW_VERSION,
             "tools": [{"name": t["function"]["name"],
                        "desc": t["function"].get("description", "")}
                       for t in s._get_tools()],
@@ -3305,7 +3305,7 @@ class Api:
             s.ses_id = sid
             s.ses_msgs = msgs
             # Reconstruir _mem para que el modelo tenga contexto de la conversación.
-            # OJO: el frontend guarda las respuestas del agente con rol "Fidel"
+            # OJO: el frontend guarda las respuestas del agente con rol "LOW"
             # (no "assistant") — hay que mapearlo o el modelo pierde su propio
             # contexto al restaurar una conversación.
             s._mem = []
@@ -3313,7 +3313,7 @@ class Api:
                 role = m.get("role")
                 if role == "user":
                     s._mem.append({"role": "user", "content": m.get("content", "")})
-                elif role in ("assistant", "Fidel", "LOW"):
+                elif role in ("assistant", "LOW"):
                     s._mem.append({"role": "assistant", "content": m.get("content", "")})
             # Mantener solo los últimos turnos para no saturar el contexto
             s._mem = s._mem[-s._mem_limit():]
@@ -3394,9 +3394,9 @@ class Api:
                     return msgs(s._remember(arg_m))
                 pm = s._load_project_memory()
                 if not pm:
-                    return msgs("📌 Este proyecto todavía no tiene memoria. Se va llenando "
-                                "sola cuando el agente descubre cosas durables, o agregá con "
-                                "«/memoria <hecho>». Vive en .fidel/memoria.md")
+                return msgs("📌 Este proyecto todavía no tiene memoria. Se va llenando "
+                            "sola cuando el agente descubre cosas durables, o agregá con "
+                            "«/memoria <hecho>». Vive en .low/memoria.md")
                 return msgs("📌 Memoria de este proyecto (se le reinyecta al agente):\n" + pm[:2500])
             if cmd == "git" and arg:
                 return msgs(s._exec_tool("git", {"args": arg}, "", "python"))

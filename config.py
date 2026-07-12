@@ -1,8 +1,8 @@
 """Configuración de LOW: API keys, tema, zoom.
 
 Vive en el directorio de datos del usuario según el sistema operativo:
-Windows %APPDATA%/Fidel · macOS ~/Library/Application Support/Fidel ·
-Linux ~/.config/Fidel.
+Windows %APPDATA%/LOW · macOS ~/Library/Application Support/LOW ·
+Linux ~/.config/LOW.
 """
 import json
 import os
@@ -19,10 +19,7 @@ def data_dir() -> Path:
     else:
         base = Path(os.environ.get("XDG_CONFIG_HOME",
                                    Path.home() / ".config"))
-    # La carpeta de datos sigue llamándose "Fidel" A PROPÓSITO: LOW es el mismo
-    # producto renombrado y así conserva config, keys e historial de quienes
-    # venían usando Fidel (renombrarla los orfanaría). Es interna, no se ve.
-    d = base / "Fidel"
+    d = base / "LOW"
     d.mkdir(parents=True, exist_ok=True)
     return d
 

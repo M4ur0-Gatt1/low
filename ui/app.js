@@ -1324,7 +1324,7 @@ async function resume(sid) {
   $("#msgs").innerHTML = "";
   for (const m of msgs) {
     if (m.role === "user") userMsg(m.content);
-    else if ((m.role === "Fidel" || m.role === "LOW")) agentMsg(m.content);
+    else if (m.role === "LOW") agentMsg(m.content);
     else sysMsg(m.content);
   }
   sysMsg(`📂 Restaurada (${msgs.length} msgs)`);

@@ -1,6 +1,6 @@
 name: build
 
-# Al pushear un tag vX.Y.Z compila Fidel para Windows, macOS y Linux
+# Al pushear un tag vX.Y.Z compila LOW para Windows, macOS y Linux
 # y sube los artefactos al release de GitHub.
 on:
   push:
@@ -30,12 +30,12 @@ jobs:
       - name: Dependencias
         run: pip install -r requirements.txt pyinstaller
       - name: Compilar exe
-        run: pyinstaller Fidel.spec --noconfirm
+        run: pyinstaller LOW.spec --noconfirm
       - name: Instalador (Inno Setup)
         shell: pwsh
         run: |
           choco install innosetup -y --no-progress
-          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" fidel_installer.iss
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" low_installer.iss
       - name: Subir al release
         shell: bash
         run: gh release upload "$GITHUB_REF_NAME" Output/*.exe dist/LOW.exe --clobber
@@ -53,7 +53,7 @@ jobs:
       - name: Dependencias
         run: pip install -r requirements.txt pyinstaller
       - name: Compilar
-        run: pyinstaller Fidel.spec --noconfirm
+        run: pyinstaller LOW.spec --noconfirm
       - name: Empaquetar
         run: cd dist && zip -r LOW-macos.zip LOW*
       - name: Subir al release
@@ -74,7 +74,7 @@ jobs:
           pip install -r requirements.txt pyinstaller
           pip install "pywebview[qt]"
       - name: Compilar
-        run: pyinstaller Fidel.spec --noconfirm
+        run: pyinstaller LOW.spec --noconfirm
       - name: Subir al release
         run: |
           mv dist/LOW dist/LOW-linux

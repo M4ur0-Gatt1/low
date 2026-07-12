@@ -1,7 +1,7 @@
-# Fidel ★
+# LOW ★
 
 **Editor de código con agente IA multi-proveedor.** Escribís una orden, el agente
-lee, escribe y ejecuta archivos de tu proyecto — y Fidel verifica que el código
+lee, escribe y ejecuta archivos de tu proyecto — y LOW verifica que el código
 generado compile antes de darlo por bueno. Pensado para comparar qué modelo
 escribe código más preciso, rápido y funcional.
 
@@ -11,10 +11,10 @@ escribe código más preciso, rápido y funcional.
 - **Agente con herramientas**: crea y lee archivos, ejecuta comandos y corre el
   código del editor. Los archivos generados se abren solos en el editor.
 - **Verificación del harness**: todo `.py` que escribe el agente se compila; si
-  tiene errores de sintaxis, Fidel se los devuelve al modelo para que los
+  tiene errores de sintaxis, LOW se los devuelve al modelo para que los
   corrija antes de reportar "listo".
 - **Desafío de código (⚖)**: la misma consigna a varios modelos en paralelo;
-  Fidel compila, ejecuta y compara la salida. Gana el código que funciona.
+  LOW compila, ejecuta y compara la salida. Gana el código que funciona.
 - **Editor**: CodeMirror con temas claro/oscuro, terminal integrada, y las apps
   con ventana (pygame, tkinter…) corren en proceso aparte. Los HTML se abren
   directo en el navegador.
@@ -25,15 +25,15 @@ En [Releases](../../releases) está la última versión:
 
 | Sistema | Archivo |
 |---|---|
-| Windows 10/11 | `FidelSetup-x.y.z.exe` (instalador, no pide administrador) |
-| macOS | `Fidel-macos.zip` (primera vez: clic derecho → Abrir, por Gatekeeper) |
-| Linux | `Fidel-linux` (`chmod +x` y ejecutar) |
+| Windows 10/11 | `LOWSetup-x.y.z.exe` (instalador, no pide administrador) |
+| macOS | `LOW-macos.zip` (primera vez: clic derecho → Abrir, por Gatekeeper) |
+| Linux | `LOW-linux` (`chmod +x` y ejecutar) |
 
 ## Correr desde el código
 
 ```bash
 git clone <este-repo>
-cd fidel
+cd low
 pip install -r requirements.txt
 # Linux además: pip install "pywebview[qt]"
 python main.py
@@ -51,8 +51,8 @@ Engranaje ⚙ → pegá tus API keys. Para empezar gratis:
 - **NVIDIA NIM** — [build.nvidia.com](https://build.nvidia.com) · una sola key
   habilita todo el catálogo (DeepSeek, Kimi, Nemotron, GLM…)
 
-Las keys se guardan localmente (`%APPDATA%\Fidel` en Windows, `~/.config/Fidel`
-en Linux, `~/Library/Application Support/Fidel` en macOS) y nunca entran al repo.
+Las keys se guardan localmente (`%APPDATA%\LOW` en Windows, `~/.config/LOW`
+en Linux, `~/Library/Application Support/LOW` en macOS) y nunca entran al repo.
 
 ## Compilar
 

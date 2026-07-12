@@ -1,5 +1,5 @@
 ; Instalador de LOW — editor de diseño/animación con agente IA
-; Compilar: ISCC.exe fidel_installer.iss
+; Compilar: ISCC.exe low_installer.iss
 
 #define AppName "LOW"
 #define AppVersion "3.4.0"
@@ -40,7 +40,7 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopico
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
-; la config y el historial quedan en %APPDATA%\Fidel por si reinstala;
+; la config y el historial quedan en %APPDATA%\LOW por si reinstala;
 ; solo se borra lo instalado
 Type: filesandordirs; Name: "{app}"
 

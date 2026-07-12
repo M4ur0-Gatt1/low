@@ -20,7 +20,7 @@ if not os.path.exists("low.ico"):
 
 # 2. exe
 subprocess.check_call([sys.executable, "-m", "pip", "install", "--quiet", "pyinstaller"])
-subprocess.check_call([sys.executable, "-m", "PyInstaller", "Fidel.spec",
+subprocess.check_call([sys.executable, "-m", "PyInstaller", "LOW.spec",
                        "--noconfirm", "--clean"])
 print("\nOK: dist/LOW.exe")
 
@@ -32,7 +32,7 @@ iscc_paths = [
 ]
 iscc = next((p for p in iscc_paths if os.path.exists(p)), None)
 if iscc:
-    subprocess.check_call([iscc, "fidel_installer.iss"])
+    subprocess.check_call([iscc, "low_installer.iss"])
     print("\nOK: Output/LOWSetup-*.exe")
 else:
     print("\nAviso: Inno Setup no encontrado; instalador omitido.")
