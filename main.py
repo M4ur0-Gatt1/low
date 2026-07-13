@@ -41,7 +41,7 @@ ASSET_EXT = {".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp",
 LANG_BY_EXT = {".py": "python", ".js": "javascript", ".ts": "javascript",
                ".sh": "bash", ".ps1": "powershell"}
 
-LOW_VERSION = "3.5.4"
+LOW_VERSION = "3.5.5"
 
 # Desafío por defecto del comparador: verificable automáticamente
 DEFAULT_TASK = ("Escribe un programa Python que imprima los primeros 10 numeros "
@@ -2805,10 +2805,13 @@ class Api:
                                             "Arrancalo (`ollama serve`, con un modelo instalado) "
                                             "o elegí otro proveedor con API key en ⚙ (arriba a la "
                                             "izquierda).", "status": "Error"}
-                        if "403" in err and "subscription" in low:
-                            return {"text": f"❌ {err[:200]}\n\nEse modelo no está habilitado en tu "
-                                            "plan. Elegí en el selector otro modelo de los que SÍ "
-                                            "tenés acceso (la lista se actualizó sola).",
+                        if "403" in err and ("subscription" in low or "tier" in low):
+                            return {"text": "❌ Ese modelo necesita un tier de suscripción más alto "
+                                            "(en DigitalOcean los PROPIETARIOS —Claude, GPT-4o/GPT-5, "
+                                            "o-series— están gateados). Elegí en el selector uno "
+                                            "ABIERTO, que sí anda en tu plan: deepseek-v4-pro, "
+                                            "glm-5.2, kimi-k2.6, llama-4-maverick, qwen3-coder-flash "
+                                            "u openai-gpt-oss-120b.",
                                     "status": "Error"}
                         raise
                     # el usuario detuvo (o el stream se cortó sin respuesta)

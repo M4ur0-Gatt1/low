@@ -14,16 +14,17 @@ from providers.base import OpenAICompatProvider
 
 class DigitalOceanProvider(OpenAICompatProvider):
     BASE_URL = "https://inference.do-ai.run/v1"
-    # fallback si /models no responde; la lista REAL (todos los modelos a los que
-    # tenés acceso) se trae en vivo de /models. OJO con el formato de los IDs de
-    # DO: 'openai-gpt-4o-mini', 'llama3-8b-instruct' (confirmados en la doc), NO
-    # 'llama3.3-70b-instruct' con puntos → eso da 403 "not available".
-    MODELS = ["openai-gpt-4o-mini", "openai-gpt-4o", "llama3-8b-instruct",
-              "llama3.3-70b-instruct", "anthropic-claude-3.5-sonnet",
-              "deepseek-r1-distill-llama-70b"]
+    # fallback si /models no responde. La lista real se trae en vivo de /models,
+    # PERO OJO: /models lista TODO el catálogo de DO; los modelos PROPIETARIOS
+    # (anthropic-claude-*, openai-gpt-*/o*) requieren un tier de suscripción alto
+    # y devuelven 403 "not available for your subscription tier". Los ABIERTOS
+    # andan en el tier base. Por eso el default y el fallback son abiertos.
+    MODELS = ["deepseek-v4-pro", "deepseek-3.2", "glm-5.2", "kimi-k2.6",
+              "llama-4-maverick", "llama3.3-70b-instruct", "qwen3-coder-flash",
+              "openai-gpt-oss-120b", "mistral-3-14B"]
 
     @staticmethod
     def provider_name(): return "DigitalOcean"
 
     @staticmethod
-    def default_model(): return "openai-gpt-4o-mini"
+    def default_model(): return "deepseek-v4-pro"

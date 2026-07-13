@@ -60,7 +60,7 @@ DEFAULT_CONFIG = {
         # con los que tengas acceso (Llama, DeepSeek, Mistral, OpenAI, Anthropic).
         # Key: token personal de DO o model access key
         #      (https://cloud.digitalocean.com/gen-ai/model-access-keys)
-        "digitalocean": {"api_key": "", "model": "openai-gpt-4o-mini", "base_url": "https://inference.do-ai.run/v1"},
+        "digitalocean": {"api_key": "", "model": "deepseek-v4-pro", "base_url": "https://inference.do-ai.run/v1"},
         # LTX (Lightricks) — SOLO video (text→video / imagen→video con audio).
         # No es un modelo de chat: no entra en la cadena de failover del agente.
         # Key: https://console.ltx.video/api-keys
@@ -101,12 +101,15 @@ class Config:
                           "https://api.paperspace.io", ""},
                          "https://inference.do-ai.run/v1"),
     }
-    # IDs de modelo inválidos que pusimos como default y daban 403 en DO
-    # (formato con puntos). Se reescriben a un ID válido de DO.
+    # IDs de modelo que pusimos como default y NO andan en el tier base de DO
+    # (formato viejo con puntos, o propietarios que dan 403 por tier). Se
+    # reescriben a un modelo ABIERTO que sí funciona. OJO: NO incluimos
+    # 'llama3.3-70b-instruct' acá porque ES un ID válido y abierto que anda.
     _OBSOLETE_MODELS = {
-        "digitalocean": ({"llama3.3-70b-instruct", "llama-3.3-70b-instruct",
-                          "llama-3.1-8b-instruct", "mixtral-8x7b-instruct"},
-                         "openai-gpt-4o-mini"),
+        "digitalocean": ({"llama-3.3-70b-instruct", "llama-3.1-8b-instruct",
+                          "mixtral-8x7b-instruct", "openai-gpt-4o-mini",
+                          "openai-gpt-4o"},
+                         "deepseek-v4-pro"),
     }
 
     def _migrate(self, cfg: dict) -> bool:
