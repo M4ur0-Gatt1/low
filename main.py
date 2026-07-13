@@ -41,7 +41,7 @@ ASSET_EXT = {".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp",
 LANG_BY_EXT = {".py": "python", ".js": "javascript", ".ts": "javascript",
                ".sh": "bash", ".ps1": "powershell"}
 
-LOW_VERSION = "3.6.0"
+LOW_VERSION = "3.7.0"
 
 # Desafío por defecto del comparador: verificable automáticamente
 DEFAULT_TASK = ("Escribe un programa Python que imprima los primeros 10 numeros "
@@ -1377,6 +1377,37 @@ class Api:
             {"type": "function", "function": {"name": "ask_model", "description": "Delega una SUBTAREA a OTRO modelo para AHORRAR recursos: mandá lo simple/mecánico a uno barato o rápido y reservá el modelo actual (caro) para lo complejo. Devuelve la respuesta de ese modelo como texto para que la uses. 'provider' = uno de los configurados con key (ej. groq, digitalocean, siliconflow, deepseek, glm, qwen, nvidia, custom). 'model' opcional (default: el rápido del proveedor). Ideal para: resumir, traducir, reformatear, generar texto trivial, clasificar, listar ideas, boilerplate. NO delegues tareas que necesiten tus herramientas (archivos, git, imagenes). Podés hacer varias ask_model en paralelo mental para comparar respuestas.", "parameters": {"type": "object", "properties": {"provider": {"type": "string", "description": "proveedor destino (con key configurada)"}, "prompt": {"type": "string", "description": "la subtarea, autocontenida (incluí todo el contexto que el otro modelo necesita)"}, "model": {"type": "string", "description": "modelo especifico del proveedor (opcional)"}}, "required": ["provider", "prompt"]}}},
         ]
 
+    # tools de imagen/video: peso muerto en tareas de código (~1.4k tokens). El
+    # tool gating las omite en sesiones 'code' y las incluye en 'design'.
+    _MEDIA_TOOLS = {"generate_image", "refine_image", "edit_image", "animate_image",
+                    "generate_video", "social_export", "save_character", "check_design"}
+    _DESIGN_RE = re.compile(r"imagen|dibuj|logo|ilustr|dise[ñn]|foto|render|v[ií]deo|video|"
+                            r"anima|storyboard|personaje|banner|flyer|afiche|p[oó]ster|"
+                            r"social|thumbnail|\bsvg\b|[ií]cono", re.I)
+
+    def _session_tools(s, msg):
+        """Tools a enviar este turno. Modo POR SESIÓN (cache estable): 'design'
+        incluye imagen/video, 'code' las omite. Se decide en el primer mensaje;
+        si una sesión 'code' pide diseño en un turno posterior, sube a 'design'
+        para el resto. Config agent.tool_profile: auto (default) | full | code | design."""
+        all_tools = s._get_tools()
+        prof = (s.cfg.data.get("agent", {}) or {}).get("tool_profile", "auto")
+        if prof == "full":
+            return all_tools
+        design_now = bool(s._DESIGN_RE.search(msg or ""))
+        if prof in ("code", "design"):
+            mode = prof
+        else:
+            mode = getattr(s, "_tool_mode", None)
+            if mode is None:
+                mode = "design" if design_now else "code"
+                s._tool_mode = mode
+            elif mode == "code" and design_now:
+                mode = s._tool_mode = "design"
+        if mode == "design":
+            return all_tools
+        return [t for t in all_tools if t["function"]["name"] not in s._MEDIA_TOOLS]
+
     # ── helpers de edición robusta / progreso ──────────────────────
     @staticmethod
     def _is_tool_err(res):
@@ -2648,11 +2679,12 @@ class Api:
             parts.append("Revisión visual:\n" + visual)
         return (f"{base}:\n" + "\n".join(parts)) if parts else ""
 
-    def _run_model(s, ms, sp, temperature, max_tok, use_tools):
+    def _run_model(s, ms, sp, temperature, max_tok, use_tools, tools=None):
         """Llama al modelo con STREAMING real: empuja content y reasoning
         ('pensamiento') a la UI a medida que llegan. Devuelve el AIResponse final.
-        `s._live` queda True si el texto de la respuesta se mostró en vivo."""
-        tools = s._get_tools() if use_tools else None
+        `s._live` queda True si el texto de la respuesta se mostró en vivo.
+        `tools`: subconjunto ya filtrado (tool gating); si no se pasa, todos."""
+        tools = (tools if tools is not None else s._get_tools()) if use_tools else None
         s._live = False
         if getattr(s.prov, "supports_stream", False):
             started = thinking = False
@@ -2692,9 +2724,16 @@ class Api:
         sid0 = s.ses_id      # charla a la que pertenece ESTE turno (anti-mezcla)
         try:
             ctx = ""
-            if code.strip() and not code.startswith("//"):
-                ctx += f"Editor ({lang}):\n```{lang}\n{code[:3000]}\n```\n"
-            if s.ws:
+            # PODA de contexto por turno: mandar editor+árbol enteros solo al arrancar
+            # la charla o cuando el mensaje los referencia; el resto de los turnos el
+            # agente ya tiene contexto y puede usar list_files/read_file (ahorra tokens).
+            first_turn = not s._mem
+            code_relevant = bool(re.search(
+                r"editor|este c[oó]digo|esta func|refactor|arregl|\bbug\b|\bfix\b|"
+                r"l[ií]nea|archivo abierto|el c[oó]digo|lo de arriba", msg or "", re.I))
+            if code.strip() and not code.startswith("//") and (first_turn or code_relevant):
+                ctx += f"Editor ({lang}):\n```{lang}\n{code[:2500]}\n```\n"
+            if s.ws and first_turn:
                 cf = list(s._iter_files(Path(s.ws)))
                 if cf:
                     ctx += "Proyecto:\n" + "\n".join(
@@ -2719,12 +2758,16 @@ class Api:
                        "los modelos abiertos (deepseek-v4-pro, glm-5.2, qwen3-coder-flash, "
                        "openai-gpt-oss-120b) son baratos y buenos. No delegues lo que necesite "
                        "tus otras herramientas (archivos, git, imágenes).")
-            # Habilidades: inyectar solo las relevantes al pedido (patrón positivo)
+            # Habilidades: inyectar solo las relevantes al pedido (patrón positivo).
+            # OJO CACHE: esto varía por mensaje → NO va en el system prompt (rompería
+            # el prefijo cacheado). Se agrega al mensaje del usuario (parte no cacheada).
             rel_skills = s._relevant_skills(msg)
+            skills_hint = ""
             if rel_skills:
-                sp += ("\n\nHABILIDADES APRENDIDAS aplicables a este pedido (usalas como guía):\n"
-                       + "\n".join(f"• {sk['name']} — cuándo: {sk.get('when','')}\n"
-                                   f"  pasos: {sk.get('steps','')}" for sk in rel_skills))
+                skills_hint = ("HABILIDADES APRENDIDAS aplicables a este pedido (usalas como guía):\n"
+                               + "\n".join(f"• {sk['name']} — cuándo: {sk.get('when','')}\n"
+                                           f"  pasos: {sk.get('steps','')}" for sk in rel_skills)
+                               + "\n\n")
             # Memoria del proyecto: hechos durables de ESTE workspace (stack, servers,
             # comandos, convenciones). Se carga entre sesiones para no arrancar de cero.
             pmem = s._load_project_memory()
@@ -2742,7 +2785,7 @@ class Api:
             # ({"type":"image_url",...}); cada provider lo traduce si hace falta
             # (ver _msgs_to_anthropic). No se guarda en la memoria del turno para
             # no arrastrar el base64 (pesado) a los mensajes siguientes.
-            user_text = ctx + msg
+            user_text = skills_hint + ctx + msg
             if image and image.get("data"):
                 user_content = [
                     {"type": "text", "text": user_text or "Describí esta imagen."},
@@ -2800,6 +2843,7 @@ class Api:
             no_progress = 0            # tramos seguidos sin ningún avance → ahí sí paramos
             last_progress = (0, 0)     # (archivos escritos, herramientas ejecutadas)
             verified_ok = False        # el turno terminó limpio (sin errores) → aprender habilidad
+            turn_tools = s._session_tools(msg)   # tool gating por sesión (cache estable)
             while True:
                 hit_cap = False
                 for attempt in range(max_attempts):
@@ -2808,7 +2852,7 @@ class Api:
                     try:
                         # temperatura baja: las llamadas a herramientas requieren
                         # JSON exacto y los Llama en Groq lo fallan con temp alta
-                        r = s._run_model(ms, sp, 0.2, max_tok, use_tools)
+                        r = s._run_model(ms, sp, 0.2, max_tok, use_tools, turn_tools)
                     except Exception as e:
                         err = str(e)
                         low = err.lower()
@@ -3089,7 +3133,12 @@ class Api:
                     text = rc.strip()[:1500] or \
                         "⚠ El modelo no devolvió respuesta (se quedó razonando o cortó). " \
                         "Probá de nuevo o cambiá de modelo."
-            status = f"✅ {r.tokens_used}t · ${r.cost:.4f} · {r.model}" if r else "Listo"
+            if r:
+                cached = getattr(r, "cached_tokens", 0) or 0
+                cache_txt = f" · 💾 {cached}t cache" if cached else ""
+                status = f"✅ {r.tokens_used}t{cache_txt} · ${r.cost:.4f} · {r.model}"
+            else:
+                status = "Listo"
             # guardar el turno en memoria (solo texto limpio, robusto entre modelos).
             # SOLO si seguimos en la misma charla: si el usuario cambió de solapa
             # mientras el agente trabajaba, no contaminar la memoria de la otra.
@@ -3272,6 +3321,7 @@ class Api:
         s.ses_msgs = []
         s._mem = []          # olvidar el contexto de conversación
         s._checkpoint = {}
+        s._tool_mode = None  # re-detectar modo de tools (code/design) en la charla nueva
         return s.ses_id
 
     def delete_session(s, sid):

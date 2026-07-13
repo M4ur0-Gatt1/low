@@ -40,6 +40,9 @@ DEFAULT_CONFIG = {
         "max_continuations": 25,  # veces que sigue solo tras llegar al tope de pasos
         "memory_turns": 24,       # turnos de conversación que recuerda en la sesión
         "learn": True,            # Reflexion: aprende de sus errores y los recuerda
+        # tool gating: qué tools se mandan (menos tokens/req). auto = detecta
+        # code/design por sesión; full = todos; code = sin imagen/video; design = todos.
+        "tool_profile": "auto",
     },
     # servidores SSH guardados (alias reutilizables para ssh_exec/scp_upload):
     # [{"name": "yungas", "user": "root", "host": "1.2.3.4", "port": "", "key": ""}]

@@ -13,7 +13,18 @@ class APIResult:
     latency_ms: int = 0
     cost: float = 0.0
     finish_reason: str = "stop"
+    cached_tokens: int = 0      # tokens del prompt servidos desde cache
     raw: dict = None
+
+
+def _cached_from_usage(usage: dict) -> int:
+    """Tokens del prompt leídos del cache, según el proveedor:
+    DeepSeek → prompt_cache_hit_tokens; OpenAI → prompt_tokens_details.cached_tokens."""
+    if not usage:
+        return 0
+    return (usage.get("prompt_cache_hit_tokens")
+            or (usage.get("prompt_tokens_details") or {}).get("cached_tokens")
+            or 0)
 
 
 # Precios por millón de tokens (input, output) — agosto 2026
@@ -149,6 +160,7 @@ class Transport:
                     latency_ms=latency,
                     cost=self._calc_cost(model, inp, out),
                     finish_reason=choice.get("finish_reason", "stop") or "stop",
+                    cached_tokens=_cached_from_usage(usage),
                     raw=data,
                 )
             except requests.exceptions.Timeout as e:
@@ -204,7 +216,7 @@ class Transport:
 
         content_parts, reasoning_parts = [], []
         tool_calls = {}          # index -> {id, name, args}
-        inp = out = 0
+        inp = out = cached = 0
         model_name = model
         finish = "stop"
 
@@ -226,6 +238,7 @@ class Transport:
             if usage:
                 inp = usage.get("prompt_tokens", inp)
                 out = usage.get("completion_tokens", out)
+                cached = _cached_from_usage(usage) or cached
             choices = chunk.get("choices") or []
             if not choices:
                 continue
@@ -263,5 +276,6 @@ class Transport:
             content=content, model=model_name, tokens_input=inp, tokens_output=out,
             latency_ms=int((time.time() - t0) * 1000),
             cost=self._calc_cost(model_name, inp, out), finish_reason=finish,
+            cached_tokens=cached,
             raw={"choices": [{"message": msg, "finish_reason": finish}],
                  "model": model_name})}

@@ -15,6 +15,7 @@ class AIResponse:
     finish_reason: str = "stop"
     cost: float = 0.0
     latency_ms: int = 0
+    cached_tokens: int = 0    # tokens del prompt leídos del cache (90% más baratos)
     raw: dict = field(default_factory=dict)
 
 
@@ -103,7 +104,8 @@ class OpenAICompatProvider(AIProvider):
         return AIResponse(content=r.content, model=r.model,
                           tokens_used=r.tokens_input + r.tokens_output,
                           finish_reason=r.finish_reason, cost=r.cost,
-                          latency_ms=r.latency_ms, raw=r.raw)
+                          latency_ms=r.latency_ms,
+                          cached_tokens=getattr(r, "cached_tokens", 0), raw=r.raw)
 
     def chat_stream(self, messages, system_prompt="", temperature=0.7,
                     max_tokens=4096, tools=None):
@@ -118,7 +120,8 @@ class OpenAICompatProvider(AIProvider):
                     content=r.content, model=r.model,
                     tokens_used=r.tokens_input + r.tokens_output,
                     finish_reason=r.finish_reason, cost=r.cost,
-                    latency_ms=r.latency_ms, raw=r.raw)}
+                    latency_ms=r.latency_ms,
+                    cached_tokens=getattr(r, "cached_tokens", 0), raw=r.raw)}
 
     # marca para que send_chat sepa que este provider hace streaming real
     supports_stream = True
