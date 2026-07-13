@@ -41,7 +41,7 @@ ASSET_EXT = {".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp",
 LANG_BY_EXT = {".py": "python", ".js": "javascript", ".ts": "javascript",
                ".sh": "bash", ".ps1": "powershell"}
 
-LOW_VERSION = "3.5.2"
+LOW_VERSION = "3.5.3"
 
 # Desafío por defecto del comparador: verificable automáticamente
 DEFAULT_TASK = ("Escribe un programa Python que imprima los primeros 10 numeros "
@@ -1235,19 +1235,27 @@ class Api:
                 "anthropic", "qwen", "glm", "xai", "digitalocean", "custom"]
         rest = sorted((p for p in provs if p != active and p not in s.MEDIA_ONLY),
                       key=lambda p: pref.index(p) if p in pref else 99)
+        # ¿Ollama está realmente corriendo? Si NO, no lo metemos como respaldo:
+        # antes la cadena caía SIEMPRE en custom y, con Ollama apagado, moría con
+        # "connection refused" en localhost:11434 en vez de dar un error útil.
+        ollama_up = bool(s._ollama) or bool(s.ollama_models())
         chain = []
         for i, name in enumerate([active] + rest):
             if name in s.MEDIA_ONLY:   # ltx & cía no chatean
                 continue
             d = provs.get(name, {})
-            if not (d.get("api_key") or name == "custom"):
+            if name == "custom":
+                # custom (Ollama): solo como respaldo si está corriendo. Si el
+                # usuario lo eligió explícitamente (activo, i==0) lo dejamos igual
+                # para que el error sea claro ("Ollama no responde").
+                if not ollama_up and i != 0:
+                    continue
+            elif not d.get("api_key"):
                 continue
             if i == 0:
                 model = d.get("model") or None            # respeta la elección del usuario
             elif name == "custom":
                 # Ollama local: usar un modelo REALMENTE instalado (detectado)
-                if not s._ollama:
-                    s.ollama_models()   # detección perezosa (timeout 2s)
                 model = (s._ollama[0] if s._ollama else None) or d.get("model") or None
             else:
                 model = s.FAST_MODEL.get(name) or d.get("model") or None
@@ -2790,6 +2798,18 @@ class Api:
                             use_tools = True
                             flubs = 0
                             continue
+                        # sin más proveedores en la cadena → mensaje útil, no el stack crudo
+                        if ("11434" in err or "10061" in err or "connection refused" in low
+                                or ("localhost" in low and "connection" in low)):
+                            return {"text": "❌ Ollama no está corriendo en localhost:11434. "
+                                            "Arrancalo (`ollama serve`, con un modelo instalado) "
+                                            "o elegí otro proveedor con API key en ⚙ (arriba a la "
+                                            "izquierda).", "status": "Error"}
+                        if "403" in err and "subscription" in low:
+                            return {"text": f"❌ {err[:200]}\n\nEse modelo no está habilitado en tu "
+                                            "plan. Elegí en el selector otro modelo de los que SÍ "
+                                            "tenés acceso (la lista se actualizó sola).",
+                                    "status": "Error"}
                         raise
                     # el usuario detuvo (o el stream se cortó sin respuesta)
                     if s._cancel or r is None:
