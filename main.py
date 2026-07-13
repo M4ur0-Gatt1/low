@@ -41,7 +41,7 @@ ASSET_EXT = {".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp",
 LANG_BY_EXT = {".py": "python", ".js": "javascript", ".ts": "javascript",
                ".sh": "bash", ".ps1": "powershell"}
 
-LOW_VERSION = "3.5.5"
+LOW_VERSION = "3.6.0"
 
 # Desafío por defecto del comparador: verificable automáticamente
 DEFAULT_TASK = ("Escribe un programa Python que imprima los primeros 10 numeros "
@@ -1221,7 +1221,7 @@ class Api:
         "qwen": "qwen-plus",
         "glm": "glm-4-flash",
         "xai": "grok-2",
-        "digitalocean": "llama-3.3-70b-instruct",
+        "digitalocean": "llama3.3-70b-instruct",
     }
 
     def _chain(s):
@@ -1268,6 +1268,36 @@ class Api:
         if d.get("base_url"):
             kw["base_url"] = d["base_url"]
         return get_provider(name, api_key=d.get("api_key", ""), **kw)
+
+    def _ask_model(s, provider, prompt, model=""):
+        """Delegación: corre `prompt` en OTRO proveedor/modelo (one-shot, sin
+        herramientas) y devuelve su texto. Permite que el modelo activo derive
+        subtareas simples a uno barato/rápido y use el resultado."""
+        provider = (provider or "").strip().lower()
+        prompt = prompt or ""
+        if not provider or not prompt:
+            return "❌ ask_model necesita {provider, prompt}."
+        provs = s.cfg.data.get("providers", {})
+        if provider not in provs:
+            avail = ", ".join(p for p in provs if p not in s.MEDIA_ONLY)
+            return f"❌ Proveedor '{provider}' no existe. Disponibles: {avail}."
+        if provider in s.MEDIA_ONLY:
+            return f"❌ '{provider}' es de medios (video), no sirve para chat."
+        d = provs[provider]
+        if not (d.get("api_key") or provider == "custom"):
+            return f"❌ '{provider}' no tiene API key configurada (⚙ para cargarla)."
+        model = (model or "").strip() or s.FAST_MODEL.get(provider) or d.get("model") or None
+        try:
+            p = s._mk_provider(provider, model)
+            r = p.chat([{"role": "user", "content": prompt}],
+                       temperature=0.3, max_tokens=2048)
+            txt = re.sub(r"<think>.*?</think>", "", r.content or "", flags=re.DOTALL).strip()
+            used = f"{provider}·{model or p.model}"
+            s._push("sys", f"🤝 Delegué a {used}")
+            return f"🤝 Respuesta de {used}:\n{txt[:4000]}" if txt else f"🤝 {used} no devolvió texto"
+        except Exception as e:
+            return (f"❌ ask_model {provider} falló: {str(e)[:200]}. "
+                    "Probá otro proveedor o hacelo vos.")
 
     @staticmethod
     def _arg_path(args):
@@ -1344,6 +1374,7 @@ class Api:
             {"type": "function", "function": {"name": "generate_video", "description": "Genera un VIDEO desde una descripción de texto. Usa LTX-2.3 si hay key (rápido, CON audio, hasta 20s) y si no Wan 2.2 T2V (~5s, 2-4 min). Para mantener estilo entre planos de un storyboard preferí animate_image sobre un cuadro ya diseñado. Guarda un .mp4.", "parameters": {"type": "object", "properties": {"prompt": {"type": "string", "description": "escena, estilo y movimiento de cámara"}, "path": {"type": "string", "description": "ruta destino, ej video/plano01.mp4 (opcional)"}}, "required": ["prompt"]}}},
             {"type": "function", "function": {"name": "web_search", "description": "Busca en internet (DuckDuckGo, sin API key) y devuelve los primeros resultados con título, URL y resumen. Usalo para info actual, documentación, precios, noticias, etc. Después podés leer una URL con web_fetch.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}}},
             {"type": "function", "function": {"name": "web_fetch", "description": "Descarga una URL y devuelve su texto legible (quita HTML/scripts). Usalo para LEER una página, doc o API pública. Devuelve hasta ~8000 caracteres.", "parameters": {"type": "object", "properties": {"url": {"type": "string"}}, "required": ["url"]}}},
+            {"type": "function", "function": {"name": "ask_model", "description": "Delega una SUBTAREA a OTRO modelo para AHORRAR recursos: mandá lo simple/mecánico a uno barato o rápido y reservá el modelo actual (caro) para lo complejo. Devuelve la respuesta de ese modelo como texto para que la uses. 'provider' = uno de los configurados con key (ej. groq, digitalocean, siliconflow, deepseek, glm, qwen, nvidia, custom). 'model' opcional (default: el rápido del proveedor). Ideal para: resumir, traducir, reformatear, generar texto trivial, clasificar, listar ideas, boilerplate. NO delegues tareas que necesiten tus herramientas (archivos, git, imagenes). Podés hacer varias ask_model en paralelo mental para comparar respuestas.", "parameters": {"type": "object", "properties": {"provider": {"type": "string", "description": "proveedor destino (con key configurada)"}, "prompt": {"type": "string", "description": "la subtarea, autocontenida (incluí todo el contexto que el otro modelo necesita)"}, "model": {"type": "string", "description": "modelo especifico del proveedor (opcional)"}}, "required": ["provider", "prompt"]}}},
         ]
 
     # ── helpers de edición robusta / progreso ──────────────────────
@@ -1700,6 +1731,10 @@ class Api:
                 return s._web_search(args.get("query") or args.get("q") or "")
             if name == "web_fetch":
                 return s._web_fetch(args.get("url") or args.get("path") or "")
+            if name == "ask_model":
+                return s._ask_model(args.get("provider") or args.get("name") or "",
+                                    args.get("prompt") or args.get("task") or "",
+                                    args.get("model") or "")
             if name == "remember":
                 return s._remember(args.get("note") or args.get("text") or "")
             if name == "social_export":
@@ -2670,6 +2705,20 @@ class Api:
             if lessons:
                 sp += ("\n\nLECCIONES APRENDIDAS de errores previos (RESPETALAS estrictamente):\n"
                        + "\n".join(f"- {x['txt']}" for x in lessons[-12:]))
+            # Delegación: qué proveedores puede usar el agente con ask_model
+            _active = s.cfg.get_active_provider()
+            _avail = [p for p, dd in s.cfg.data.get("providers", {}).items()
+                      if p not in s.MEDIA_ONLY and p != _active
+                      and (dd.get("api_key") or p == "custom")]
+            if _avail:
+                sp += ("\n\nDELEGACIÓN (herramienta ask_model): para AHORRAR recursos, derivá "
+                       "subtareas SIMPLES o mecánicas (resumir, traducir, reformatear, texto "
+                       "trivial, clasificar, listar ideas, boilerplate) a un modelo más barato/"
+                       "rápido y reservate vos (el modelo actual) para lo complejo. Proveedores "
+                       "disponibles para delegar: " + ", ".join(_avail) + ". Para DigitalOcean, "
+                       "los modelos abiertos (deepseek-v4-pro, glm-5.2, qwen3-coder-flash, "
+                       "openai-gpt-oss-120b) son baratos y buenos. No delegues lo que necesite "
+                       "tus otras herramientas (archivos, git, imágenes).")
             # Habilidades: inyectar solo las relevantes al pedido (patrón positivo)
             rel_skills = s._relevant_skills(msg)
             if rel_skills:
