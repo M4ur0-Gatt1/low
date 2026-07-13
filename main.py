@@ -41,7 +41,7 @@ ASSET_EXT = {".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp",
 LANG_BY_EXT = {".py": "python", ".js": "javascript", ".ts": "javascript",
                ".sh": "bash", ".ps1": "powershell"}
 
-LOW_VERSION = "3.12.0"
+LOW_VERSION = "3.13.0"
 
 # Desafío por defecto del comparador: verificable automáticamente
 DEFAULT_TASK = ("Escribe un programa Python que imprima los primeros 10 numeros "
@@ -1359,6 +1359,81 @@ class Api:
             return (f"❌ ask_model {provider} falló: {str(e)[:200]}. "
                     "Probá otro proveedor o hacelo vos.")
 
+    def _anim(s, action, params):
+        """Puente al motor de animación 2D (tools/animation + low_anim.AnimationAPI).
+        Mantiene el proyecto vivo en s._anim_api entre tool-calls del turno, guarda
+        en el workspace y avisa al frontend (wrote) para refrescar árbol/artefactos."""
+        params = params or {}
+        try:
+            import low_anim
+        except Exception as e:
+            return f"❌ Motor de animación no disponible: {e}"
+        api = getattr(s, "_anim_api", None)
+        if api is None:
+            api = s._anim_api = low_anim.AnimationAPI()
+        base = s._base()
+
+        def _f(k):   # float opcional
+            v = params.get(k)
+            return None if v is None else float(v)
+        try:
+            if action == "new":
+                name = (params.get("name") or "anim").strip() or "anim"
+                api.create_project(name, int(params.get("width", 1920)),
+                                   int(params.get("height", 1080)),
+                                   int(params.get("fps", 24)),
+                                   int(params.get("duration", 240)))
+                proj = base / name
+                api.save_project(str(proj))
+                s._push("wrote", {"path": str(proj / "scene.json")})
+                return (f"✅ Proyecto de animación '{name}' creado en {name}/ "
+                        "(scene.json, timeline.json, comp.json). Ahora agregá actores "
+                        "con action='add_actor'.")
+            if not api.current_scene:
+                return "❌ Primero creá un proyecto con action='new'."
+            if action == "add_actor":
+                svg = params.get("svg", "") or ""
+                sp = params.get("svg_path") or params.get("path")
+                if sp:
+                    p = Path(sp) if os.path.isabs(sp) else base / sp
+                    if p.exists():
+                        svg = p.read_text(encoding="utf-8", errors="replace")
+                    else:
+                        return f"❌ No existe el SVG: {sp}"
+                nm = params.get("name") or "actor"
+                api.add_actor(params.get("layer", "main"), nm, svg,
+                              float(params.get("x", 0)), float(params.get("y", 0)))
+                return f"✅ Actor '{nm}' agregado a la capa '{params.get('layer', 'main')}'."
+            if action == "keyframe":
+                actor = params.get("actor", "")
+                api.add_keyframe(actor, int(params.get("frame", 0)),
+                                 x=_f("x"), y=_f("y"), rotation=_f("rotation"),
+                                 scale_x=_f("scale_x"), scale_y=_f("scale_y"),
+                                 opacity=_f("opacity"))
+                return f"✅ Keyframe en frame {params.get('frame', 0)} para '{actor}'."
+            if action == "walk_cycle":
+                actor = params.get("actor", "")
+                api.generate_walk_cycle(actor, int(params.get("start", 0)),
+                                        int(params.get("duration", 24)))
+                return f"✅ Ciclo de caminata generado para '{actor}'."
+            if action in ("render", "export"):
+                fmt = params.get("format", "mp4")
+                rel = params.get("output") or f"anim/{(api.current_scene.name or 'anim')}.{fmt}"
+                out = base / rel
+                out.parent.mkdir(parents=True, exist_ok=True)
+                api.export(str(out), format=fmt, preset=params.get("preset", "hd"))
+                s._push("wrote", {"path": str(out)})
+                return f"🎬 Exportado: {rel}"
+            if action == "storyboard":
+                from tools.animation.ai_pipeline import StoryboardAI
+                scenes = StoryboardAI().parse_script(params.get("script", "") or "")
+                return (f"📋 Storyboard: {len(scenes)} escena(s).\n"
+                        + json.dumps(scenes, ensure_ascii=False)[:1800])
+            return ("❌ Acción desconocida. Usá: new, add_actor, keyframe, walk_cycle, "
+                    "render, storyboard.")
+        except Exception as e:
+            return f"❌ anim {action}: {e}"
+
     @staticmethod
     def _arg_path(args):
         """Ruta desde los args de una tool, tolerando alias comunes que el modelo
@@ -1435,12 +1510,14 @@ class Api:
             {"type": "function", "function": {"name": "web_search", "description": "Busca en internet (DuckDuckGo, sin API key) y devuelve los primeros resultados con título, URL y resumen. Usalo para info actual, documentación, precios, noticias, etc. Después podés leer una URL con web_fetch.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}}},
             {"type": "function", "function": {"name": "web_fetch", "description": "Descarga una URL y devuelve su texto legible (quita HTML/scripts). Usalo para LEER una página, doc o API pública. Devuelve hasta ~8000 caracteres.", "parameters": {"type": "object", "properties": {"url": {"type": "string"}}, "required": ["url"]}}},
             {"type": "function", "function": {"name": "ask_model", "description": "Delega una SUBTAREA a OTRO modelo para AHORRAR recursos: mandá lo simple/mecánico a uno barato o rápido y reservá el modelo actual (caro) para lo complejo. Devuelve la respuesta de ese modelo como texto para que la uses. 'provider' = uno de los configurados con key (ej. groq, digitalocean, siliconflow, deepseek, glm, qwen, nvidia, custom). 'model' opcional (default: el rápido del proveedor). Ideal para: resumir, traducir, reformatear, generar texto trivial, clasificar, listar ideas, boilerplate. NO delegues tareas que necesiten tus herramientas (archivos, git, imagenes). Podés hacer varias ask_model en paralelo mental para comparar respuestas.", "parameters": {"type": "object", "properties": {"provider": {"type": "string", "description": "proveedor destino (con key configurada)"}, "prompt": {"type": "string", "description": "la subtarea, autocontenida (incluí todo el contexto que el otro modelo necesita)"}, "model": {"type": "string", "description": "modelo especifico del proveedor (opcional)"}}, "required": ["provider", "prompt"]}}},
+            {"type": "function", "function": {"name": "anim", "description": "Estudio de ANIMACION 2D profesional (motor propio de LOW: timeline, rigging con huesos/IK, compositor de nodos, export MP4/GIF/Lottie). Ideal para ANIMAR los SVG que diseñás. Acciones (campo 'action') con sus 'params': 'new' {name,width,height,fps,duration} crea un proyecto en el workspace; 'add_actor' {layer,name,svg_path (ruta a un .svg del workspace) o svg (inline),x,y}; 'keyframe' {actor,frame,x,y,rotation,scale_x,scale_y,opacity} pone un cuadro clave; 'walk_cycle' {actor,start,duration} ciclo de caminata automatico; 'render' {output,format(mp4/gif/png),preset(hd/web/4k/gif)} exporta el video; 'storyboard' {script} arma un storyboard desde un guion. Flujo tipico: diseñá el personaje (generate_image/save_character), guardalo como SVG, luego anim new -> add_actor -> keyframe/walk_cycle -> render.", "parameters": {"type": "object", "properties": {"action": {"type": "string", "description": "new | add_actor | keyframe | walk_cycle | render | storyboard"}, "params": {"type": "object", "description": "campos segun la accion (ver descripcion)"}}, "required": ["action"]}}},
         ]
 
     # tools de imagen/video: peso muerto en tareas de código (~1.4k tokens). El
     # tool gating las omite en sesiones 'code' y las incluye en 'design'.
     _MEDIA_TOOLS = {"generate_image", "refine_image", "edit_image", "animate_image",
-                    "generate_video", "social_export", "save_character", "check_design"}
+                    "generate_video", "social_export", "save_character", "check_design",
+                    "anim"}
     _DESIGN_RE = re.compile(r"imagen|dibuj|logo|ilustr|dise[ñn]|foto|render|v[ií]deo|video|"
                             r"anima|storyboard|personaje|banner|flyer|afiche|p[oó]ster|"
                             r"social|thumbnail|\bsvg\b|[ií]cono", re.I)
@@ -1839,6 +1916,8 @@ class Api:
                 return s._ask_model(args.get("provider") or args.get("name") or "",
                                     args.get("prompt") or args.get("task") or "",
                                     args.get("model") or "")
+            if name == "anim":
+                return s._anim(args.get("action") or "", args.get("params") or {})
             if name == "remember":
                 return s._remember(args.get("note") or args.get("text") or "")
             if name == "social_export":
