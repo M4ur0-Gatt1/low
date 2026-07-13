@@ -497,6 +497,7 @@ function bind() {
   $("#dzImg").onclick = dzImportImage;
   $("#dzColor").onclick = dzColorize;
   $("#dzBg").onclick = dzGenBg;
+  $("#dzVec").onclick = dzVectorize;
   $("#dzProps").addEventListener("focusin", () => dzSnapshot());
   $("#dzCanvas").addEventListener("pointerdown", dzDrawDown);
   $("#dzCanvas").addEventListener("pointermove", dzDrawMove);
@@ -2473,6 +2474,42 @@ async function dzGenBg() {
   dzMarkDirty(); dzBuildLayers();
   dzSetStatus("🖼 Fondo generado y enviado al fondo del lienzo (eje z)" +
               (r.used ? " · " + r.used : ""));
+}
+
+/* ── vectorizar: raster (imagen importada/generada) → trazos SVG editables ── */
+async function dzVectorize() {
+  const svg = $("#dzCanvas").querySelector("svg");
+  if (!svg) return dzSetStatus("Abrí o creá un diseño primero");
+  // usar la imagen seleccionada, o la primera <image> del lienzo
+  let img = (DZ.sel && DZ.sel.tagName && DZ.sel.tagName.toLowerCase() === "image")
+    ? DZ.sel : svg.querySelector("image");
+  if (!img) return dzSetStatus("Importá o generá una imagen primero (🖼) y después vectorizá (✒)");
+  const href = img.getAttribute("href") ||
+    img.getAttributeNS("http://www.w3.org/1999/xlink", "href");
+  if (!href) return dzSetStatus("La imagen no tiene datos para vectorizar");
+  dzSetStatus("✒ Vectorizando la imagen a trazos editables…");
+  const r = await api.vectorize_image(href, "high");
+  if (!r || r.error) return dzSetStatus("❌ " + ((r && r.error) || "no se pudo vectorizar"));
+  let traced;
+  try { traced = new DOMParser().parseFromString(r.svg, "image/svg+xml").querySelector("svg"); }
+  catch (e) { return dzSetStatus("❌ el vectorizador devolvió SVG inválido"); }
+  if (!traced) return dzSetStatus("❌ el vectorizador no devolvió SVG");
+  const tw = parseFloat(traced.getAttribute("width")) || 512;
+  const th = parseFloat(traced.getAttribute("height")) || 512;
+  const ix = parseFloat(img.getAttribute("x")) || 0, iy = parseFloat(img.getAttribute("y")) || 0;
+  const iw = parseFloat(img.getAttribute("width")) || tw;
+  const ih = parseFloat(img.getAttribute("height")) || (iw * th / tw);
+  dzSnapshot();
+  const g = document.createElementNS(SVGNS, "g");
+  g.setAttribute("transform", `translate(${ix} ${iy}) scale(${iw / tw} ${ih / th})`);
+  [...traced.childNodes].forEach(n => {
+    if (n.nodeType === 1 && n.tagName.toLowerCase() !== "title")
+      g.appendChild(document.importNode(n, true));
+  });
+  img.parentNode.insertBefore(g, img.nextSibling);
+  img.remove();
+  dzSelect(g); dzMarkDirty(); dzBuildLayers();
+  dzSetStatus(`✒ Vectorizado: ${g.querySelectorAll("path").length} trazos editables (reemplazó la imagen)`);
 }
 
 /* ── coloreado inteligente / entintado con IA (FLUX Kontext / SiliconFlow) ── */

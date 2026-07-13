@@ -41,7 +41,7 @@ ASSET_EXT = {".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp",
 LANG_BY_EXT = {".py": "python", ".js": "javascript", ".ts": "javascript",
                ".sh": "bash", ".ps1": "powershell"}
 
-LOW_VERSION = "3.14.0"
+LOW_VERSION = "3.15.0"
 
 # Desafío por defecto del comparador: verificable automáticamente
 DEFAULT_TASK = ("Escribe un programa Python que imprima los primeros 10 numeros "
@@ -937,6 +937,75 @@ class Api:
             return {"error": err or fal_err or "no se pudo colorear"}
         return {"error": fal_err or "cargá una API key de fal.ai o SiliconFlow (⚙) para el coloreado con IA"}
 
+    # ── vectorización: raster (PNG/JPG) → SVG EDITABLE ("calcar") ────────
+    # El truco para que la IA "dibuje bien": en vez de escribir coordenadas SVG a
+    # ciegas (sale tosco), genera/toma un raster y lo TRAZA a vectores editables.
+    _VTRACE_PRESETS = {
+        "low":    {"filter_speckle": 10, "color_precision": 4, "path_precision": 4},
+        "medium": {"filter_speckle": 6,  "color_precision": 6, "path_precision": 6},
+        "high":   {"filter_speckle": 3,  "color_precision": 8, "path_precision": 8},
+    }
+
+    def _vectorize(s, png_bytes, detail="medium"):
+        """PNG/JPG (bytes) → (svg_str, error). vtracer local (offline, gratis)
+        primero; si no está, fal.ai recraft/vectorize (IA, needs key)."""
+        opt = s._VTRACE_PRESETS.get(detail, s._VTRACE_PRESETS["medium"])
+        try:
+            import tempfile
+            import vtracer
+            tin = Path(tempfile.mktemp(suffix=".png"))
+            tout = Path(tempfile.mktemp(suffix=".svg"))
+            tin.write_bytes(png_bytes)
+            vtracer.convert_image_to_svg_py(str(tin), str(tout), colormode="color",
+                                            mode="spline", hierarchical="stacked", **opt)
+            svg = tout.read_text(encoding="utf-8", errors="replace")
+            for f in (tin, tout):
+                try:
+                    f.unlink()
+                except OSError:
+                    pass
+            if "<svg" in svg:
+                return svg, None
+        except Exception as e:
+            log(f"vtracer no disponible/falló: {e}")
+        # fallback: fal.ai recraft (vectorizador neural)
+        if s.cfg.get_api_key("fal"):
+            du = "data:image/png;base64," + base64.b64encode(png_bytes).decode("ascii")
+            data, err = s._fal_run("fal-ai/recraft/vectorize", {"image_url": du}, "image")
+            if data:
+                try:
+                    return data.decode("utf-8", "replace"), None
+                except Exception:
+                    return None, "fal devolvió un formato inesperado"
+            return None, err
+        return None, ("vectorización no disponible: instalá vtracer "
+                      "(pip install vtracer) o cargá una API key de fal.ai en ⚙")
+
+    def _read_img_bytes(s, image):
+        """Bytes de una imagen desde data URL o ruta (relativa al workspace o abs)."""
+        if not image:
+            return None, "falta la imagen"
+        if str(image).startswith("data:"):
+            try:
+                return base64.b64decode(image.split(",", 1)[1]), None
+            except Exception as e:
+                return None, f"data URL inválido: {e}"
+        p = Path(image) if os.path.isabs(image) else s._base() / image
+        if not p.exists():
+            return None, f"no existe: {image}"
+        try:
+            return p.read_bytes(), None
+        except OSError as e:
+            return None, str(e)
+
+    def vectorize_image(s, image, detail="medium"):
+        """API para el frontend: raster (data URL o ruta) → {svg} editable."""
+        raw, err = s._read_img_bytes(image)
+        if err:
+            return {"error": err}
+        svg, err = s._vectorize(raw, detail)
+        return {"svg": svg} if svg else {"error": err or "no se pudo vectorizar"}
+
     # ── escena de animación: cámara, claves y easing por secuencia ──────
     # Vive en <base>_escena.json al lado de los cuadros (portable con el proyecto).
     # {"cam": {"1": {"cx","cy","w","rot"}}, "keys": [1,5], "ease": "inout", "fps": 12}
@@ -1540,6 +1609,8 @@ class Api:
             {"type": "function", "function": {"name": "web_search", "description": "Busca en internet (DuckDuckGo, sin API key) y devuelve los primeros resultados con título, URL y resumen. Usalo para info actual, documentación, precios, noticias, etc. Después podés leer una URL con web_fetch.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}}},
             {"type": "function", "function": {"name": "web_fetch", "description": "Descarga una URL y devuelve su texto legible (quita HTML/scripts). Usalo para LEER una página, doc o API pública. Devuelve hasta ~8000 caracteres.", "parameters": {"type": "object", "properties": {"url": {"type": "string"}}, "required": ["url"]}}},
             {"type": "function", "function": {"name": "ask_model", "description": "Delega una SUBTAREA a OTRO modelo para AHORRAR recursos: mandá lo simple/mecánico a uno barato o rápido y reservá el modelo actual (caro) para lo complejo. Devuelve la respuesta de ese modelo como texto para que la uses. 'provider' = uno de los configurados con key (ej. groq, digitalocean, siliconflow, deepseek, glm, qwen, nvidia, custom). 'model' opcional (default: el rápido del proveedor). Ideal para: resumir, traducir, reformatear, generar texto trivial, clasificar, listar ideas, boilerplate. NO delegues tareas que necesiten tus herramientas (archivos, git, imagenes). Podés hacer varias ask_model en paralelo mental para comparar respuestas.", "parameters": {"type": "object", "properties": {"provider": {"type": "string", "description": "proveedor destino (con key configurada)"}, "prompt": {"type": "string", "description": "la subtarea, autocontenida (incluí todo el contexto que el otro modelo necesita)"}, "model": {"type": "string", "description": "modelo especifico del proveedor (opcional)"}}, "required": ["provider", "prompt"]}}},
+            {"type": "function", "function": {"name": "vectorize", "description": "Convierte una imagen raster del workspace (PNG/JPG) en un SVG VECTORIAL EDITABLE (la 'calca'). Usalo para NO escribir coordenadas SVG a mano (eso sale tosco): parti de una foto, boceto o imagen generada y obtene vectores limpios y editables. 'detail': low|medium|high (mas detalle = mas trazos). Guarda el .svg en el workspace y lo abre en el editor de vectores.", "parameters": {"type": "object", "properties": {"image": {"type": "string", "description": "ruta a la imagen PNG/JPG en el workspace"}, "out": {"type": "string", "description": "ruta .svg destino (opcional)"}, "detail": {"type": "string"}}, "required": ["image"]}}},
+            {"type": "function", "function": {"name": "illustrate", "description": "LA MEJOR forma de crear una ILUSTRACION sofisticada como VECTOR editable: genera un raster de alta calidad con IA (diffusion) desde tu descripcion y lo VECTORIZA a SVG. Evita el SVG tosco escrito a mano — usalo en vez de dibujar paths cuando quieras algo pulido (personajes, escenas, logos con detalle). 'prompt' detallado (estilo, colores, composicion, fondo). 'detail': low|medium|high. Guarda y abre el .svg editable en el editor ✒.", "parameters": {"type": "object", "properties": {"prompt": {"type": "string"}, "out": {"type": "string", "description": "ruta .svg destino (opcional)"}, "detail": {"type": "string"}, "size": {"type": "string", "description": "ej 1024x1024"}}, "required": ["prompt"]}}},
             {"type": "function", "function": {"name": "anim", "description": "Estudio de ANIMACION 2D profesional (motor propio de LOW: timeline, rigging con huesos/IK, compositor de nodos, export MP4/GIF/Lottie). Ideal para ANIMAR los SVG que diseñás. Acciones (campo 'action') con sus 'params': 'new' {name,width,height,fps,duration} crea un proyecto en el workspace; 'add_actor' {layer,name,svg_path (ruta a un .svg del workspace) o svg (inline),x,y}; 'keyframe' {actor,frame,x,y,rotation,scale_x,scale_y,opacity} pone un cuadro clave; 'walk_cycle' {actor,start,duration} ciclo de caminata automatico; 'render' {output,format(mp4/gif/png),preset(hd/web/4k/gif)} exporta el video; 'storyboard' {script} arma un storyboard desde un guion. Flujo tipico: diseñá el personaje (generate_image/save_character), guardalo como SVG, luego anim new -> add_actor -> keyframe/walk_cycle -> render.", "parameters": {"type": "object", "properties": {"action": {"type": "string", "description": "new | add_actor | keyframe | walk_cycle | render | storyboard"}, "params": {"type": "object", "description": "campos segun la accion (ver descripcion)"}}, "required": ["action"]}}},
         ]
 
@@ -1547,7 +1618,7 @@ class Api:
     # tool gating las omite en sesiones 'code' y las incluye en 'design'.
     _MEDIA_TOOLS = {"generate_image", "refine_image", "edit_image", "animate_image",
                     "generate_video", "social_export", "save_character", "check_design",
-                    "anim"}
+                    "anim", "vectorize", "illustrate"}
     _DESIGN_RE = re.compile(r"imagen|dibuj|logo|ilustr|dise[ñn]|foto|render|v[ií]deo|video|"
                             r"anima|storyboard|personaje|banner|flyer|afiche|p[oó]ster|"
                             r"social|thumbnail|\bsvg\b|[ií]cono", re.I)
@@ -1948,6 +2019,43 @@ class Api:
                                     args.get("model") or "")
             if name == "anim":
                 return s._anim(args.get("action") or "", args.get("params") or {})
+            if name == "vectorize":
+                raw, err = s._read_img_bytes(s._arg_path(args) or args.get("image"))
+                if err:
+                    return f"❌ {err}"
+                svg, err = s._vectorize(raw, args.get("detail", "medium"))
+                if not svg:
+                    return f"❌ {err}"
+                rel = args.get("out") or f"disenos/vector_{datetime.datetime.now().strftime('%H%M%S')}.svg"
+                if not rel.endswith(".svg"):
+                    rel += ".svg"
+                p = s._base() / rel
+                p.parent.mkdir(parents=True, exist_ok=True)
+                p.write_text(svg, encoding="utf-8")
+                s._written.append(str(p))
+                s._push("wrote", {"path": str(p)})
+                return (f"✅ Vectorizado → {rel} ({svg.count('<path')} trazos editables). "
+                        "Abrilo en el editor ✒ para ajustarlo.")
+            if name == "illustrate":
+                prompt = args.get("prompt") or ""
+                if not prompt:
+                    return "❌ Falta 'prompt' (describí la ilustración: estilo, colores, composición)."
+                data, used, gerr = s._gen_image(prompt, size=args.get("size", "1024x1024"))
+                if not data:
+                    return f"❌ No pude generar el raster base: {gerr}"
+                svg, verr = s._vectorize(data, args.get("detail", "high"))
+                if not svg:
+                    return f"❌ Generé el raster pero no pude vectorizar: {verr}"
+                rel = args.get("out") or f"disenos/ilustracion_{datetime.datetime.now().strftime('%H%M%S')}.svg"
+                if not rel.endswith(".svg"):
+                    rel += ".svg"
+                p = s._base() / rel
+                p.parent.mkdir(parents=True, exist_ok=True)
+                p.write_text(svg, encoding="utf-8")
+                s._written.append(str(p))
+                s._push("wrote", {"path": str(p)})
+                return (f"✅ Ilustración vectorial → {rel} ({svg.count('<path')} trazos, vía {used}). "
+                        "Editable en el ✒ (cada zona de color es un path).")
             if name == "remember":
                 return s._remember(args.get("note") or args.get("text") or "")
             if name == "social_export":

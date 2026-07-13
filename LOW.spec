@@ -14,7 +14,7 @@ a = Analysis(
                    'low_anim', 'tools', 'tools.animation', 'tools.animation.core',
                    'tools.animation.timeline', 'tools.animation.exporter',
                    'tools.animation.rigging', 'tools.animation.nodes',
-                   'tools.animation.ai_pipeline'],
+                   'tools.animation.ai_pipeline', 'vtracer'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
