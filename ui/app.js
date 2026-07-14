@@ -493,6 +493,8 @@ function bind() {
     $("#dzSmoothLbl").textContent = e.target.value;
     try { localStorage.setItem("low.dzsmooth", String(DZ.smooth)); } catch (err) { /* */ }
   };
+  // gamma de presión (OpenToonz V_BrushPressureSensitivity): <1 más sensible al inicio
+  DZ.pressureGamma = +(localStorage.getItem("low.dzgamma") || 0.85);
   $("#dzPrefs").onclick = dzPrefsModal;
   $("#dzRotate").addEventListener("mousedown", dzRotateDown);
   $("#dzGroup").onclick = (e) => dzGroupSel(e.shiftKey);
@@ -2784,41 +2786,51 @@ function dzReleaseFocus() {
 
 /* ── presión suavizada: buffer circular de las últimas N muestras.
    OpenToonz usa un track continuo con presión por punto (TThickPoint);
-   en la web la presión puede fluctuar frame a frame → media móvil. ── */
+   en la web la presión puede fluctuar frame a frame → media móvil.
+   Aplica curva gamma de sensibilidad (OpenToonz V_BrushPressureSensitivity). ── */
 function dzSmoothPressure(pr) {
   if (!DRAW) return pr || 0.5;
   if (!DRAW._pbuf) DRAW._pbuf = [];
-  const BUF = 6;
-  DRAW._pbuf.push(pr || 0.5);
+  const BUF = 5;
+  // presión 0 con pluma es común al inicio del trazo → piso suave 0.03
+  const clamped = Math.max(0.03, pr || 0.03);
+  DRAW._pbuf.push(clamped);
   if (DRAW._pbuf.length > BUF) DRAW._pbuf.shift();
   let s = 0; for (let i = 0; i < DRAW._pbuf.length; i++) s += DRAW._pbuf[i];
-  return s / DRAW._pbuf.length;
+  const avg = s / DRAW._pbuf.length;
+  // curva gamma: <1 más sensible al inicio, >1 más control al final
+  const gamma = DZ.pressureGamma !== undefined ? DZ.pressureGamma : 0.85;
+  return Math.pow(avg, gamma);
 }
 
 /* pointerrawupdate: eventos de alta frecuencia de la tableta (≈200Hz),
-   igual que WinTab en OpenToonz. Solo se dispara con el lápiz presionado. */
+   igual que WinTab en OpenToonz. Solo se dispara con el lápiz presionado.
+   Guardamos timestamp para que pointermove rellene huecos si raw se atrasa. */
 function dzDrawRaw(e) {
   if (!DRAW || e.pointerId !== DRAW.pid) return;
   if (DRAW._pending) { clearTimeout(DRAW._pending); DRAW._pending = null; }
-  DRAW._rawActive = true;                              // evita que pointermove duplique
   e.preventDefault();
+  DRAW._lastRaw = performance.now();                   // timestamp → fallback híbrido
   const p = dzToUser(e.clientX, e.clientY);
   const last = DRAW.pts[DRAW.pts.length - 1];
   const dx = p.x - last[0], dy = p.y - last[1];
   const d2 = dx * dx + dy * dy;
-  const minD2 = Math.max(0.3, 0.8 / (DZ.zoom || 1));  // umbral dinámico según zoom
+  // umbral dinámico más fino (0.08 base vs 0.3 antes; 0.45/zoom vs 0.8/zoom)
+  const minD2 = Math.max(0.08, 0.45 / (DZ.zoom || 1));
   if (d2 < minD2) return;
   if (d2 > DRAW.maxJump2) return;                      // rechazo de spike
-  // presión: si es pluma y viene con presión > 0, usarla; si no, mantener la última
-  let pr = (e.pointerType === "pen" && e.pressure != null && e.pressure > 0) ? e.pressure
-           : (DRAW._lastPr || 0.5);
+  // presión: si es pluma SIEMPRE usar el valor real (el piso lo maneja dzSmoothPressure)
+  let pr = (e.pointerType === "pen" && e.pressure != null) ? e.pressure
+           : (DRAW._lastPr > 0 ? DRAW._lastPr : 0.5);
   DRAW._lastPr = pr;
+  // tilt del lápiz (OpenToonz lo usa para caligrafía)
+  if (e.tiltX != null) { DRAW._tiltX = e.tiltX; DRAW._tiltY = e.tiltY; }
   pr = dzSmoothPressure(pr);
   DRAW.pts.push([p.x, p.y, pr]);
   if (DRAW.mode !== "pencil") {
     const seg = document.createElementNS(SVGNS, "path");
     seg.setAttribute("d", `M ${last[0].toFixed(1)} ${last[1].toFixed(1)} L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`);
-    seg.setAttribute("stroke-width", Math.max(0.5, (DZ.drawW || 6) * 2 * pr).toFixed(1));
+    seg.setAttribute("stroke-width", Math.max(0.3, (DZ.drawW || 6) * 2 * pr).toFixed(1));
     DRAW.el.appendChild(seg);
   }
   if (DRAW.mode === "pencil") DRAW.el.setAttribute("d", dzSmoothPath(DRAW.pts));
@@ -2843,22 +2855,25 @@ function dzDrawDown(e) {
   const vb = (svg.getAttribute("viewBox") || "0 0 1080 1080").split(/\s+/).map(Number);
   const dim = Math.max(vb[2] || 1080, vb[3] || 1080);
   const jump = dim * 0.55;
-  // STITCHING mejorado (inspirado en OpenToonz TInputManager):
-  // Windows Ink / algunas tabletas fragmentan el trazo con up/down falsos.
-  // Si hay un trazo pendiente de finalizar, mismo tipo de herramienta y
-  // CERCA (umbral generoso), se REANUDA en vez de empezar otro.
+  // STITCHING inspirado en OpenToonz TInputManager (track por dispositivo):
+  // Windows Ink / tabletas fragmentan el trazo con up/down fantasmas.
+  // OpenToonz mantiene UN track por (deviceId, touchId); si el mismo
+  // dispositivo reaparece, reanuda. Nosotros:
+  //   1) mismo pointerId → stitching inmediato (el SO reutilizó el ID)
+  //   2) misma herramienta + cerca (< 12% del lienzo) + timeout 250ms
   if (DRAW && DRAW._pending && DRAW.mode === DZ.tool) {
     const last = DRAW.pts[DRAW.pts.length - 1];
-    // distancia euclidiana + misma herramienta → stitching
-    const near = (p.x - last[0]) ** 2 + (p.y - last[1]) ** 2 < (dim * 0.16) ** 2;
-    // mismo pointerId que reaparece → stitching inmediato (sin chequear distancia)
     const samePid = DRAW._lastPid != null && e.pointerId === DRAW._lastPid;
-    if (near || samePid) {
+    const near = (p.x - last[0]) ** 2 + (p.y - last[1]) ** 2 < (dim * 0.12) ** 2;
+    if (samePid || near) {
       clearTimeout(DRAW._pending); DRAW._pending = null;
       DRAW.pid = e.pointerId;
-      let pr = (e.pointerType === "pen" && e.pressure != null && e.pressure > 0) ? e.pressure
+      DRAW._lastRaw = performance.now();
+      let pr = (e.pointerType === "pen" && e.pressure != null) ? Math.max(0.03, e.pressure)
                : (DRAW._lastPr || 0.5);
-      DRAW._lastPr = pr; DRAW._pbuf = [pr];
+      DRAW._lastPr = pr;
+      DRAW._pbuf = [pr, pr, pr, pr, pr];               // resetear buffer
+      if (e.tiltX != null) { DRAW._tiltX = e.tiltX; DRAW._tiltY = e.tiltY; }
       DRAW.pts.push([p.x, p.y, pr]);   // conectar el tramo
       try { $("#dzCanvas").setPointerCapture(e.pointerId); } catch (err) { /* */ }
       return;
@@ -2866,13 +2881,15 @@ function dzDrawDown(e) {
     dzFinalizeStroke();                                // arranca lejos → cerrá el anterior
   }
   dzSnapshot();                                        // Ctrl+Z deshace el trazo
-  // Presión inicial: si es pluma, tomarla; si no, 0.5 por defecto.
-  // Si pressure es 0 pero pointerType es "pen", puede ser un glitch del driver
-  // → guardamos 0.01 para marcar que es pluma pero sin presión real aún.
-  let initPr = (e.pointerType === "pen" && e.pressure != null) ? Math.max(0.01, e.pressure) : 0.5;
+  // Presión inicial: si es pluma, siempre tomarla (piso 0.03 para que no sea invisible)
+  let initPr = (e.pointerType === "pen" && e.pressure != null) ? Math.max(0.03, e.pressure) : 0.5;
+  const initTx = (e.tiltX != null) ? e.tiltX : 0;
+  const initTy = (e.tiltY != null) ? e.tiltY : 0;
   DRAW = { pts: [[p.x, p.y, initPr]], mode: DZ.tool, el: null,
            pid: e.pointerId, maxJump2: jump * jump, _pending: null,
-           _lastPr: initPr, _pbuf: [initPr, initPr, initPr], _lastPid: e.pointerId };
+           _lastPr: initPr, _pbuf: [initPr, initPr, initPr, initPr, initPr],
+           _lastPid: e.pointerId, _lastRaw: performance.now(),
+           _tiltX: initTx, _tiltY: initTy, _devId: e.pointerId };
   if (DZ.tool === "pencil") {
     DRAW.el = document.createElementNS(SVGNS, "path");
     DRAW.el.setAttribute("fill", "none");
@@ -2897,13 +2914,15 @@ function dzDrawMove(e) {
   // trazo en pausa que se reanuda por movimiento (el lápiz siguió sin nuevo down):
   // adoptá su pointer y cancelá la finalización pendiente → línea continua
   if (DRAW._pending) { clearTimeout(DRAW._pending); DRAW._pending = null; DRAW.pid = e.pointerId; }
-  // si llega pointerrawupdate, este evento es redundante (ya procesado a alta frecuencia)
-  if (DRAW._rawActive) return;
   if (e.pointerId !== DRAW.pid) return;                // ignorá OTROS punteros (palma/2º dedo/hover)
   e.preventDefault();
+  // FALLBACK HÍBRIDO: si pointerrawupdate llegó hace < 30ms, raw está activo
+  // y no interferimos. Si pasó más (raw va lento o se perdió frame),
+  // procesamos pointermove + coalesced events para rellenar huecos.
+  const now = performance.now();
+  if (DRAW._lastRaw && (now - DRAW._lastRaw) < 30) return;
   // eventos coalescidos: la tableta muestrea a 100-250Hz pero el navegador
   // agrupa — sin esto las curvas rápidas salen poligonales.
-  // Si ya estamos en raw update, solo procesamos coalescidos como fallback.
   const evs = (e.getCoalescedEvents && e.getCoalescedEvents().length)
     ? e.getCoalescedEvents() : [e];
   for (const ev of evs) {
@@ -2911,19 +2930,21 @@ function dzDrawMove(e) {
     const last = DRAW.pts[DRAW.pts.length - 1];
     const dx = p.x - last[0], dy = p.y - last[1];
     const d2 = dx * dx + dy * dy;
-    const minD2 = Math.max(0.3, 0.8 / (DZ.zoom || 1)); // umbral dinámico según zoom
+    // umbral más fino (0.08 base, 0.45/zoom) → captura más detalle
+    const minD2 = Math.max(0.08, 0.45 / (DZ.zoom || 1));
     if (d2 < minD2) continue;
     if (d2 > DRAW.maxJump2) continue;                  // rechazo de spike (glitch de tableta)
-    // presión: si es pluma, usar la real; si no, mantener última conocida
-    let pr = (ev.pointerType === "pen" && ev.pressure != null && ev.pressure > 0) ? ev.pressure
+    // presión: si es pluma SIEMPRE usar el valor real (incluso 0 → piso en smoother)
+    let pr = (ev.pointerType === "pen" && ev.pressure != null) ? Math.max(0.03, ev.pressure)
              : (DRAW._lastPr || 0.5);
     DRAW._lastPr = pr;
+    if (ev.tiltX != null) { DRAW._tiltX = ev.tiltX; DRAW._tiltY = ev.tiltY; }
     pr = dzSmoothPressure(pr);
     DRAW.pts.push([p.x, p.y, pr]);
     if (DRAW.mode !== "pencil") {
       const seg = document.createElementNS(SVGNS, "path");
       seg.setAttribute("d", `M ${last[0].toFixed(1)} ${last[1].toFixed(1)} L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`);
-      seg.setAttribute("stroke-width", Math.max(0.5, (DZ.drawW || 6) * 2 * pr).toFixed(1));
+      seg.setAttribute("stroke-width", Math.max(0.3, (DZ.drawW || 6) * 2 * pr).toFixed(1));
       DRAW.el.appendChild(seg);
     }
   }
@@ -2937,12 +2958,10 @@ function dzDrawUp(e) {
       && e.type !== "pointercancel" && e.type !== "lostpointercapture") return;
   DRAW._lastPid = DRAW.pid;                            // recordar para stitching por mismo ID
   try { $("#dzCanvas").releasePointerCapture(DRAW.pid); } catch (err) { /* */ }
-  DRAW._rawActive = false;
   // NO finalizar al toque: la tableta puede fragmentar con up/down rápidos.
-  // Espero ~200ms (OpenToonz usa un enfoque similar con track continuity);
-  // si el lápiz vuelve (down cerca o move) se REANUDA el mismo trazo.
+  // OpenToonz usa track continuity con timeout; nosotros 250ms.
   if (DRAW._pending) clearTimeout(DRAW._pending);
-  DRAW._pending = setTimeout(dzFinalizeStroke, 200);
+  DRAW._pending = setTimeout(dzFinalizeStroke, 250);
 }
 /* finaliza de verdad el trazo: post-procesado (media móvil + simplificación +
    bezier), pincel → cinta de ancho variable, espejo. Se llama recién cuando el
@@ -3013,7 +3032,8 @@ function dzRefineStroke(pts) {
   return dzRDP(dzMovingAvg(pts, win), eps);
 }
 /* cinta de ancho variable para el pincel: UN solo path relleno cuyo contorno
-   sigue la presión (como los outline strokes vectoriales de OpenToonz) */
+   sigue la presión (como los outline strokes vectoriales de OpenToonz).
+   Puntas redondeadas + taper progresivo en los extremos. */
 function dzBrushRibbon(pts, baseW, color) {
   if (pts.length < 2) return null;
   const L = [], R = [];
@@ -3022,9 +3042,11 @@ function dzBrushRibbon(pts, baseW, color) {
     let tx = p1[0] - p0[0], ty = p1[1] - p0[1];
     const len = Math.hypot(tx, ty) || 1;
     tx /= len; ty /= len;
-    // afinar las puntas: entrada y salida del trazo tienden a 30%
-    const tip = Math.min(1, Math.min(i, pts.length - 1 - i) / 3) * 0.7 + 0.3;
-    const w = Math.max(0.4, baseW * (pts[i][2] || 0.5) * tip);
+    // taper: entra suave (5 pts) y sale suave, como OpenToonz capStyle
+    const tIn = Math.min(1, i / 5);
+    const tOut = Math.min(1, (pts.length - 1 - i) / 5);
+    const tip = tIn * tOut;
+    const w = Math.max(0.2, baseW * (pts[i][2] || 0.5) * tip);
     L.push([pts[i][0] - ty * w, pts[i][1] + tx * w]);
     R.push([pts[i][0] + ty * w, pts[i][1] - tx * w]);
   }
@@ -3248,9 +3270,14 @@ function dzPrefsModal() {
     Supr/Retroceso deja la acción sin atajo. Los atajos funcionan cuando no estás escribiendo texto.</div>
     ${rows}
     <div class="dz-style-row" style="margin-top:12px">
-      <span class="dz-hint">Suavizado por defecto del lápiz/pincel</span>
+      <span class="dz-hint">Suavizado del lápiz/pincel</span>
       <input type="range" id="prefSmooth" min="0" max="100" value="${DZ.smooth === undefined ? 40 : DZ.smooth}">
       <span class="dz-hint" id="prefSmoothLbl">${DZ.smooth === undefined ? 40 : DZ.smooth}</span>
+    </div>
+    <div class="dz-style-row">
+      <span class="dz-hint">Sensibilidad de presión (gamma)</span>
+      <input type="range" id="prefGamma" min="20" max="200" value="${Math.round((DZ.pressureGamma || 0.85) * 100)}">
+      <span class="dz-hint" id="prefGammaLbl">${(DZ.pressureGamma || 0.85).toFixed(2)}</span>
     </div>
     <div class="m-actions">
       <button class="ghost" id="prefReset">Restaurar por defecto</button>
@@ -3282,6 +3309,11 @@ function dzPrefsModal() {
     $("#prefSmoothLbl").textContent = e.target.value;
     const s = $("#dzSmooth"); if (s) { s.value = e.target.value; $("#dzSmoothLbl").textContent = e.target.value; }
     try { localStorage.setItem("low.dzsmooth", String(DZ.smooth)); } catch (err) { /* */ }
+  };
+  $("#prefGamma").oninput = (e) => {
+    DZ.pressureGamma = +e.target.value / 100;
+    $("#prefGammaLbl").textContent = DZ.pressureGamma.toFixed(2);
+    try { localStorage.setItem("low.dzgamma", String(DZ.pressureGamma)); } catch (err) { /* */ }
   };
   $("#prefReset").onclick = () => {
     DZ.keymap = { ...DZ_KEY_DEFAULTS };
