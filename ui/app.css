@@ -1019,3 +1019,15 @@ footer {
 .dz-perf-sep { border-top: 1px solid var(--line); padding-top: 8px; margin-top: 4px; }
 #perfRec.rec { color: #fff; background: #E5322D; border-color: #E5322D; animation: perf-blink 1s ease-in-out infinite; }
 @keyframes perf-blink { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
+
+/* ── 🎦 Titiritero: HUD de grabación en vivo sobre el lienzo ── */
+.dz-pup-hud {
+  position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+  z-index: 40; pointer-events: none;
+  background: rgba(11,11,12,.82); color: #fff; border: 1.5px solid var(--red);
+  border-radius: 10px; padding: 8px 18px; font: 800 18px 'Figtree', sans-serif;
+  letter-spacing: .5px; box-shadow: 0 6px 24px rgba(0,0,0,.5);
+}
+/* botón de titiritero grabando: pulsa en naranja como el de grabación */
+#tlPuppet.rec { background: var(--red); border-color: var(--red); color: #fff; animation: dz-recpulse 1s steps(2) infinite; }
+@keyframes dz-recpulse { 50% { opacity: .45; } }

@@ -41,7 +41,7 @@ ASSET_EXT = {".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp",
 LANG_BY_EXT = {".py": "python", ".js": "javascript", ".ts": "javascript",
                ".sh": "bash", ".ps1": "powershell"}
 
-LOW_VERSION = "3.15.0"
+LOW_VERSION = "3.16.0"
 
 # Desafío por defecto del comparador: verificable automáticamente
 DEFAULT_TASK = ("Escribe un programa Python que imprima los primeros 10 numeros "
@@ -714,6 +714,31 @@ class Api:
         except OSError as e:
             return {"error": str(e)}
         return {"path": str(out)}
+
+    def record_take(s, path, svgs):
+        """TITIRITERO: escribe una toma completa (lista de SVGs capturados en vivo)
+        como cuadros consecutivos DESPUÉS del último — en un solo llamado, sin
+        renumerar (mucho más rápido que insert_frame por cuadro). Devuelve el
+        primer cuadro nuevo y la cantidad."""
+        p = Path(path)
+        m = s._FRAME_RX.match(p.name)
+        if not m:
+            return {"error": "no es un cuadro (_fNNN.svg)"}
+        if not isinstance(svgs, list) or not svgs:
+            return {"error": "toma vacía"}
+        base = m.group(1)
+        frames = s.list_frames(path)["frames"]
+        last = max(int(s._FRAME_RX.match(Path(f).name).group(2)) for f in frames) if frames else 0
+        first_out = None
+        try:
+            for i, svg in enumerate(svgs):
+                out = p.with_name(f"{base}_f{last + 1 + i:03d}.svg")
+                out.write_text(svg or "", encoding="utf-8")
+                if first_out is None:
+                    first_out = str(out)
+        except OSError as e:
+            return {"error": str(e)}
+        return {"path": first_out, "n": len(svgs)}
 
     def del_frame(s, path):
         """Borra un cuadro y devuelve el vecino más cercano para seguir editando."""

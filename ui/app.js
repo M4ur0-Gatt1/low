@@ -451,6 +451,7 @@ function bind() {
   $("#dzMirror").onclick = dzMirrorToggle;
   $("#tlMove").onclick = dzMoveTween;
   $("#tlRec").onclick = dzRecToggle;
+  $("#tlPuppet").onclick = dzPuppetToggle;
   // scrub del X-sheet: arrastrá sobre los cuadros para hojearlos (flipping)
   $("#tlFrames").addEventListener("mousedown", (e) => {
     if (!DZ.anim) return;
@@ -761,6 +762,10 @@ function bind() {
     if (e.key === "Escape" && PEN) {
       // cancela la pluma SIN cerrar el editor (frena el Escape global)
       e.preventDefault(); e.stopImmediatePropagation(); dzPenFinish(true);
+    }
+    if (e.key === "Escape" && DZ.pup) {
+      // Esc corta/cancela la grabación de titiritero sin cerrar el editor
+      e.preventDefault(); e.stopImmediatePropagation(); dzPuppetStop();
     }
   });
   document.querySelectorAll(".chip").forEach(c => {
@@ -4414,6 +4419,73 @@ async function dzRecFinish(rec) {
   try { S.tree = (await api.refresh_tree()).tree; renderTree(); } catch (e) { /* */ }
   await dzTimelineRefresh(); dzOnionUpdate(); dzTimelineBadges();
   dzSetStatus("⏺ Actuación grabada: " + nFrames + " cuadros a " + fps + " fps — dale ▶.");
+}
+
+/* ══ 🎦 TITIRITERO (marioneta digital) ═══════════════════════════════════
+   Grabación en vivo de performance: apretás REC, manipulás el muñeco en
+   tiempo real (arrastrás/rotás cabeza, brazos, piezas del rig) y LOW captura
+   la escena entera cada 1/fps segundos como cuadros — hasta que parás. Es el
+   titiritero de varilla (rod puppet) digital: la actuación ES la animación.
+   A diferencia de la grabación en vivo (un elemento), acá capturás TODO lo
+   que muevas, con las manos, en wall-clock real. ══ */
+function dzPuppetToggle() {
+  if (DZ.pup && DZ.pup.recording) { dzPuppetStop(); return; }
+  if (DZ.pup && DZ.pup.counting) { return; }        // en cuenta regresiva
+  if (!DZ.anim) { dzAnimToggle(); }                 // el titiritero vive en la timeline
+  if (!DZ.path) return sysMsg("🎦 Abrí un diseño primero (✒).");
+  // cuenta regresiva 3·2·1 para que agarres el muñeco listo
+  DZ.pup = { counting: true, recording: false, snaps: [] };
+  dzPuppetHUD("preparate…");
+  let n = 3;
+  const tick = () => {
+    if (!DZ.pup || !DZ.pup.counting) return;        // cancelado
+    if (n > 0) { dzPuppetHUD("🎬 " + n); n--; setTimeout(tick, 700); }
+    else dzPuppetStart();
+  };
+  tick();
+}
+function dzPuppetStart() {
+  const fps = Math.max(1, Math.min(60, +$("#tlFps").value || 12));
+  DZ.pup = { recording: true, counting: false, snaps: [], t0: performance.now(), fps };
+  $("#tlPuppet").classList.add("rec");
+  dzPuppetHUD("● REC  0.0s · 0 cuadros");
+  // capturá la escena entera cada 1/fps mientras manipulás el muñeco
+  DZ.pup.timer = setInterval(() => {
+    const svg = $("#dzCanvas").querySelector("svg");
+    if (!svg) return;
+    DZ.pup.snaps.push(dzSerialize(svg));
+    const secs = ((performance.now() - DZ.pup.t0) / 1000).toFixed(1);
+    dzPuppetHUD("● REC  " + secs + "s · " + DZ.pup.snaps.length + " cuadros");
+  }, 1000 / fps);
+  dzSetStatus("🎦 GRABANDO — movés el muñeco con la mano; cada instante es un cuadro. Apretá 🎦 (o Esc) para cortar.");
+}
+async function dzPuppetStop() {
+  const pup = DZ.pup; DZ.pup = null;
+  if (pup && pup.timer) clearInterval(pup.timer);
+  $("#tlPuppet").classList.remove("rec");
+  dzPuppetHUD(null);
+  if (!pup || !pup.recording) { dzSetStatus("🎦 Titiritero cancelado"); return; }
+  const snaps = pup.snaps || [];
+  if (snaps.length < 2) return dzSetStatus("🎦 Toma muy corta — apretá REC y movés el muñeco un rato antes de cortar.");
+  dzSetStatus("🎦 Guardando la actuación (" + snaps.length + " cuadros)…");
+  const r = await api.record_take(DZ.path, snaps);
+  if (r && r.error) return dzSetStatus("❌ " + r.error);
+  DZ.anim.cache = {};
+  try { S.tree = (await api.refresh_tree()).tree; renderTree(); } catch (e) { /* */ }
+  await dzTimelineRefresh(); dzTimelineBadges();
+  if (r && r.path) { await dzGoFrame(DZ.anim.frames.indexOf(r.path)); }
+  dzSetStatus("🎦 ¡Actuación grabada! " + (r.n || snaps.length) + " cuadros a " + pup.fps + " fps — dale ▶ para verla.");
+}
+/* HUD grande de grabación sobre el lienzo (texto o null para ocultar) */
+function dzPuppetHUD(txt) {
+  let h = $("#dzPupHud");
+  if (txt == null) { if (h) h.remove(); return; }
+  if (!h) {
+    h = document.createElement("div");
+    h.id = "dzPupHud"; h.className = "dz-pup-hud";
+    $("#dzCanvas").appendChild(h);
+  }
+  h.textContent = txt;
 }
 
 /* ══ 🎭 DIORAMA: compositing sin nodos ═══════════════════════════════════
