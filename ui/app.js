@@ -2808,6 +2808,7 @@ function dzSmoothPressure(pr) {
    Guardamos timestamp para que pointermove rellene huecos si raw se atrasa. */
 function dzDrawRaw(e) {
   if (!DRAW || e.pointerId !== DRAW.pid) return;
+  if (e.buttons === 0) return;                       // hover: ignorar (raw no debería llegar sin contacto, pero por seguridad)
   if (DRAW._pending) { clearTimeout(DRAW._pending); DRAW._pending = null; }
   e.preventDefault();
   const p = dzToUser(e.clientX, e.clientY);
@@ -2842,8 +2843,10 @@ function dzDrawDown(e) {
   if (tool === "select" || tool === "direct") return;  // seleccionar: flujo clásico
   const svg = $("#dzCanvas").querySelector("svg");
   if (!svg || e.button !== 0) return;
-  // ⛔ hover fantasma de tableta: algunas plumas mandan pointerdown con presión 0 o casi 0
-  if (e.pointerType === "pen" && (!e.pressure || e.pressure <= 0.03)) return;
+  // ⛔ hover fantasma de tableta: la pluma manda pointerdown con presión baja en hover.
+  //    e.buttons es el indicador canónico: 0 = hover, 1 (o 32) = contacto real.
+  if (e.pointerType === "pen" && e.buttons === 0) return;   // hover sin contacto real
+  if (e.pointerType === "pen" && (!e.pressure || e.pressure <= 0.08)) return;  // backup
   e.preventDefault(); e.stopPropagation();             // suprime los mouse events
   if (tool === "pivot") { dzPivotClick(e); return; }
   if (tool === "nodes") { dzNodesClick(e); return; }
@@ -2866,9 +2869,10 @@ function dzDrawDown(e) {
     const samePid = DRAW._lastPid != null && e.pointerId === DRAW._lastPid;
     const near = (p.x - last[0]) ** 2 + (p.y - last[1]) ** 2 < (dim * 0.12) ** 2;
     if (samePid || near) {
-      // presión real > umbral → stitching genuino; presión ~0 = hover fantasma → ignorar
+      // stitching genuino solo si hay contacto real (e.buttons > 0) y presión real
       const stPr = (e.pointerType === "pen" && e.pressure != null) ? e.pressure : 0.5;
-      if (e.pointerType === "pen" && stPr <= 0.03) { dzFinalizeStroke(); return; }
+      if (e.pointerType === "pen" && e.buttons === 0) { dzFinalizeStroke(); return; }
+      if (e.pointerType === "pen" && stPr <= 0.08) { dzFinalizeStroke(); return; }
       clearTimeout(DRAW._pending); DRAW._pending = null;
       DRAW.pid = e.pointerId;
       DRAW._lastRaw = 0;                                // 0 → fallback activo desde ya
@@ -2916,11 +2920,13 @@ function dzDrawMove(e) {
   // trazo en pausa que se reanuda por movimiento: sólo si hay presión real.
   // Un pointermove con presión 0 del mismo lápiz es hover, NO reanuda el trazo.
   if (DRAW._pending) {
+    if (e.pointerType === "pen" && e.buttons === 0) return;   // hover: no reanudar
     const mvPr = (e.pointerType === "pen" && e.pressure != null) ? e.pressure : 0.5;
-    if (e.pointerType === "pen" && mvPr <= 0.03) return;   // hover: no reanudar
+    if (e.pointerType === "pen" && mvPr <= 0.08) return;   // presión demasiado baja
     clearTimeout(DRAW._pending); DRAW._pending = null; DRAW.pid = e.pointerId;
   }
   if (e.pointerId !== DRAW.pid) return;                // ignorá OTROS punteros (palma/2º dedo/hover)
+  if (e.buttons === 0) return;                       // mismo dispositivo en hover, no dibujar
   e.preventDefault();
   // FALLBACK HÍBRIDO: si pointerrawupdate llegó hace < 30ms, raw está activo
   // y no interferimos. Si pasó más (raw va lento o se perdió frame),
@@ -2964,13 +2970,14 @@ function dzDrawUp(e) {
       && e.type !== "pointercancel" && e.type !== "lostpointercapture") return;
   DRAW._lastPid = DRAW.pid;                            // recordar para stitching por mismo ID
   try { $("#dzCanvas").releasePointerCapture(DRAW.pid); } catch (err) { /* */ }
-  // Si la pluma se levanta con presión ~0 → fue un fantasma, finalizar ya.
+  // Si la pluma se levanta sin contacto real (buttons=0) o presión ínfima → fantasma
   const upPr = (e && e.pointerType === "pen" && e.pressure != null) ? e.pressure : -1;
-  if (upPr >= 0 && upPr <= 0.03) { dzFinalizeStroke(); return; }
+  if (e && e.pointerType === "pen" && e.buttons === 0) { dzFinalizeStroke(); return; }
+  if (upPr >= 0 && upPr <= 0.08) { dzFinalizeStroke(); return; }
   // NO finalizar al toque: la tableta puede fragmentar con up/down rápidos.
-  // OpenToonz usa track continuity con timeout; nosotros 250ms.
+  // OpenToonz usa track continuity con timeout; 350ms para tabletas más lentas.
   if (DRAW._pending) clearTimeout(DRAW._pending);
-  DRAW._pending = setTimeout(dzFinalizeStroke, 250);
+  DRAW._pending = setTimeout(dzFinalizeStroke, 350);
 }
 /* finaliza de verdad el trazo: post-procesado (media móvil + simplificación +
    bezier), pincel → cinta de ancho variable, espejo. Se llama recién cuando el
