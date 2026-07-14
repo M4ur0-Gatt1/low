@@ -12,13 +12,14 @@ from providers.siliconflow_provider import SiliconFlowProvider
 from providers.digitalocean_provider import DigitalOceanProvider
 from providers.ltx_provider import LTXProvider
 from providers.fal_provider import FALProvider
+from providers.aimlapi_provider import AIMLAPIProvider
 
 PROVIDERS = {
     "groq": GroqProvider, "openai": OpenAIProvider, "anthropic": AnthropicProvider,
     "deepseek": DeepSeekProvider, "qwen": QwenProvider, "glm": GLMProvider,
     "xai": XAIProvider, "nvidia": NVIDIAProvider, "siliconflow": SiliconFlowProvider,
     "digitalocean": DigitalOceanProvider, "ltx": LTXProvider, "fal": FALProvider,
-    "custom": CustomProvider,
+    "aimlapi": AIMLAPIProvider, "custom": CustomProvider,
 }
 
 def get_provider(name, api_key=None, **kwargs):
