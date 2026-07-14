@@ -2844,6 +2844,8 @@ function dzDrawDown(e) {
   if (tool === "select" || tool === "direct") return;  // seleccionar: flujo clásico
   const svg = $("#dzCanvas").querySelector("svg");
   if (!svg || e.button !== 0) return;
+  // ⛔ hover fantasma de tableta: algunas plumas mandan pointerdown con presión 0
+  if (e.pointerType === "pen" && (e.pressure === 0 || e.pressure == null)) return;
   e.preventDefault(); e.stopPropagation();             // suprime los mouse events
   if (tool === "pivot") { dzPivotClick(e); return; }
   if (tool === "nodes") { dzNodesClick(e); return; }
@@ -2866,11 +2868,13 @@ function dzDrawDown(e) {
     const samePid = DRAW._lastPid != null && e.pointerId === DRAW._lastPid;
     const near = (p.x - last[0]) ** 2 + (p.y - last[1]) ** 2 < (dim * 0.12) ** 2;
     if (samePid || near) {
+      // presión real > 0 → stitching genuino; presión 0 = hover fantasma → ignorar
+      const stPr = (e.pointerType === "pen" && e.pressure != null) ? e.pressure : 0.5;
+      if (e.pointerType === "pen" && stPr <= 0.02) { dzFinalizeStroke(); return; }
       clearTimeout(DRAW._pending); DRAW._pending = null;
       DRAW.pid = e.pointerId;
-      DRAW._lastRaw = performance.now();
-      let pr = (e.pointerType === "pen" && e.pressure != null) ? Math.max(0.03, e.pressure)
-               : (DRAW._lastPr || 0.5);
+      DRAW._lastRaw = 0;                                // 0 → fallback activo desde ya
+      let pr = Math.max(0.03, stPr);
       DRAW._lastPr = pr;
       DRAW._pbuf = [pr, pr, pr, pr, pr];               // resetear buffer
       if (e.tiltX != null) { DRAW._tiltX = e.tiltX; DRAW._tiltY = e.tiltY; }
@@ -2888,7 +2892,7 @@ function dzDrawDown(e) {
   DRAW = { pts: [[p.x, p.y, initPr]], mode: DZ.tool, el: null,
            pid: e.pointerId, maxJump2: jump * jump, _pending: null,
            _lastPr: initPr, _pbuf: [initPr, initPr, initPr, initPr, initPr],
-           _lastPid: e.pointerId, _lastRaw: performance.now(),
+           _lastPid: e.pointerId, _lastRaw: 0,          // 0 = fallback pointermove activo (se actualiza con raw)
            _tiltX: initTx, _tiltY: initTy, _devId: e.pointerId };
   if (DZ.tool === "pencil") {
     DRAW.el = document.createElementNS(SVGNS, "path");
@@ -2911,9 +2915,13 @@ function dzDrawMove(e) {
   if (PEN && PEN.dragging) { dzPenDrag(dzToUser(e.clientX, e.clientY)); return; }
   if (PEN && !DRAW) { dzPenHover(dzToUser(e.clientX, e.clientY)); return; }
   if (!DRAW) return;
-  // trazo en pausa que se reanuda por movimiento (el lápiz siguió sin nuevo down):
-  // adoptá su pointer y cancelá la finalización pendiente → línea continua
-  if (DRAW._pending) { clearTimeout(DRAW._pending); DRAW._pending = null; DRAW.pid = e.pointerId; }
+  // trazo en pausa que se reanuda por movimiento: sólo si hay presión real.
+  // Un pointermove con presión 0 del mismo lápiz es hover, NO reanuda el trazo.
+  if (DRAW._pending) {
+    const mvPr = (e.pointerType === "pen" && e.pressure != null) ? e.pressure : 0.5;
+    if (e.pointerType === "pen" && mvPr <= 0.02) return;   // hover: no reanudar
+    clearTimeout(DRAW._pending); DRAW._pending = null; DRAW.pid = e.pointerId;
+  }
   if (e.pointerId !== DRAW.pid) return;                // ignorá OTROS punteros (palma/2º dedo/hover)
   e.preventDefault();
   // FALLBACK HÍBRIDO: si pointerrawupdate llegó hace < 30ms, raw está activo
@@ -2958,6 +2966,9 @@ function dzDrawUp(e) {
       && e.type !== "pointercancel" && e.type !== "lostpointercapture") return;
   DRAW._lastPid = DRAW.pid;                            // recordar para stitching por mismo ID
   try { $("#dzCanvas").releasePointerCapture(DRAW.pid); } catch (err) { /* */ }
+  // Si la pluma se levanta con presión 0 → fue un fantasma, finalizar ya.
+  const upPr = (e && e.pointerType === "pen" && e.pressure != null) ? e.pressure : -1;
+  if (upPr === 0) { dzFinalizeStroke(); return; }
   // NO finalizar al toque: la tableta puede fragmentar con up/down rápidos.
   // OpenToonz usa track continuity con timeout; nosotros 250ms.
   if (DRAW._pending) clearTimeout(DRAW._pending);
