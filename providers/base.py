@@ -151,4 +151,4 @@ class OpenAICompatProvider(AIProvider):
                     return ids
         except (requests.RequestException, ValueError, KeyError):
             pass
-        return self.MODELS or [self.model]
+        return list(self.MODELS) if self.MODELS else [self.model]

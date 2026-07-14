@@ -353,6 +353,9 @@ function updApis(st) {
 
 function fillSelect(sel, values, cur) {
   sel.innerHTML = "";
+  if (!values || !Array.isArray(values)) {
+    values = [];
+  }
   for (const v of values) {
     const o = document.createElement("option");
     o.value = o.textContent = v;
