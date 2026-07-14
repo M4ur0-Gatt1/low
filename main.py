@@ -28,6 +28,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from config import Config, data_dir
 from providers import get_provider, PROVIDERS
 from code_runner import CodeRunner
+from self_improvement import SelfImprovementSystem
 
 IGNORE_DIRS = {".git", "__pycache__", "node_modules", ".venv", "venv",
                "dist", "build", ".idea", ".vscode"}
@@ -41,7 +42,7 @@ ASSET_EXT = {".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp",
 LANG_BY_EXT = {".py": "python", ".js": "javascript", ".ts": "javascript",
                ".sh": "bash", ".ps1": "powershell"}
 
-LOW_VERSION = "3.16.13"
+LOW_VERSION = "3.17.0"
 
 # Desafío por defecto del comparador: verificable automáticamente
 DEFAULT_TASK = ("Escribe un programa Python que imprima los primeros 10 numeros "
@@ -50,7 +51,7 @@ DEFAULT_EXPECTED = "2, 3, 5, 7, 11, 13, 17, 19, 23, 29"
 
 # System prompt por defecto del agente. Editable desde ⚙ — LOW no agrega
 # ningún filtro ni instrucción oculta más allá de esto.
-DEFAULT_SP = ("Eres LOW, agente creativo y programador senior orientado a diseño, video y animacion. Tienes HERRAMIENTAS: read_file, "
+DEFAULT_SP = ("Eres LOW, agente creativo y programador senior orientado a programación, diseño, video y animación. Tienes HERRAMIENTAS: read_file, "
               "write_file, edit_file, exec_cmd, run_code, list_files, search_code, "
               "git, ssh_exec, scp_upload, generate_image, remember, check_design, social_export, "
               "web_search, web_fetch, write_doc, edit_image, refine_image, animate_image, generate_video. "
@@ -163,6 +164,7 @@ class Api:
         s._checkpoint = {}   # {path: contenido_previo|None} del último turno → /undo
         s._ollama = []       # modelos locales de Ollama detectados (para failover)
         s._cancel = False    # bandera para detener una consulta en curso
+        s._self_improvement = SelfImprovementSystem(data_dir())  # Sistema de automejora
         s._initp()
 
     def cancel(s):
@@ -1607,6 +1609,30 @@ class Api:
         s.cfg.data["ssh_hosts"] = clean
         s.cfg.save()
         return {"ssh_hosts": clean}
+
+    # ── sistema de automejora ──
+    def get_diagnostic_report(s):
+        """Genera un reporte de diagnóstico del sistema."""
+        return s._self_improvement.get_diagnostic_report()
+
+    def get_optimization_suggestions(s):
+        """Obtiene sugerencias de optimización basadas en análisis."""
+        return {"suggestions": s._self_improvement.get_optimization_suggestions()}
+
+    def get_best_model(s, provider=None):
+        """Recomienda el mejor modelo basado en métricas de rendimiento."""
+        best = s._self_improvement.get_best_model(provider)
+        if best:
+            return {"provider": best[0], "model": best[1]}
+        return {"error": "No hay suficientes datos para recomendar un modelo"}
+
+    def auto_optimize_config(s):
+        """Optimiza automáticamente la configuración del agente."""
+        current = s.cfg.data.get("agent", {})
+        optimized = s._self_improvement.auto_optimize_agent_config(current)
+        s.cfg.data["agent"] = optimized
+        s.cfg.save()
+        return {"config": optimized, "applied": True}
 
     # ── agente ────────────────────────────────────────────
     def _get_tools(s):
