@@ -2810,20 +2810,18 @@ function dzDrawRaw(e) {
   if (!DRAW || e.pointerId !== DRAW.pid) return;
   if (DRAW._pending) { clearTimeout(DRAW._pending); DRAW._pending = null; }
   e.preventDefault();
-  DRAW._lastRaw = performance.now();                   // timestamp → fallback híbrido
   const p = dzToUser(e.clientX, e.clientY);
   const last = DRAW.pts[DRAW.pts.length - 1];
   const dx = p.x - last[0], dy = p.y - last[1];
   const d2 = dx * dx + dy * dy;
-  // umbral dinámico más fino (0.08 base vs 0.3 antes; 0.45/zoom vs 0.8/zoom)
-  const minD2 = Math.max(0.08, 0.45 / (DZ.zoom || 1));
-  if (d2 < minD2) return;
-  if (d2 > DRAW.maxJump2) return;                      // rechazo de spike
-  // presión: si es pluma SIEMPRE usar el valor real (el piso lo maneja dzSmoothPressure)
+  const minD2 = Math.max(0.06, 0.35 / (DZ.zoom || 1));  // aún más fino
+  if (d2 < minD2) return;                                // ⚠ NO setear _lastRaw si no se agrega punto
+  if (d2 > DRAW.maxJump2) return;
+  // ⚠ _lastRaw SOLO se actualiza cuando REALMENTE se agrega un punto
+  DRAW._lastRaw = performance.now();
   let pr = (e.pointerType === "pen" && e.pressure != null) ? e.pressure
            : (DRAW._lastPr > 0 ? DRAW._lastPr : 0.5);
   DRAW._lastPr = pr;
-  // tilt del lápiz (OpenToonz lo usa para caligrafía)
   if (e.tiltX != null) { DRAW._tiltX = e.tiltX; DRAW._tiltY = e.tiltY; }
   pr = dzSmoothPressure(pr);
   DRAW.pts.push([p.x, p.y, pr]);
@@ -2844,8 +2842,8 @@ function dzDrawDown(e) {
   if (tool === "select" || tool === "direct") return;  // seleccionar: flujo clásico
   const svg = $("#dzCanvas").querySelector("svg");
   if (!svg || e.button !== 0) return;
-  // ⛔ hover fantasma de tableta: algunas plumas mandan pointerdown con presión 0
-  if (e.pointerType === "pen" && (e.pressure === 0 || e.pressure == null)) return;
+  // ⛔ hover fantasma de tableta: algunas plumas mandan pointerdown con presión 0 o casi 0
+  if (e.pointerType === "pen" && (!e.pressure || e.pressure <= 0.03)) return;
   e.preventDefault(); e.stopPropagation();             // suprime los mouse events
   if (tool === "pivot") { dzPivotClick(e); return; }
   if (tool === "nodes") { dzNodesClick(e); return; }
@@ -2868,9 +2866,9 @@ function dzDrawDown(e) {
     const samePid = DRAW._lastPid != null && e.pointerId === DRAW._lastPid;
     const near = (p.x - last[0]) ** 2 + (p.y - last[1]) ** 2 < (dim * 0.12) ** 2;
     if (samePid || near) {
-      // presión real > 0 → stitching genuino; presión 0 = hover fantasma → ignorar
+      // presión real > umbral → stitching genuino; presión ~0 = hover fantasma → ignorar
       const stPr = (e.pointerType === "pen" && e.pressure != null) ? e.pressure : 0.5;
-      if (e.pointerType === "pen" && stPr <= 0.02) { dzFinalizeStroke(); return; }
+      if (e.pointerType === "pen" && stPr <= 0.03) { dzFinalizeStroke(); return; }
       clearTimeout(DRAW._pending); DRAW._pending = null;
       DRAW.pid = e.pointerId;
       DRAW._lastRaw = 0;                                // 0 → fallback activo desde ya
@@ -2919,7 +2917,7 @@ function dzDrawMove(e) {
   // Un pointermove con presión 0 del mismo lápiz es hover, NO reanuda el trazo.
   if (DRAW._pending) {
     const mvPr = (e.pointerType === "pen" && e.pressure != null) ? e.pressure : 0.5;
-    if (e.pointerType === "pen" && mvPr <= 0.02) return;   // hover: no reanudar
+    if (e.pointerType === "pen" && mvPr <= 0.03) return;   // hover: no reanudar
     clearTimeout(DRAW._pending); DRAW._pending = null; DRAW.pid = e.pointerId;
   }
   if (e.pointerId !== DRAW.pid) return;                // ignorá OTROS punteros (palma/2º dedo/hover)
@@ -2966,9 +2964,9 @@ function dzDrawUp(e) {
       && e.type !== "pointercancel" && e.type !== "lostpointercapture") return;
   DRAW._lastPid = DRAW.pid;                            // recordar para stitching por mismo ID
   try { $("#dzCanvas").releasePointerCapture(DRAW.pid); } catch (err) { /* */ }
-  // Si la pluma se levanta con presión 0 → fue un fantasma, finalizar ya.
+  // Si la pluma se levanta con presión ~0 → fue un fantasma, finalizar ya.
   const upPr = (e && e.pointerType === "pen" && e.pressure != null) ? e.pressure : -1;
-  if (upPr === 0) { dzFinalizeStroke(); return; }
+  if (upPr >= 0 && upPr <= 0.03) { dzFinalizeStroke(); return; }
   // NO finalizar al toque: la tableta puede fragmentar con up/down rápidos.
   // OpenToonz usa track continuity con timeout; nosotros 250ms.
   if (DRAW._pending) clearTimeout(DRAW._pending);
