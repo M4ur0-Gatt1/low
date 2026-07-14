@@ -1031,3 +1031,13 @@ footer {
 /* botón de titiritero grabando: pulsa en naranja como el de grabación */
 #tlPuppet.rec { background: var(--red); border-color: var(--red); color: #fff; animation: dz-recpulse 1s steps(2) infinite; }
 @keyframes dz-recpulse { 50% { opacity: .45; } }
+
+/* 🩺 panel de diagnóstico de tableta (pointer events en vivo) */
+.dz-pendbg {
+  position: absolute; top: 10px; left: 10px; z-index: 45; width: 320px; max-height: 70%;
+  background: rgba(11,11,12,.92); border: 1px solid var(--cyan); border-radius: 9px;
+  font: 500 10.5px 'JetBrains Mono', monospace; color: #d8d8d2; overflow: hidden;
+  display: flex; flex-direction: column; box-shadow: 0 6px 24px rgba(0,0,0,.5);
+}
+.dz-pendbg-h { padding: 6px 9px; background: var(--cyansoft); color: #fff; font-weight: 700; }
+#dzPenDbgLog { padding: 6px 9px; overflow-y: auto; line-height: 1.5; white-space: pre; color: #d8d8d2; }

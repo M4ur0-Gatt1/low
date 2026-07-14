@@ -2706,6 +2706,53 @@ let PEN = null;    // pluma vectorial en curso
 const DZ_CURSORS = { select: "", direct: "default", nodes: "default", eraser: "cell",
                      dropper: "copy", bucket: "pointer", hand: "grab",
                      pivot: "crosshair" };
+/* ══ 🩺 Diagnóstico de tableta: registra el flujo REAL de pointer events
+   (tipo · pointerId · pointerType · botones · presión · Δpx · Δms) en un panel
+   en vivo, para ver qué emite la Huion de verdad en vez de suponerlo. ══ */
+function dzPenDebugToggle() {
+  DZ.penDebug = !DZ.penDebug;
+  let panel = $("#dzPenDbg");
+  if (!DZ.penDebug) {
+    if (DZ._penDbgFn) { document.removeEventListener("pointerdown", DZ._penDbgFn, true);
+      document.removeEventListener("pointermove", DZ._penDbgFn, true);
+      document.removeEventListener("pointerup", DZ._penDbgFn, true);
+      document.removeEventListener("pointercancel", DZ._penDbgFn, true);
+      DZ._penDbgFn = null; }
+    if (panel) panel.remove();
+    dzSetStatus("🩺 Diagnóstico de tableta OFF");
+    return;
+  }
+  panel = document.createElement("div");
+  panel.id = "dzPenDbg"; panel.className = "dz-pendbg";
+  panel.innerHTML = '<div class="dz-pendbg-h">🩺 tableta — hacé UNA línea y sacá captura</div><div id="dzPenDbgLog"></div>';
+  $("#dzCanvas").appendChild(panel);
+  const log = $("#dzPenDbgLog");
+  let lastT = 0, lastX = 0, lastY = 0, cnt = { down: 0, move: 0, up: 0, cancel: 0 };
+  DZ._penDbgFn = (e) => {
+    const cv = $("#dzCanvas"); if (!cv.contains(e.target) && e.target !== cv) return;
+    const t = performance.now();
+    const dt = lastT ? Math.round(t - lastT) : 0; lastT = t;
+    const dx = Math.round(e.clientX - lastX), dy = Math.round(e.clientY - lastY);
+    lastX = e.clientX; lastY = e.clientY;
+    const k = e.type.replace("pointer", "");
+    cnt[k] = (cnt[k] || 0) + 1;
+    const co = (e.getCoalescedEvents && e.getCoalescedEvents().length) || 0;
+    const line = `${k.padEnd(6)} id${e.pointerId} ${e.pointerType[0]} b${e.buttons} p${(e.pressure||0).toFixed(2)} Δ${dx},${dy} ${dt}ms${co?(" c"+co):""}`;
+    const row = document.createElement("div"); row.textContent = line;
+    if (k === "down") row.style.color = "#33B5E8";
+    if (k === "up" || k === "cancel") row.style.color = "#F0450E";
+    log.appendChild(row);
+    while (log.childElementCount > 26) log.firstChild.remove();
+    $(".dz-pendbg-h").textContent = `🩺 down:${cnt.down} move:${cnt.move} up:${cnt.up} cancel:${cnt.cancel||0}`;
+    try { api.log_js && api.log_js("[pen] " + line); } catch (err) { /* */ }
+  };
+  document.addEventListener("pointerdown", DZ._penDbgFn, true);
+  document.addEventListener("pointermove", DZ._penDbgFn, true);
+  document.addEventListener("pointerup", DZ._penDbgFn, true);
+  document.addEventListener("pointercancel", DZ._penDbgFn, true);
+  dzSetStatus("🩺 Diagnóstico ON — elegí Pincel, hacé UNA línea y mandame la captura del panel");
+}
+
 function dzSetTool(t) {
   if (DRAW && DRAW._pending) dzFinalizeStroke();       // cerrá cualquier trazo pendiente
   DZ.tool = t;
@@ -4611,7 +4658,7 @@ function dzMenuAction(act) {
     cerrar: () => closeDesign(),
     deshacer: dzUndo, rehacer: dzRedo, duplicar: dzDuplicate, borrar: dzDeleteSelected,
     agrupar: () => dzGroupSel(false), desagrupar: () => dzGroupSel(true),
-    preferencias: dzPrefsModal, atajos: dzPrefsModal,
+    preferencias: dzPrefsModal, atajos: dzPrefsModal, pendebug: dzPenDebugToggle,
     zoomin: () => dzZoom(0.15), zoomout: () => dzZoom(-0.15),
     zoom100: () => dzRunAction("zoom100"), fit: dzFitView,
     rotl: () => dzRotView(-15), rotr: () => dzRotView(15),
