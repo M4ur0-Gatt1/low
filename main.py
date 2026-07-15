@@ -42,7 +42,7 @@ ASSET_EXT = {".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp",
 LANG_BY_EXT = {".py": "python", ".js": "javascript", ".ts": "javascript",
                ".sh": "bash", ".ps1": "powershell"}
 
-LOW_VERSION = "3.17.1"
+LOW_VERSION = "3.17.2"
 
 # Desafío por defecto del comparador: verificable automáticamente
 DEFAULT_TASK = ("Escribe un programa Python que imprima los primeros 10 numeros "
@@ -165,6 +165,8 @@ class Api:
         s._ollama = []       # modelos locales de Ollama detectados (para failover)
         s._cancel = False    # bandera para detener una consulta en curso
         s._self_improvement = SelfImprovementSystem(data_dir())  # Sistema de automejora
+        s._design_session_id = None  # sesión separada para modo diseño
+        s._previous_session_id = None  # sesión anterior antes de entrar a diseño
         s._initp()
 
     def cancel(s):
@@ -3770,6 +3772,39 @@ class Api:
         s._checkpoint = {}
         s._tool_mode = None  # re-detectar modo de tools (code/design) en la charla nueva
         return s.ses_id
+
+    def enter_design_mode(s):
+        """Entra al modo diseño con una sesión separada."""
+        s._previous_session_id = s.ses_id
+        if not s._design_session_id:
+            s._design_session_id = s._new_sid()
+        s.ses_id = s._design_session_id
+        s.ses_msgs = []
+        s._mem = []
+        s._checkpoint = {}
+        return {"session_id": s.ses_id, "previous_session_id": s._previous_session_id}
+
+    def exit_design_mode(s):
+        """Sale del modo diseño y vuelve a la sesión anterior."""
+        if s._previous_session_id:
+            s.ses_id = s._previous_session_id
+            # Cargar mensajes de la sesión anterior
+            f = s.ses_dir / f"{s.ses_id}.json"
+            if f.exists():
+                try:
+                    s.ses_msgs = json.loads(f.read_text(encoding="utf-8"))
+                except Exception:
+                    s.ses_msgs = []
+            else:
+                s.ses_msgs = []
+            # Reconstruir memoria
+            s._mem = []
+            for msg in s.ses_msgs:
+                if msg.get("role") in ("user", "assistant"):
+                    s._mem.append({"role": msg["role"], "content": msg.get("content", "")})
+            s._mem = s._mem[-s._mem_limit():]
+            s._previous_session_id = None
+        return {"session_id": s.ses_id}
 
     def delete_session(s, sid):
         """Borra una conversación del historial (cerrar la solapa). Si es la
