@@ -70,6 +70,15 @@ DEFAULT_CONFIG = {
         # Key: token personal de DO o model access key
         #      (https://cloud.digitalocean.com/gen-ai/model-access-keys)
         "digitalocean": {"api_key": "", "model": "deepseek-v4-pro", "base_url": "https://inference.do-ai.run/v1"},
+        # Cloudflare Workers AI — 10,000 Neurons por día gratis.
+        # Endpoint: https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run
+        # Key: API Token de Cloudflare (https://dash.cloudflare.com/profile/api-tokens)
+        #      Requiere account_id en base_url o como parámetro
+        "cloudflare": {"api_key": "", "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast", "base_url": ""},
+        # Replicate — miles de modelos open-source con free tier de $0.005.
+        # Endpoint: https://api.replicate.com/v1
+        # Key: API Token de Replicate (https://replicate.com/account/api-tokens)
+        "replicate": {"api_key": "", "model": "meta/meta-llama-3-70b-instruct", "base_url": ""},
         # LTX (Lightricks) — SOLO video (text→video / imagen→video con audio).
         # No es un modelo de chat: no entra en la cadena de failover del agente.
         # Key: https://console.ltx.video/api-keys
