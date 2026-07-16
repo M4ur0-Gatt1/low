@@ -530,7 +530,7 @@ function bind() {
   try { $("#dzCanvas").addEventListener("pointerrawupdate", dzDrawRaw); } catch (e) { /* no soportado */ }
   // el lápiz saliendo de rango / pointer cancelado no debe dejar el trazo colgado
   $("#dzCanvas").addEventListener("pointercancel", dzDrawUp);
-  $("#dzCanvas").addEventListener("lostpointercapture", (e) => { dzDrawUp(e); });
+
   $("#dzCanvas").addEventListener("dblclick", (e) => {
     if (PEN) { dzPenFinish(false); return; }
     // flecha negra: doble clic ENTRA al grupo (selección profunda, como Animate)
@@ -2888,14 +2888,12 @@ function _drawBeginTrack(e, svg) {
     track.el.setAttribute("stroke-linecap", "round");
   }
   svg.appendChild(track.el);
-  try { $("#dzCanvas").setPointerCapture(e.pointerId); } catch (err) { /* */ }
   return track;
 }
 
 function _drawFinish() {
   if (!DRAW_TRACK) return;
   const t = DRAW_TRACK; DRAW_TRACK = null;
-  try { $("#dzCanvas").releasePointerCapture(t.pid); } catch (err) { /* */ }
   if (t.pts.length < 2) { if (t.el) t.el.remove(); return; }
   const pts = dzRefineStroke(t.pts);
   let finalEl = t.el;
@@ -2914,7 +2912,7 @@ function dzDrawRaw(e) {
   if (!DRAW_TRACK || e.pointerId !== DRAW_TRACK.pid) return;
   // Si no hay presión, ignorar (hover)
   const pr = (e.pressure != null) ? e.pressure : 0;
-  if (pr === 0) return;
+  if (pr <= 0.02) return;
   e.preventDefault();
   const p = dzToUser(e.clientX, e.clientY);
   _drawAddPoint(DRAW_TRACK, p.x, p.y, pr);
@@ -2933,7 +2931,7 @@ function dzDrawDown(e) {
   const dev = _otDevType(e);
   if (dev !== "mouse") {
     const pr = (e.pressure != null) ? e.pressure : 0;
-    if (pr === 0) return;  // hover puro, no dibujar
+    if (pr <= 0.02) return;  // hover: Huion manda ~0.005 sin contacto
   }
 
   e.preventDefault(); e.stopPropagation();
@@ -2962,7 +2960,7 @@ function dzDrawMove(e) {
   const dev = _otDevType(e);
   if (dev !== "mouse") {
     const pr = (e.pressure != null) ? e.pressure : 0;
-    if (pr === 0) return;
+    if (pr <= 0.02) return;
   }
 
   e.preventDefault();
