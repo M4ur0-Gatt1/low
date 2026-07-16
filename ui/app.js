@@ -2757,10 +2757,10 @@ function dzPenDebugToggle() {
   }
   panel = document.createElement("div");
   panel.id = "dzPenDbg"; panel.className = "dz-pendbg";
-  panel.innerHTML = '<div class="dz-pendbg-h">🩺 tableta — hacé UNA línea y sacá captura</div><div id="dzPenDbgLog"></div>';
+  panel.innerHTML = '<div class="dz-pendbg-h">🩺 tableta — hacé UNA línea y sacá captura <span style="cursor:pointer;float:right;opacity:.7" title="Abrir diagnóstico completo en navegador" onclick="try{api.open_tablet_diag()}catch(e){}">🔗 externo</span></div><div id="dzPenDbgLog"></div>';
   $("#dzCanvas").appendChild(panel);
   const log = $("#dzPenDbgLog");
-  let lastT = 0, lastX = 0, lastY = 0, cnt = { down: 0, move: 0, up: 0, cancel: 0, raw: 0 };
+  let lastT = 0, lastX = 0, lastY = 0, cnt = { down: 0, move: 0, up: 0, cancel: 0, raw: 0 }, buf = [];
   const addRow = (text, color) => {
     const row = document.createElement("div"); row.textContent = text;
     if (color) row.style.color = color;
@@ -2783,15 +2783,19 @@ function dzPenDebugToggle() {
     const line = `${onCv} ${k.padEnd(5)} id${e.pointerId} ${e.pointerType[0]} btn:${e.button} btns:${e.buttons} pr:${pr} tw:${(e.tiltX||0).toFixed(1)} Δ${dx},${dy} ${dt}ms${co?(" c"+co):""}`;
     let color = null;
     if (k === "down") color = "#33B5E8";
-    if (k === "up" || k === "cancel") color = "#F0450E";
+    if (k === "up" || k === "cancel") { color = "#F0450E"; try { api.save_tablet_log && api.save_tablet_log(buf.join('\n')); } catch(e){} }
     if (!onCanvas) color = "#666";
     addRow(line, color);
+    buf.push(line);
+    if (buf.length % 50 === 0) { try { api.save_tablet_log && api.save_tablet_log(buf.join('\n')); } catch(e){} }
     try { api.log_js && api.log_js("[pen] " + line); } catch (err) { /* */ }
   };
   DZ._penDbgRawFn = (e) => {
     cnt.raw = (cnt.raw || 0) + 1;
     const pr = (e.pressure != null) ? e.pressure.toFixed(3) : "-";
     const line = `⚡ raw     id${e.pointerId} ${e.pointerType[0]} btns:${e.buttons} pr:${pr} tw:${(e.tiltX||0).toFixed(1)}`;
+    buf.push(line);
+    if (buf.length % 50 === 0) { try { api.save_tablet_log && api.save_tablet_log(buf.join('\n')); } catch(e){} }
     addRow(line, "#FFA000");
   };
   document.addEventListener("pointerdown", DZ._penDbgFn, true);
@@ -2849,11 +2853,21 @@ function dzSmoothPressure(pr, track) {
    Principio: acumular todos los puntos y renderizar. El post-procesado
    (Ramer-Douglas-Peucker + Catmull-Rom) limpia el ruido después.
    
-   Reglas de hover para tableta (el 90% de los bugs vienen de acá):
-   - pressure === 0  →  hover (ignorar)
-   - pressure > 0    →  contacto real (dibujar)
-   - pointerType !== "pen"  →  mouse (dibujar siempre en down)
+   pointerdown con pointerType==="pen" → SIEMPRE inicia trazo.
+   El navegador solo dispara pointerdown con contacto real (spec).
+   La presión solo afecta el GROSOR del trazo, no si se dibuja o no.
    ═══════════════════════════════════════════════════════════════════════ */
+
+function _dzDiag(msg, color) {
+  const log = $("#dzPenDbgLog");
+  if (log) {
+    const row = document.createElement("div"); row.textContent = msg;
+    if (color) row.style.color = color;
+    log.appendChild(row);
+    while (log.childElementCount > 60) log.firstChild.remove();
+  }
+  console.log("[LOW:draw]", msg);
+}
 
 let DRAW_TRACK = null;   // UN solo track: { pts, mode, el, pid, devType, _pbuf }
 
@@ -2932,9 +2946,10 @@ function _drawFinish() {
 
 function dzDrawRaw(e) {
   if (!DRAW_TRACK || e.pointerId !== DRAW_TRACK.pid) return;
+  // Si hay track activo, SIEMPRE procesar (la presión puede ser 0 en el primer frame)
+  const pr = (e.pressure != null) ? e.pressure : _otPressure(e);
   e.preventDefault();
   const p = dzToUser(e.clientX, e.clientY);
-  const pr = (e.pressure != null) ? e.pressure : _otPressure(e);
   _drawAddPoint(DRAW_TRACK, p.x, p.y, pr);
 }
 
@@ -2947,7 +2962,9 @@ function dzDrawDown(e) {
   const svg = $("#dzCanvas").querySelector("svg");
   if (!svg) return;
 
-
+  // ═══ pointerdown SIEMPRE inicia trazo si es pen ═══
+  _dzDiag("▼ down " + e.pointerType + " pr:" + (e.pressure != null ? e.pressure.toFixed(4) : "null") +
+    " btn:" + e.button + " btns:" + e.buttons + " tool:" + tool, "#33B5E8");
 
   e.preventDefault(); e.stopPropagation();
   if (tool === "pivot") { dzPivotClick(e); return; }
@@ -2971,8 +2988,8 @@ function dzDrawMove(e) {
   if (!DRAW_TRACK) return;
   if (e.pointerId !== DRAW_TRACK.pid) return;
 
-
-
+  // ═══ Si hay DRAW_TRACK activo y mismo pointerId, SIEMPRE dibujar ═══
+  // (la presión solo afecta el grosor, no si se dibuja)
   e.preventDefault();
 
   // Procesar eventos coalescidos (alta precisión)
@@ -2990,6 +3007,7 @@ function dzDrawUp(e) {
   if (!DRAW_TRACK) return;
   if (e && e.pointerId != null && e.pointerId !== DRAW_TRACK.pid
       && e.type !== "pointercancel" && e.type !== "lostpointercapture") return;
+  _dzDiag("▲ up   id" + (e ? e.pointerId : "?") + " pts:" + (DRAW_TRACK ? DRAW_TRACK.pts.length : 0), "#F0450E");
   _drawFinish();
 }
 /* ══ post-procesado del trazo (como OpenToonz al soltar el lápiz):

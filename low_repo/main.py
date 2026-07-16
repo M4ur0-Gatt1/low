@@ -42,7 +42,7 @@ ASSET_EXT = {".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp",
 LANG_BY_EXT = {".py": "python", ".js": "javascript", ".ts": "javascript",
                ".sh": "bash", ".ps1": "powershell"}
 
-LOW_VERSION = "3.17.7"
+LOW_VERSION = "3.17.8"
 
 # Desafío por defecto del comparador: verificable automáticamente
 DEFAULT_TASK = ("Escribe un programa Python que imprima los primeros 10 numeros "
@@ -1613,6 +1613,14 @@ class Api:
         with open(p, 'a', encoding='utf-8') as f:
             f.write(f"── {ts} ──\n{text}\n\n")
         return f"ok {p}"
+
+    def open_tablet_diag(s):
+        """Abre el diagnóstico de tableta en el navegador externo."""
+        import sys as _sys
+        base = getattr(_sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+        diag = os.path.join(base, "ui", "diag-tablet.html")
+        webbrowser.open(diag)
+        return {"ok": True}
 
     def get_optimization_suggestions(s):
         """Obtiene sugerencias de optimización basadas en análisis."""

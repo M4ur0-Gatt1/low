@@ -2757,10 +2757,10 @@ function dzPenDebugToggle() {
   }
   panel = document.createElement("div");
   panel.id = "dzPenDbg"; panel.className = "dz-pendbg";
-  panel.innerHTML = '<div class="dz-pendbg-h">🩺 tableta — hacé UNA línea y sacá captura</div><div id="dzPenDbgLog"></div>';
+  panel.innerHTML = '<div class="dz-pendbg-h">🩺 tableta — hacé UNA línea y sacá captura <span style="cursor:pointer;float:right;opacity:.7" title="Abrir diagnóstico completo en navegador" onclick="try{api.open_tablet_diag()}catch(e){}">🔗 externo</span></div><div id="dzPenDbgLog"></div>';
   $("#dzCanvas").appendChild(panel);
   const log = $("#dzPenDbgLog");
-  let lastT = 0, lastX = 0, lastY = 0, cnt = { down: 0, move: 0, up: 0, cancel: 0, raw: 0 };
+  let lastT = 0, lastX = 0, lastY = 0, cnt = { down: 0, move: 0, up: 0, cancel: 0, raw: 0 }, buf = [];
   const addRow = (text, color) => {
     const row = document.createElement("div"); row.textContent = text;
     if (color) row.style.color = color;
@@ -2783,15 +2783,19 @@ function dzPenDebugToggle() {
     const line = `${onCv} ${k.padEnd(5)} id${e.pointerId} ${e.pointerType[0]} btn:${e.button} btns:${e.buttons} pr:${pr} tw:${(e.tiltX||0).toFixed(1)} Δ${dx},${dy} ${dt}ms${co?(" c"+co):""}`;
     let color = null;
     if (k === "down") color = "#33B5E8";
-    if (k === "up" || k === "cancel") color = "#F0450E";
+    if (k === "up" || k === "cancel") { color = "#F0450E"; try { api.save_tablet_log && api.save_tablet_log(buf.join('\n')); } catch(e){} }
     if (!onCanvas) color = "#666";
     addRow(line, color);
+    buf.push(line);
+    if (buf.length % 50 === 0) { try { api.save_tablet_log && api.save_tablet_log(buf.join('\n')); } catch(e){} }
     try { api.log_js && api.log_js("[pen] " + line); } catch (err) { /* */ }
   };
   DZ._penDbgRawFn = (e) => {
     cnt.raw = (cnt.raw || 0) + 1;
     const pr = (e.pressure != null) ? e.pressure.toFixed(3) : "-";
     const line = `⚡ raw     id${e.pointerId} ${e.pointerType[0]} btns:${e.buttons} pr:${pr} tw:${(e.tiltX||0).toFixed(1)}`;
+    buf.push(line);
+    if (buf.length % 50 === 0) { try { api.save_tablet_log && api.save_tablet_log(buf.join('\n')); } catch(e){} }
     addRow(line, "#FFA000");
   };
   document.addEventListener("pointerdown", DZ._penDbgFn, true);

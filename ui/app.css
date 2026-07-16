@@ -607,6 +607,7 @@ footer {
 .dz-canvas {
   flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center;
   padding: 24px; min-width: 0;
+  touch-action: none; /* CRÍTICO: sin esto el navegador roba eventos de tableta para scroll */
   background: #141416;
   background-image:
     linear-gradient(45deg,#1c1c1f 25%,transparent 25%),
