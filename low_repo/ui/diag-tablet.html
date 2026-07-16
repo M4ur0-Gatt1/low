@@ -3,233 +3,214 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LOW — Diagnóstico Tableta</title>
+<title>LOW - Diagnóstico Tableta</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #1a1a2e; color: #eee;
-         display: flex; height: 100vh; overflow: hidden; }
-  #panel { width: 380px; min-width: 380px; background: #16213e; padding: 16px;
-           overflow-y: auto; border-right: 2px solid #0f3460; display: flex; flex-direction: column; gap: 10px; }
-  #panel h2 { color: #e94560; font-size: 18px; margin-bottom: 4px; }
-  #panel h3 { color: #0f3460; font-size: 13px; margin: 8px 0 4px; border-bottom: 1px solid #0f3460; padding-bottom: 4px; }
-  #log { flex: 1; background: #0f0f1a; border-radius: 8px; padding: 10px; overflow-y: auto;
-         font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace; font-size: 11px; line-height: 1.5;
-         max-height: calc(100vh - 100px); }
-  .ev { padding: 2px 4px; border-radius: 3px; margin: 1px 0; white-space: nowrap; }
-  .ev.pen { background: #1a3a1a; border-left: 3px solid #4caf50; }
-  .ev.mouse { background: #1a1a3a; border-left: 3px solid #2196F3; }
-  .ev.touch { background: #3a1a1a; border-left: 3px solid #ff9800; }
-  .ev.ignored { background: #2a2a2a; border-left: 3px solid #666; opacity: 0.6; }
-  .ev.warn { background: #3a3a1a; border-left: 3px solid #ffeb3b; }
-  .badge { display: inline-block; padding: 1px 6px; border-radius: 10px; font-size: 10px; font-weight: bold; margin-right: 4px; }
-  .badge.down { background: #4caf50; color: #000; }
-  .badge.move { background: #2196F3; color: #fff; }
-  .badge.up { background: #f44336; color: #fff; }
-  .badge.raw { background: #9c27b0; color: #fff; }
-  .badge.cancel { background: #ff5722; color: #fff; }
-  .badge.lost { background: #607d8b; color: #fff; }
-  #canvas-wrap { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; }
-  #testCanvas { border: 2px dashed #0f3460; background: #fff; cursor: crosshair;
-                touch-action: none; /* CRÍTICO: sin esto el navegador hace scroll en vez de mandar eventos */ }
-  #stats { position: absolute; bottom: 16px; right: 16px; background: rgba(0,0,0,0.8);
-           padding: 8px 14px; border-radius: 8px; font-size: 12px; }
-  #stats span { margin: 0 8px; }
-  .val { color: #4caf50; font-weight: bold; }
-  .clear-btn { background: #e94560; color: #fff; border: none; padding: 6px 14px; border-radius: 6px;
-               cursor: pointer; font-size: 12px; }
-  .clear-btn:hover { background: #ff6b81; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#1a1a2e; color:#eee; font:13px/1.5 monospace; height:100vh; display:flex; }
+#log { width:400px; padding:12px; overflow-y:auto; background:#16213e; border-right:2px solid #0f3460; max-height:100vh; }
+#log h2 { color:#e94560; margin-bottom:8px; font-size:14px; }
+#log .bar { display:flex; gap:6px; margin-bottom:10px; }
+#log button { background:#e94560; color:#fff; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font:inherit; font-size:12px; }
+#log button:disabled { opacity:0.4; cursor:default; }
+#log .saved { color:#4ecca3; font-size:11px; display:none; }
+#line { flex:1; background:#0a0a15; position:relative; overflow:hidden; }
+canvas { position:absolute; top:0; left:0; }
+.entry { border-bottom:1px solid #1a1a3e; padding:4px 0; font-size:11px; }
+.entry .type { display:inline-block; min-width:80px; font-weight:bold; }
+.entry .type.down { color:#4ecca3; }
+.entry .type.move { color:#3498db; }
+.entry .type.up   { color:#e74c3c; }
+.entry .type.raw  { color:#f39c12; }
+.entry .type.hover { color:#7f8c8d; }
+.stats { background:#0f3460; padding:8px; border-radius:6px; margin:8px 0; }
+.stats span { display:block; }
+.val { color:#e94560; }
 </style>
 </head>
 <body>
-
-<div id="panel">
-  <h2>🩺 Diagnóstico Tableta</h2>
-  <p style="font-size:11px;color:#999;">Dibujá UNA línea en el canvas blanco. Todos los eventos quedan registrados abajo.</p>
-  <button class="clear-btn" onclick="clearLog()">🗑 Limpiar log</button>
-  <div>
-    <h3>📊 Resumen</h3>
-    <div id="summary" style="font-size:11px;">Esperando eventos...</div>
+<div id="log">
+  <h2>🩺 LOW Tablet Diagnostic</h2>
+  <div class="bar">
+    <button id="btnSave" onclick="saveLog()">💾 Guardar log YA</button>
+    <span class="saved" id="savedMsg">✅ Guardado</span>
   </div>
-  <h3>📋 Eventos (más recientes arriba)</h3>
-  <div id="log"><em style="color:#666;">Dibujá en el canvas para ver eventos...</em></div>
-</div>
-
-<div id="canvas-wrap">
-  <canvas id="testCanvas" width="800" height="600"></canvas>
-  <div id="stats">
-    <span>Events: <span class="val" id="cnt">0</span></span>
-    <span>Pen: <span class="val" id="cntPen">0</span></span>
-    <span>Raw: <span class="val" id="cntRaw">0</span></span>
+  <div class="stats">
+    <span>Eventos: <b class="val" id="cnt">0</b></span>
+    <span>↓ down: <b class="val" id="cntD">0</b> | → move: <b class="val" id="cntM">0</b> | ↑ up: <b class="val" id="cntU">0</b></span>
+    <span>⚡ raw: <b class="val" id="cntR">0</b> | 🖱 hover: <b class="val" id="cntH">0</b></span>
+    <span>Última presión: <b class="val" id="lastPr">-</b></span>
+    <span>Último buttons: <b class="val" id="lastBtns">-</b></span>
+    <span>Último tipo: <b class="val" id="lastType">-</b></span>
+    <span>Auto-guardado: <b class="val" id="autoStatus">c/50 eventos</b></span>
   </div>
+  <div id="entries"></div>
 </div>
+<div id="line"><canvas id="cvs"></canvas></div>
 
 <script>
-const canvas = document.getElementById('testCanvas');
-const ctx = canvas.getContext('2d');
-const logEl = document.getElementById('log');
-const summaryEl = document.getElementById('summary');
-let events = [];
+const log = document.getElementById('entries');
+const cvs = document.getElementById('cvs');
+const ctx = cvs.getContext('2d');
+let cnt=0,cntD=0,cntM=0,cntU=0,cntR=0,cntH=0;
 let drawing = false;
 let pts = [];
-let trackPid = null;
-let cnt = 0, cntPen = 0, cntRaw = 0;
-let lastDown = null;
+let allEvents = []; // buffer completo de eventos para guardar a disco
 
-// Dibujar grid en el canvas
-ctx.fillStyle = '#fff';
-ctx.fillRect(0, 0, canvas.width, canvas.height);
-ctx.strokeStyle = '#e0e0e0';
-ctx.lineWidth = 0.5;
-for (let x = 0; x <= canvas.width; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
-for (let y = 0; y <= canvas.height; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+function resize() {
+  cvs.width = cvs.parentElement.clientWidth;
+  cvs.height = cvs.parentElement.clientHeight;
+}
+window.addEventListener('resize', resize);
+resize();
 
-function clearLog() { events = []; logEl.innerHTML = ''; cnt = cntPen = cntRaw = 0; updateStats(); ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvas.width,canvas.height); }
-function updateStats() {
-  document.getElementById('cnt').textContent = cnt;
-  document.getElementById('cntPen').textContent = cntPen;
-  document.getElementById('cntRaw').textContent = cntRaw;
+function ts() {
+  const d = new Date();
+  return d.toISOString().split('T')[1].slice(0,12);
 }
 
-function fmtPr(p) {
-  if (p == null) return 'null';
-  return p.toFixed(4);
-}
-
-function fmtTilt(e) {
-  let tx = e.tiltX != null ? e.tiltX : '?';
-  let ty = e.tiltY != null ? e.tiltY : '?';
-  return `tw:(${tx},${ty})`;
-}
-
-function addEvent(type, e, note) {
+function addEntry(type, e) {
   cnt++;
-  const isPen = e.pointerType === 'pen';
-  if (isPen) cntPen++;
-  const cls = isPen ? 'pen' : (e.pointerType === 'touch' ? 'touch' : 'mouse');
-  const badge = type === 'pointerdown' ? 'down' : (type === 'pointermove' ? 'move' : (type === 'pointerup' ? 'up' : (type === 'pointerrawupdate' ? 'raw' : (type === 'pointercancel' ? 'cancel' : 'lost'))));
-  const pr = e.pressure != null ? e.pressure : null;
+  const cls = {pointerdown:'down',pointermove:'move',pointerup:'up',pointerrawupdate:'raw'}[type]||'hover';
+  if (cls==='down') cntD++; else if (cls==='move') cntM++; else if (cls==='up') cntU++; else if (cls==='raw') cntR++; else cntH++;
   
-  const html = `<div class="ev ${cls}">
-    <span class="badge ${badge}">${type}</span>
-    <b>${e.pointerType||'?'}</b> id:${e.pointerId}
-    pr:<b style="color:${pr>0?'#4caf50':'#ff5252'}">${fmtPr(pr)}</b>
-    btn:${e.button} btns:${e.buttons}
-    ${fmtTilt(e)}
-    (${e.offsetX?.toFixed(0)||'?'},${e.offsetY?.toFixed(0)||'?'})
-    ${note ? ' <span style="color:#ffeb3b">'+note+'</span>' : ''}
-  </div>`;
-  
-  events.unshift(html);
-  if (events.length > 200) events.pop();
-  logEl.innerHTML = events.join('');
-  updateStats();
-  
-  // Resumen
-  summaryEl.innerHTML = `
-    Último: <b>${type}</b> ${e.pointerType} | presión: <b>${fmtPr(pr)}</b><br>
-    botón: ${e.button} | botones máscara: ${e.buttons}<br>
-    tilt: (${e.tiltX??'?'}, ${e.tiltY??'?'})<br>
-    HW: width=${e.width??'?'} height=${e.height??'?'}
-  `;
+  document.getElementById('cnt').textContent=cnt;
+  document.getElementById('cntD').textContent=cntD;
+  document.getElementById('cntM').textContent=cntM;
+  document.getElementById('cntU').textContent=cntU;
+  document.getElementById('cntR').textContent=cntR;
+  document.getElementById('cntH').textContent=cntH;
+  document.getElementById('lastPr').textContent=e.pressure?.toFixed(4)??'null';
+  document.getElementById('lastBtns').textContent=e.buttons??'null';
+  document.getElementById('lastType').textContent=e.pointerType??'null';
+
+  const line = `${ts()} ${type} ptr:${e.pointerId??'?'} ${e.pointerType??'?'} btn:${e.button??'?'} btns:${e.buttons??'?'} pr:${(e.pressure??-1).toFixed(4)} tw:${(e.tiltX??-1).toFixed(2)}/${(e.tiltY??-1).toFixed(2)} x:${e.clientX?.toFixed(0)??'?'} y:${e.clientY?.toFixed(0)??'?'}`;
+  allEvents.push(line);
+
+  const div = document.createElement('div');
+  div.className = 'entry';
+  div.innerHTML = `<span class="type ${cls}">${type}</span> `
+    +`ptr:${e.pointerId??'?'} ${e.pointerType??'?'} `
+    +`btn:${e.button??'?'} btns:${e.buttons??'?'} `
+    +`pr:${(e.pressure??-1).toFixed(4)} `
+    +`tw:${(e.tiltX??-1).toFixed(2)}/${(e.tiltY??-1).toFixed(2)} `
+    +`x:${e.clientX?.toFixed(0)??'?'} y:${e.clientY?.toFixed(0)??'?'}`;
+  log.insertBefore(div, log.firstChild);
+  if (log.children.length > 200) log.lastChild.remove();
+
+  // Auto-guardar cada 50 eventos
+  if (allEvents.length % 50 === 0) saveLog(true);
 }
 
-// === Event Listeners ===
-canvas.addEventListener('pointerdown', (e) => {
-  e.preventDefault();
-  // NO usar setPointerCapture — causa lostpointercapture que corta el trazo
-  addEvent('pointerdown', e);
-  drawing = true;
-  trackPid = e.pointerId;
-  lastDown = { x: e.offsetX, y: e.offsetY, pr: e.pressure || 0.5 };
-  pts = [lastDown];
+function saveLog(auto) {
+  const text = allEvents.join('\n');
+  const btn = document.getElementById('btnSave');
+  const msg = document.getElementById('savedMsg');
   
-  // Dibujar punto inicial
-  ctx.fillStyle = '#e94560';
-  ctx.beginPath();
-  ctx.arc(e.offsetX, e.offsetY, 4, 0, Math.PI*2);
-  ctx.fill();
-});
-
-canvas.addEventListener('pointermove', (e) => {
-  if (!drawing || e.pointerId !== trackPid) {
-    addEvent('pointermove', e, 'hover (ignorado)');
-    return;
+  // Intentar pywebview API
+  if (typeof window.pywebview !== 'undefined' && window.pywebview.api && window.pywebview.api.save_tablet_log) {
+    window.pywebview.api.save_tablet_log(text).then(r => {
+      console.log('[LOW Diag] Log guardado:', r);
+      msg.style.display = 'inline';
+      setTimeout(() => msg.style.display = 'none', 2000);
+    }).catch(err => {
+      console.warn('[LOW Diag] pywebview.api falló:', err);
+      fallbackSave(text);
+    });
+  } else {
+    fallbackSave(text);
   }
-  
-  const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
-  for (const ev of evs) {
-    addEvent('pointermove', ev);
-    pts.push({ x: ev.offsetX, y: ev.offsetY, pr: ev.pressure || 0.5 });
+}
+
+function fallbackSave(text) {
+  // Fallback: descargar como archivo .txt
+  const blob = new Blob([text], {type:'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'low-tablet-diag-log.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+  const msg = document.getElementById('savedMsg');
+  msg.textContent = '⬇ Descargado';
+  msg.style.display = 'inline';
+  setTimeout(() => msg.style.display = 'none', 2000);
+  console.log('[LOW Diag] Log descargado como archivo.');
+}
+
+// Guardar al cerrar
+window.addEventListener('beforeunload', () => saveLog(true));
+
+['pointerdown','pointermove','pointerup','pointerrawupdate','pointerenter','pointerleave','pointercancel','lostpointercapture','gotpointercapture'].forEach(t => {
+  cvs.addEventListener(t, (e) => {
+    e.preventDefault();
+    addEntry(t, e);
+    
+    if (t === 'pointerdown' && e.pointerType === 'pen') {
+      drawing = true;
+      pts = [{x:e.clientX, y:e.clientY, pr:e.pressure}];
+      ctx.clearRect(0,0,cvs.width,cvs.height);
+    }
+    if (t === 'pointermove' && drawing) {
+      pts.push({x:e.clientX, y:e.clientY, pr:e.pressure});
+      ctx.clearRect(0,0,cvs.width,cvs.height);
+      if (pts.length < 2) return;
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i=1; i<pts.length; i++) {
+        ctx.lineTo(pts[i].x, pts[i].y);
+      }
+      ctx.strokeStyle = '#e94560';
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    }
+    if ((t === 'pointerup' || t === 'pointercancel') && drawing) {
+      drawing = false;
+      addEntry('TRAZO_FIN ('+pts.length+' pts)', e);
+      // Guardar automáticamente al terminar cada trazo
+      saveLog(true);
+    }
+  });
+});
+
+// También interceptar en window para ver eventos que no llegan al canvas
+['pointerdown','pointerup','pointercancel','lostpointercapture'].forEach(t => {
+  window.addEventListener(t, (e) => {
+    if (e.target !== cvs) {
+      const line = `${ts()} ⚠ ${t} EN WINDOW (NO canvas) target:${e.target?.tagName||'?'} ptrType:${e.pointerType}`;
+      allEvents.push(line);
+      const div = document.createElement('div');
+      div.className = 'entry';
+      div.style.color = '#ff6b6b';
+      div.innerHTML = `⚠ <b>${t}</b> EN WINDOW (NO canvas) target:${e.target?.tagName||'?'} ptrType:${e.pointerType}`;
+      log.insertBefore(div, log.firstChild);
+    }
+  }, true);
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' || e.key === 'c') {
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+    pts = [];
+    drawing = false;
+    const div = document.createElement('div');
+    div.className = 'entry';
+    div.innerHTML = '🧹 Canvas limpiado';
+    log.insertBefore(div, log.firstChild);
   }
-  
-  // Dibujar línea
-  ctx.strokeStyle = '#e94560';
-  ctx.lineWidth = (e.pressure || 0.5) * 8;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  ctx.beginPath();
-  ctx.moveTo(lastDown.x, lastDown.y);
-  for (let i = 1; i < pts.length; i++) {
-    ctx.lineTo(pts[i].x, pts[i].y);
+  if (e.key === 's' && e.ctrlKey) {
+    e.preventDefault();
+    saveLog(false);
   }
-  ctx.stroke();
-  lastDown = pts[pts.length - 1];
 });
 
-canvas.addEventListener('pointerup', (e) => {
-  addEvent('pointerup', e);
-  drawing = false;
-  trackPid = null;
-});
-
-canvas.addEventListener('pointercancel', (e) => {
-  addEvent('pointercancel', e, '⚠ CANCELADO');
-  drawing = false;
-  trackPid = null;
-});
-
-// lostpointercapture NO se usa — setPointerCapture eliminado
-
-canvas.addEventListener('pointerrawupdate', (e) => {
-  cntRaw++;
-  if (!drawing || e.pointerId !== trackPid) {
-    addEvent('pointerrawupdate', e, 'hover raw (ignorado)');
-    return;
-  }
-  const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
-  for (const ev of evs) {
-    addEvent('pointerrawupdate', ev);
-    pts.push({ x: ev.offsetX, y: ev.offsetY, pr: ev.pressure || 0.5 });
-  }
-  // Dibujar
-  ctx.strokeStyle = '#e94560';
-  ctx.lineWidth = (e.pressure || 0.5) * 8;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  ctx.beginPath();
-  ctx.moveTo(lastDown.x, lastDown.y);
-  for (let i = 1; i < pts.length; i++) {
-    ctx.lineTo(pts[i].x, pts[i].y);
-  }
-  ctx.stroke();
-  lastDown = pts[pts.length - 1];
-  updateStats();
-});
-
-// También escuchar eventos globales para ver si caen en window pero no en canvas
-window.addEventListener('pointerdown', (e) => {
-  if (e.target === canvas || canvas.contains(e.target)) return; // ya capturado
-  addEvent('pointerdown', e, '⚠ cayó en WINDOW');
-});
-window.addEventListener('pointermove', (e) => {
-  if (e.target === canvas || canvas.contains(e.target)) return;
-  // No loguear todos los moves globales, solo los de pen
-  if (e.pointerType === 'pen') addEvent('pointermove', e, '⚠ global (no canvas)');
-});
-
+// Info inicial
 console.log('[LOW Diag] Listo. Dibujá en el canvas para diagnosticar tu tableta.');
 console.log('[LOW Diag] pointerType esperado: "pen" (no "mouse" ni "touch")');
 console.log('[LOW Diag] Si no ves eventos, el navegador no reconoce tu tableta.');
+console.log('[LOW Diag] El log se guarda automáticamente cada 50 eventos y al terminar cada trazo.');
+console.log('[LOW Diag] También podés guardar con Ctrl+S o el botón 💾.');
+console.log('[LOW Diag] Archivo: diag-log.txt en el directorio de datos de LOW.');
 </script>
 </body>
 </html>

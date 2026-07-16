@@ -2843,7 +2843,7 @@ function dzSmoothPressure(pr, track) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   SISTEMA DE DIBUJO — v5 (v3.17.6)
+   SISTEMA DE DIBUJO — v5 (v3.17.7)
    ═══════════════════════════════════════════════════════════════════════
    Un solo track activo. Sin máquinas de estado, sin stitching con timeout.
    Principio: acumular todos los puntos y renderizar. El post-procesado

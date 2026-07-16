@@ -42,7 +42,7 @@ ASSET_EXT = {".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp",
 LANG_BY_EXT = {".py": "python", ".js": "javascript", ".ts": "javascript",
                ".sh": "bash", ".ps1": "powershell"}
 
-LOW_VERSION = "3.17.6"
+LOW_VERSION = "3.17.7"
 
 # Desafío por defecto del comparador: verificable automáticamente
 DEFAULT_TASK = ("Escribe un programa Python que imprima los primeros 10 numeros "
@@ -1604,6 +1604,15 @@ class Api:
     def get_diagnostic_report(s):
         """Genera un reporte de diagnóstico del sistema."""
         return s._self_improvement.get_diagnostic_report()
+
+    def save_tablet_log(s, text):
+        """Guarda el log de diagnóstico de tableta en un archivo."""
+        import datetime
+        p = data_dir() / 'diag-log.txt'
+        ts = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        with open(p, 'a', encoding='utf-8') as f:
+            f.write(f"── {ts} ──\n{text}\n\n")
+        return f"ok {p}"
 
     def get_optimization_suggestions(s):
         """Obtiene sugerencias de optimización basadas en análisis."""
