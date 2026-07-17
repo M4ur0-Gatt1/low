@@ -27,10 +27,9 @@ a = Analysis(
     excludes=[
         # Modulos pesados que LOW no usa
         'matplotlib', 'numpy', 'scipy', 'pandas',
-        'tkinter', 'tcl', 'tk',
         'unittest', 'test', 'pydoc',
         'distutils', 'setuptools',
-        'sqlite3', 'sqlalchemy',
+        'sqlalchemy',
         'pytest', 'coverage', 'tox',
         'Cython', 'cffi',
     ],

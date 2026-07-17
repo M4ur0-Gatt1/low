@@ -26,10 +26,9 @@ datas=[('providers', 'providers'), ('code_runner', 'code_runner'), ('config.py',
     excludes=[
         # Modulos pesados que LOW no usa -> build mas rapido
         'matplotlib', 'numpy', 'scipy', 'pandas',
-        'tkinter', 'tcl', 'tk',
         'unittest', 'test', 'pydoc',
         'distutils', 'setuptools',
-        'sqlite3', 'sqlalchemy',
+        'sqlalchemy',
         'pytest', 'coverage', 'tox',
         'Cython', 'cffi',
     ],

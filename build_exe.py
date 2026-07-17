@@ -32,22 +32,20 @@ except ImportError:
 
 # 3. Armar flags segun modo
 if MODE == "fast":
-    # --onedir: no comprime en un solo archivo, MUCHO mas rapido
-    # sin UPX, sin clean -> usa cache de builds anteriores
     spec = "LOW_fast.spec"
     extra = ["--noconfirm"]
-    print("⚡ Modo FAST: --onedir, sin comprimir (30-60s)")
+    print("[FAST] Modo FAST: --onedir, sin comprimir (30-60s)")
 elif MODE == "clean":
     spec = "LOW.spec"
     extra = ["--noconfirm", "--clean"]
-    print("🧹 Modo CLEAN: --onefile, sin cache (3-5 min)")
+    print("[CLEAN] Modo CLEAN: --onefile, sin cache (3-5 min)")
 else:  # release
     spec = "LOW.spec"
     extra = ["--noconfirm", "--clean"]
-    print("📦 Modo RELEASE: --onefile + UPX + clean (5-10 min)")
+    print("[RELEASE] Modo RELEASE: --onefile + UPX + clean (5-10 min)")
 
 subprocess.check_call([sys.executable, "-m", "PyInstaller", spec] + extra)
-print(f"\n✅ OK: dist/LOW.exe (modo={MODE})")
+print(f"\n[OK] dist/LOW.exe (modo={MODE})")
 
 # 3. instalador (opcional: necesita Inno Setup -> winget install JRSoftware.InnoSetup)
 iscc_paths = [
@@ -58,7 +56,7 @@ iscc_paths = [
 iscc = next((p for p in iscc_paths if os.path.exists(p)), None)
 if iscc:
     subprocess.check_call([iscc, "low_installer.iss"])
-    print("\nOK: Output/LOWSetup-*.exe")
+    print("\n[OK] Output/LOWSetup-*.exe")
 else:
-    print("\nAviso: Inno Setup no encontrado; instalador omitido.")
+    print("\n[Aviso] Inno Setup no encontrado; instalador omitido.")
     print("Instalarlo con: winget install JRSoftware.InnoSetup")
