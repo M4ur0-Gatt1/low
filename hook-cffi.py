@@ -1,18 +1,8 @@
-"""PyInstaller hook para cffi — recolecta el .pyd compilado (_cffi_backend).
+"""PyInstaller hook para cffi — incluye el .pyd compilado (_cffi_backend).
 
 Sin esto, pythonnet → clr_loader → cffi falla con:
     ModuleNotFoundError: No module named 'cffi'
 
-Porque hiddenimports=['cffi'] solo importa el paquete Python pero NO el .pyd
-(_cffi_backend.*.pyd) que es el motor C compilado.
+No usamos collect_submodules() porque dispara imports circulares con PyInstaller 6.x.
 """
-from PyInstaller.utils.hooks import (
-    collect_submodules,
-    collect_data_files,
-    collect_dynamic_libs,
-)
-
-hiddenimports = collect_submodules('cffi')
-hiddenimports.append('_cffi_backend')
-datas = collect_data_files('cffi')
-binaries = collect_dynamic_libs('cffi')
+hiddenimports = ['cffi', '_cffi_backend']

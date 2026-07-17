@@ -31,7 +31,9 @@ a = Analysis(
         # Modulos pesados que LOW no usa
         'matplotlib', 'numpy', 'scipy', 'pandas',
         'unittest', 'test', 'pydoc',
-        'distutils', 'setuptools',
+        # distutils NO se excluye — PyInstaller 6.x + Python 3.13 lo necesita
+        # (setuptools provee el shim y el hook lo aliasa)
+        'setuptools',
         'sqlalchemy',
         'pytest', 'coverage', 'tox',
         'Cython',
