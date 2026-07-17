@@ -1,13 +1,14 @@
 # -*- mode: python ; coding: utf-8 -*-
-
+# LOW_fast.spec — build RAPIDO (--onedir, sin UPX, ~30-60s)
+# Uso: python build_exe.py fast
 
 a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-datas=[('providers', 'providers'), ('code_runner', 'code_runner'), ('config.py', '.'),
-       ('low.ico', '.'), ('ui', 'ui'), ('tools', 'tools'), ('low_anim.py', '.'),
-       ('self_improvement.py', '.'), ('animation_engine', 'animation_engine')],
+    datas=[('providers', 'providers'), ('code_runner', 'code_runner'), ('config.py', '.'),
+           ('low.ico', '.'), ('ui', 'ui'), ('tools', 'tools'), ('low_anim.py', '.'),
+           ('self_improvement.py', '.'), ('animation_engine', 'animation_engine')],
     hiddenimports=['providers', 'providers.transport', 'providers.nvidia_provider',
                    'code_runner', 'webview.platforms.winforms',
                    'webview.platforms.edgechromium', 'webview.platforms.cocoa',
@@ -24,7 +25,7 @@ datas=[('providers', 'providers'), ('code_runner', 'code_runner'), ('config.py',
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
-        # Modulos pesados que LOW no usa -> build mas rapido
+        # Modulos pesados que LOW no usa
         'matplotlib', 'numpy', 'scipy', 'pandas',
         'tkinter', 'tcl', 'tk',
         'unittest', 'test', 'pydoc',
@@ -48,7 +49,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=False,              # sin UPX = mucho mas rapido
     upx_exclude=[],
     runtime_tmpdir=None,
     console=False,
@@ -58,4 +59,15 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     icon='low.ico',
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    strip=False,
+    upx=False,
+    upx_exclude=[],
+    name='LOW',
 )
