@@ -1,7 +1,0 @@
-requests>=2.31
-pywebview>=5.0
-pillow>=10.0
-vtracer>=0.6         # raster → SVG editable (vectorizar / "calcar"); offline
-# ffmpeg (binario, no pip) habilita export a MP4 y video; opcional
-# Linux necesita ademas un backend web: pip install "pywebview[qt]"
-# Para compilar: pip install pyinstaller
