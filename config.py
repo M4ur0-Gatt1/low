@@ -72,7 +72,7 @@ DEFAULT_CONFIG = {
         "xai": {"api_key": "", "model": "grok-2", "base_url": ""},
         # Agnes AI — OpenAI-compatible (https://platform.agnes-ai.com)
         # Key: https://platform.agnes-ai.com/settings/apiKeys
-        "agnes": {"api_key": "", "model": "gpt-4o", "base_url": "https://platform.agnes-ai.com/v1"},
+        "agnes": {"api_key": "", "model": "gpt-4o", "base_url": "https://api.agnes-ai.com/api/v1"},
         # DigitalOcean GenAI Platform — Serverless Inference (compatible OpenAI).
         # Endpoint: https://inference.do-ai.run/v1  → da acceso a TODOS los modelos
         # con los que tengas acceso (Llama, DeepSeek, Mistral, OpenAI, Anthropic).
@@ -129,6 +129,10 @@ class Config:
                           "https://gateway.digitalocean.ai/v1",
                           "https://api.paperspace.io", ""},
                          "https://inference.do-ai.run/v1"),
+        "agnes": ({"https://platform.agnes-ai.com/v1",
+                   "https://platform.agnes-ai.com/api/v1",
+                   "https://api.agnes-ai.com/v1", ""},
+                  "https://api.agnes-ai.com/api/v1"),
     }
     # IDs de modelo que pusimos como default y NO andan en el tier base de DO
     # (formato viejo con puntos, o propietarios que dan 403 por tier). Se

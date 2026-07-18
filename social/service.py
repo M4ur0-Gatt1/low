@@ -60,12 +60,39 @@ class SocialService:
                 "has_app": cfg["has_app"],
                 "connected": row is not None,
                 "handle": row["handle"] if row else "",
-                "client_id_saved": bool(row and row.get("client_id")),
+                "client_id_saved": bool(row and row["client_id"]),
+            })
+        templates = [
+            {"id": r["id"], "canva_template_id": r["canva_template_id"],
+             "name": r["name"] or "", "format": r["format"] or ""}
+            for r in self.conn.execute(
+                "SELECT * FROM canva_templates ORDER BY name")]
+        queue = []
+        for r in self.conn.execute(
+                "SELECT q.*, a.platform AS network FROM content_queue q "
+                "LEFT JOIN social_accounts a ON a.id = q.account_id "
+                "ORDER BY q.id DESC LIMIT 50"):
+            try:
+                data = json.loads(r["copy_json"] or "{}")
+                caption = data.get("caption") or data.get("copy") or ""
+            except Exception:
+                caption = ""
+            queue.append({
+                "id": r["id"],
+                "network": r["network"] or "?",
+                "status": r["status"],
+                "caption": caption[:140],
+                "scheduled_at": r["scheduled_at"] or "",
+                "published_at": r["published_at"] or "",
+                "error": (r["error"] or "")[:200],
+                "attempts": r["attempts"],
             })
         return {
             "platforms": platforms,
             "redirect_uri": REDIRECT_URI,
             "brand": self.brand_mgr.get_profile(),
+            "templates": templates,
+            "queue": queue,
         }
 
     def connect(self, platform: str, client_id: str, client_secret: str) -> dict:
@@ -166,6 +193,58 @@ class SocialService:
                     (brand_id, t["id"], t["name"], json.dumps(placeholders)))
         self.conn.commit()
         return templates
+
+    def enqueue(self, network: str, content: str, template_id="",
+                asset_path="", scheduled_at="") -> int:
+        """Encola un post. Devuelve el id en content_queue.
+
+        network: instagram/facebook/linkedin/x/tiktok (cuenta conectada).
+        template_id: id numérico local o canva_template_id (opcional).
+        scheduled_at: ISO 8601; vacío = listo para procesar ya.
+        """
+        network = (network or "").strip().lower()
+        publishable = [p for p in PLATFORMS if p != "canva"]
+        if network not in publishable:
+            raise ValueError(f"Red desconocida: {network!r} — usá una de: "
+                             + ", ".join(publishable))
+        if not (content or "").strip():
+            raise ValueError("Falta el contenido del post")
+        acct = self.conn.execute(
+            "SELECT id FROM social_accounts WHERE platform=? AND status='active'",
+            (network,)).fetchone()
+        if not acct:
+            raise ValueError(f"{network} no está conectada — conectala en "
+                             "⚙ → Redes Sociales")
+
+        tpl_row_id = None
+        if template_id:
+            trow = self.conn.execute(
+                "SELECT id FROM canva_templates WHERE id=? OR canva_template_id=?",
+                (str(template_id), str(template_id))).fetchone()
+            if not trow:
+                raise ValueError(f"Template no encontrado: {template_id} — "
+                                 "sincronizá los templates de Canva")
+            tpl_row_id = trow["id"]
+
+        when = (scheduled_at or "").strip() or datetime.now(timezone.utc).isoformat()
+        cur = self.conn.execute(
+            "INSERT INTO content_queue (brand_id,account_id,template_id,copy_json,"
+            "asset_url,status,scheduled_at) VALUES (?,?,?,?,?,'draft',?)",
+            (self.brand_mgr.brand_id, acct["id"], tpl_row_id,
+             json.dumps({"copy": content}, ensure_ascii=False),
+             asset_path or None, when))
+        self.conn.commit()
+        return cur.lastrowid
+
+    def queue_delete(self, qid: int):
+        row = self.conn.execute(
+            "SELECT status FROM content_queue WHERE id=?", (qid,)).fetchone()
+        if not row:
+            raise ValueError(f"Item #{qid} no existe")
+        if row["status"] == "publishing":
+            raise ValueError(f"Item #{qid} se está publicando — esperá a que termine")
+        self.conn.execute("DELETE FROM content_queue WHERE id=?", (qid,))
+        self.conn.commit()
 
     def process_item(self, qid: int, llm_fn, notify_fn) -> dict:
         """Procesa un item de la cola: valida → renderiza → publica."""
@@ -319,15 +398,21 @@ class SocialService:
             return {"error": err}
 
     def tick(self, llm_fn, notify_fn):
-        """Procesa items vencidos en la cola."""
+        """Procesa items vencidos en la cola (borradores incluidos: el flujo
+        completo draft → validar → render → publicar corre acá)."""
         now = datetime.now(timezone.utc).isoformat()
         cur = self.conn.execute(
-            "SELECT id FROM content_queue WHERE status IN ('ready','validated') "
-            "AND scheduled_at <= ? ORDER BY scheduled_at LIMIT 5",
+            "SELECT id, status FROM content_queue "
+            "WHERE status IN ('draft','ready','validated') "
+            "AND scheduled_at IS NOT NULL AND scheduled_at <= ? "
+            "ORDER BY scheduled_at LIMIT 5",
             (now,))
         for row in cur.fetchall():
             try:
-                self._publish(row["id"], notify_fn)
+                if row["status"] == "draft":
+                    self.process_item(row["id"], llm_fn, notify_fn)
+                else:
+                    self._publish(row["id"], notify_fn)
             except Exception as e:
                 notify_fn(f"❌ tick #{row['id']}: {e}")
 
@@ -358,3 +443,41 @@ def start_scheduler(llm_fn, notify_fn, interval=60):
 
     t = threading.Thread(target=_loop, daemon=True, name="soc-sched")
     t.start()
+
+
+# ── API a nivel módulo: main.py llama social.service.<fn>() directamente ──
+def state():
+    return get_service().state()
+
+
+def connect(platform, client_id="", client_secret=""):
+    return get_service().connect(platform, client_id, client_secret)
+
+
+def disconnect(platform):
+    return get_service().disconnect(platform)
+
+
+def save_brand(profile_json):
+    return get_service().save_brand(profile_json)
+
+
+def set_brand_guide(text):
+    return get_service().set_brand_guide(text)
+
+
+def sync_templates():
+    return get_service().sync_templates()
+
+
+def enqueue(network, content, template_id="", asset_path="", scheduled_at=""):
+    return get_service().enqueue(network, content, template_id=template_id,
+                                 asset_path=asset_path, scheduled_at=scheduled_at)
+
+
+def process_item(qid, llm_fn, notify_fn):
+    return get_service().process_item(int(qid), llm_fn, notify_fn)
+
+
+def queue_delete(qid):
+    return get_service().queue_delete(int(qid))

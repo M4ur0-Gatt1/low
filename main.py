@@ -42,7 +42,7 @@ ASSET_EXT = {".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp",
 LANG_BY_EXT = {".py": "python", ".js": "javascript", ".ts": "javascript",
                ".sh": "bash", ".ps1": "powershell"}
 
-LOW_VERSION = "3.18.7"
+LOW_VERSION = "3.19.0"
 
 # Desafío por defecto del comparador: verificable automáticamente
 DEFAULT_TASK = ("Escribe un programa Python que imprima los primeros 10 numeros "
@@ -1692,6 +1692,24 @@ class Api:
             svc = s._social()
             return {"msg": svc.process_item(int(qid), s._social_ask,
                                             lambda m: s._push("sys", m))}
+        except Exception as e:
+            return {"error": str(e)[:300]}
+
+    def social_enqueue(s, network, content, template_id="", schedule_at=""):
+        """Encola un post desde el panel de Redes (📣). schedule_at ISO
+        vacío = queda listo para publicar ya (draft con fecha now)."""
+        try:
+            qid = s._social().enqueue(network or "", content or "",
+                                      template_id=template_id or "",
+                                      scheduled_at=(schedule_at or "").strip())
+            return {"ok": True, "qid": qid}
+        except Exception as e:
+            return {"error": str(e)[:300]}
+
+    def social_queue_delete(s, qid):
+        try:
+            s._social().queue_delete(int(qid))
+            return {"ok": True}
         except Exception as e:
             return {"error": str(e)[:300]}
 

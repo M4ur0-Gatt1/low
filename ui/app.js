@@ -470,6 +470,7 @@ function bind() {
     $("#abAgent").classList.toggle("active", a.style.display !== "none");
   };
   $("#abArtifacts").onclick = showArtifacts;
+  $("#abSocial").onclick = modalSocial;
   $("#abRoutines").onclick = modalRoutines;
   $("#abTools").onclick = modalTools;
   $("#abServers").onclick = modalServers;
@@ -1827,6 +1828,115 @@ async function renderSocialCfg(firstLoad) {
   // el brand solo se carga al abrir, para no pisar lo que el usuario esté editando
   if (firstLoad && $("#brandJson"))
     $("#brandJson").value = JSON.stringify(st.brand || {}, null, 2);
+}
+
+/* ── 📣 Redes sociales: panel del módulo (nuevo post, cola, templates) ── */
+async function modalSocial() {
+  openModal(`<h2>Redes sociales</h2><div class="sub">Cargando…</div>`);
+  const st = await api.social_state();
+  if ($("#overlay").hidden) return;                 // lo cerraron mientras cargaba
+  if (st && st.error) {
+    openModal(`<h2>Redes sociales</h2><div class="sub">⚠ ${esc(st.error)}</div>
+      <div class="m-actions"><button class="primary" id="mCancel">Cerrar</button></div>`);
+    $("#mCancel").onclick = closeModal;
+    return;
+  }
+  const nets = (st.platforms || []).filter(p => p.key !== "canva");
+  const conn = nets.filter(p => p.connected);
+  const canva = (st.platforms || []).find(p => p.key === "canva");
+  const chips = (st.platforms || []).map(p =>
+    `<span class="soc-chip${p.connected ? " on" : ""}" title="${esc(p.handle || (p.connected ? "conectado" : "sin conectar — ⚙ Cuentas y marca"))}">${p.connected ? "●" : "○"} ${esc(p.label)}</span>`).join("");
+  const tplOpts = ['<option value="">— sin template (solo texto) —</option>']
+    .concat((st.templates || []).map(t =>
+      `<option value="${t.id}">${esc(t.name || t.canva_template_id)}${t.format ? " · " + esc(t.format) : ""}</option>`)).join("");
+  const netOpts = conn.length
+    ? conn.map(p => `<option value="${p.key}">${esc(p.label)}</option>`).join("")
+    : '<option value="">(sin cuentas conectadas)</option>';
+  const stIco = { draft: "📝", validated: "✔", rendering: "🎨", ready: "📦",
+                  scheduled: "⏰", publishing: "🚀", published: "✅", failed: "❌" };
+  const rows = (st.queue || []).map(q =>
+    `<div class="q-row st-${q.status}">
+      <span class="q-st" title="${esc(q.error || q.status)}">${stIco[q.status] || "•"} ${q.status}</span>
+      <span class="q-net">${esc(q.network)}</span>
+      <span class="q-cap" title="${esc(q.caption)}">${esc(q.caption) || "(sin texto)"}</span>
+      <span class="q-when">${esc((q.published_at || q.scheduled_at || "").replace("T", " ").slice(0, 16))}</span>
+      ${q.status === "published" || q.status === "publishing" ? ""
+        : `<button class="ghost q-go" data-id="${q.id}" title="Validar contra la marca, renderizar y publicar YA">▶</button>`}
+      ${q.status === "publishing" ? ""
+        : `<button class="ghost q-del" data-id="${q.id}" title="Quitar de la cola">✕</button>`}
+    </div>`).join("") || '<div class="sub">La cola está vacía — creá tu primer post arriba.</div>';
+  openModal(`
+    <h2>Redes sociales</h2>
+    <div class="sub">El autopiloto de LOW: encolás el post, el agente lo valida
+    contra tu marca, lo renderiza con Canva (si elegís template) y lo publica
+    solo — ya o a la hora programada.</div>
+    <div class="soc-chips">${chips}
+      <button class="ghost" id="socCfg" title="Conectar cuentas (OAuth) y editar la identidad de marca">⚙ Cuentas y marca</button>
+      ${canva && canva.connected ? '<button class="ghost" id="socSync" title="Traer los Brand Templates de tu Canva">⟳ Templates</button>' : ""}
+    </div>
+    <h2 style="margin-top:14px">Nuevo post</h2>
+    <div class="krow"><label>Red</label><select id="socNet" class="langsel">${netOpts}</select>
+      <label class="soc-l2">Template</label><select id="socTpl" class="langsel">${tplOpts}</select></div>
+    <textarea id="socCopy" class="cmp-field" rows="3" spellcheck="false"
+      placeholder="¿Qué querés publicar? El agente lo adapta al tono de tu marca y a los límites de la red."></textarea>
+    <div class="krow"><label>Programar</label><input type="datetime-local" id="socWhen">
+      <button class="ghost" id="socQueue" title="Queda en la cola y sale solo a la hora elegida">⏰ Programar</button>
+      <button class="primary" id="socNow" title="Validar + renderizar + publicar ahora mismo">🚀 Publicar ya</button></div>
+    <h2 style="margin-top:14px">Cola de contenido</h2>
+    <div id="socQ">${rows}</div>
+    <div class="m-actions">
+      <button class="ghost" id="socRefresh">⟳ Actualizar</button>
+      <button class="primary" id="mCancel">Cerrar</button>
+    </div>`);
+  $("#mCancel").onclick = closeModal;
+  $("#socRefresh").onclick = modalSocial;
+  $("#socCfg").onclick = () => { closeModal(); modalKeys(); };
+  const sync = $("#socSync");
+  if (sync) sync.onclick = async () => {
+    sync.disabled = true; sync.textContent = "Sincronizando…";
+    const r = await api.social_sync_templates();
+    if (r && r.error) sysMsg("❌ Templates: " + r.error);
+    else sysMsg(`✅ ${(r.templates || []).length} template(s) de Canva sincronizados`);
+    modalSocial();
+  };
+  const newPost = async (publishNow) => {
+    const net = $("#socNet").value;
+    const copy = $("#socCopy").value.trim();
+    const tpl = $("#socTpl").value;
+    const when = $("#socWhen").value;
+    if (!net) return sysMsg("⚠ Conectá una cuenta primero (⚙ Cuentas y marca)");
+    if (!copy) return sysMsg("⚠ Escribí el contenido del post");
+    if (!publishNow && !when) return sysMsg("⚠ Elegí fecha y hora para programarlo");
+    const btn = $(publishNow ? "#socNow" : "#socQueue");
+    btn.disabled = true; btn.textContent = publishNow ? "Publicando…" : "Encolando…";
+    const r = await api.social_enqueue(net, copy, tpl,
+      publishNow ? "" : new Date(when).toISOString());
+    if (r && r.error) {
+      sysMsg("❌ " + r.error);
+      btn.disabled = false; btn.textContent = publishNow ? "🚀 Publicar ya" : "⏰ Programar";
+      return;
+    }
+    if (publishNow) {
+      const p = await api.social_publish_now(r.qid);
+      if (p && p.error) sysMsg("❌ " + p.error);
+    } else {
+      sysMsg(`⏰ Post #${r.qid} programado para ${when.replace("T", " ")} — sale solo`);
+    }
+    modalSocial();
+  };
+  $("#socNow").onclick = () => newPost(true);
+  $("#socQueue").onclick = () => newPost(false);
+  document.querySelectorAll("#socQ .q-go").forEach(b => b.onclick = async () => {
+    b.disabled = true; b.textContent = "…";
+    const p = await api.social_publish_now(b.dataset.id);
+    if (p && p.error) sysMsg("❌ " + p.error);
+    modalSocial();
+  });
+  document.querySelectorAll("#socQ .q-del").forEach(b => b.onclick = async () => {
+    const r = await api.social_queue_delete(b.dataset.id);
+    if (r && r.error) sysMsg("❌ " + r.error);
+    modalSocial();
+  });
 }
 
 function openModal(html) { $("#modal").innerHTML = html; $("#overlay").hidden = false; }
