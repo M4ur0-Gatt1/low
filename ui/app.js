@@ -5318,6 +5318,13 @@ function dzPosDelta(a, b) {
 }
 async function dzTweenFrames(baseSvgText, elPath, offsets) {
   // genera un cuadro por offset [dx,dy,rot] (en orden) insertándolos tras el actual
+  // pivote de rotación: bbox del elemento VIVO — los clones no están montados y
+  // getBBox() en un árbol desmontado devuelve 0×0 (giraría sobre el origen)
+  let cx = 540, cy = 540;
+  const live = dzElAt($("#dzCanvas").querySelector("svg"), elPath);
+  if (live && live.getBBox) {
+    try { const b = live.getBBox(); cx = b.x + b.width / 2; cy = b.y + b.height / 2; } catch (e) { /* sin render */ }
+  }
   for (let k = offsets.length - 1; k >= 0; k--) {
     const tmp = document.createElement("div"); tmp.innerHTML = baseSvgText;
     const svg2 = tmp.querySelector("svg");
@@ -5326,9 +5333,8 @@ async function dzTweenFrames(baseSvgText, elPath, offsets) {
     dzWritePos(el2, dzReadPos(el2), offsets[k][0], offsets[k][1]);
     if (offsets[k][2]) {
       const tr = el2.getAttribute("transform") || "";
-      const b = el2.getBoundingClientRect ? el2.getBBox() : null;
-      const cx = b ? (b.x + b.width / 2) : 540, cy = b ? (b.y + b.height / 2) : 540;
-      el2.setAttribute("transform", (tr ? tr + " " : "") + `rotate(${offsets[k][2]} ${cx} ${cy})`);
+      el2.setAttribute("transform", (tr ? tr + " " : "")
+        + `rotate(${offsets[k][2]} ${cx + offsets[k][0]} ${cy + offsets[k][1]})`);
     }
     const r = await api.insert_frame(DZ.path, svg2.outerHTML);
     if (r && r.error) return r.error;
@@ -5535,23 +5541,23 @@ function dzWalkCycleModal() {
 async function dzWalkCycleRun(steps, fpb, bounce, sway) {
   const el = DZ.sel;
   if (!el) return;
+  const elPath = dzElPath(el);
+  if (!elPath) return dzSetStatus("🚶 Ese elemento no se puede animar (no cuelga del lienzo)");
   const totalFrames = steps * fpb;
   dzSnapshot();
-  const startPos = dzReadPos(el);
   await dzPersist();
   const base = dzSerialize($("#dzCanvas").querySelector("svg"));
   dzSetStatus("🚶 Generando " + totalFrames + " cuadros de caminata…");
   const offs = [];
   for (let k = 1; k <= totalFrames; k++) {
     const phase = (k - 1) / fpb;                // 0..steps
-    const t = phase / Math.max(1, steps - 1);   // 0..1 del ciclo
     // parábola para el bounce: sube en el medio del paso
     const b = Math.sin(phase * Math.PI) * bounce;
     // sway sinusoidal
     const s = Math.sin(phase * Math.PI * 2) * sway;
     offs.push([0, -Math.abs(b), s]);            // [dx, dy, rotation]
   }
-  const err = await dzTweenFrames(base, DZ.path, offs);
+  const err = await dzTweenFrames(base, elPath, offs);
   if (err) return dzSetStatus("❌ " + err);
   DZ.anim.cache = {};
   try { S.tree = (await api.refresh_tree()).tree; renderTree(); } catch (e) { /* */ }
