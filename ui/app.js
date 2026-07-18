@@ -513,6 +513,7 @@ $("#dzDiscBtn").onclick = () => dzDiscToggle();
   $("#tlMove").onclick = dzMoveTween;
   $("#tlRec").onclick = dzRecToggle;
   $("#tlPuppet").onclick = dzPuppetToggle;
+  $("#tlWalk").onclick = dzWalkCycleModal;
   // scrub del X-sheet: arrastrá sobre los cuadros para hojearlos (flipping)
   $("#tlFrames").addEventListener("mousedown", (e) => {
     if (!DZ.anim) return;
@@ -5316,13 +5317,19 @@ function dzPosDelta(a, b) {
   return [b.tx - a.tx, b.ty - a.ty];
 }
 async function dzTweenFrames(baseSvgText, elPath, offsets) {
-  // genera un cuadro por offset [dx,dy] (en orden) insertándolos tras el actual
+  // genera un cuadro por offset [dx,dy,rot] (en orden) insertándolos tras el actual
   for (let k = offsets.length - 1; k >= 0; k--) {
     const tmp = document.createElement("div"); tmp.innerHTML = baseSvgText;
     const svg2 = tmp.querySelector("svg");
     const el2 = dzElAt(svg2, elPath);
     if (!el2) return "no encontré el elemento en el cuadro clonado";
     dzWritePos(el2, dzReadPos(el2), offsets[k][0], offsets[k][1]);
+    if (offsets[k][2]) {
+      const tr = el2.getAttribute("transform") || "";
+      const b = el2.getBoundingClientRect ? el2.getBBox() : null;
+      const cx = b ? (b.x + b.width / 2) : 540, cy = b ? (b.y + b.height / 2) : 540;
+      el2.setAttribute("transform", (tr ? tr + " " : "") + `rotate(${offsets[k][2]} ${cx} ${cy})`);
+    }
     const r = await api.insert_frame(DZ.path, svg2.outerHTML);
     if (r && r.error) return r.error;
   }
@@ -5490,6 +5497,66 @@ function dzPuppetHUD(txt) {
     $("#dzCanvas").appendChild(h);
   }
   h.textContent = txt;
+}
+
+/* ══ 🚶 CICLO DE CAMINATA automático (estilo Toon Boom / OpenToonz) ══ */
+function dzWalkCycleModal() {
+  if (!DZ.anim) { dzAnimToggle(); if (!DZ.anim) return; }
+  if (!DZ.sel) return sysMsg("🚶 Seleccioná un elemento para animar el ciclo de caminata");
+  openModal(`<h2>🚶 Ciclo de caminata</h2>
+    <div class="sub">Genera un ciclo automático de pasos: el elemento sube/baja y se inclina
+    rítmicamente. Ideal para personajes enteros, siluetas o props que "caminan".</div>
+    <div class="dz-style-row">
+      <span class="dz-hint">Pasos (ciclo completo)</span>
+      <input type="number" id="wcSteps" class="dz-win" value="2" min="1" max="8">
+      <span class="dz-hint">Cuadros por paso</span>
+      <input type="number" id="wcFrames" class="dz-win" value="8" min="4" max="24">
+    </div>
+    <div class="dz-style-row">
+      <span class="dz-hint">Altura del paso (px)</span>
+      <input type="number" id="wcBounce" class="dz-win" value="20" min="1" max="120">
+      <span class="dz-hint">Balanceo (°)</span>
+      <input type="number" id="wcSway" class="dz-win" value="8" min="0" max="45">
+    </div>
+    <div class="m-actions">
+      <button class="ghost" id="mCancel">Cancelar</button>
+      <button class="primary" id="wcGo">🚶 Generar ciclo</button>
+    </div>`);
+  $("#mCancel").onclick = closeModal;
+  $("#wcGo").onclick = () => {
+    const steps = Math.max(1, Math.min(8, +$("#wcSteps").value || 2));
+    const fpb = Math.max(4, Math.min(24, +$("#wcFrames").value || 8));
+    const bounce = Math.max(1, Math.min(120, +$("#wcBounce").value || 20));
+    const sway = Math.max(0, Math.min(45, +$("#wcSway").value || 8));
+    closeModal();
+    dzWalkCycleRun(steps, fpb, bounce, sway);
+  };
+}
+async function dzWalkCycleRun(steps, fpb, bounce, sway) {
+  const el = DZ.sel;
+  if (!el) return;
+  const totalFrames = steps * fpb;
+  dzSnapshot();
+  const startPos = dzReadPos(el);
+  await dzPersist();
+  const base = dzSerialize($("#dzCanvas").querySelector("svg"));
+  dzSetStatus("🚶 Generando " + totalFrames + " cuadros de caminata…");
+  const offs = [];
+  for (let k = 1; k <= totalFrames; k++) {
+    const phase = (k - 1) / fpb;                // 0..steps
+    const t = phase / Math.max(1, steps - 1);   // 0..1 del ciclo
+    // parábola para el bounce: sube en el medio del paso
+    const b = Math.sin(phase * Math.PI) * bounce;
+    // sway sinusoidal
+    const s = Math.sin(phase * Math.PI * 2) * sway;
+    offs.push([0, -Math.abs(b), s]);            // [dx, dy, rotation]
+  }
+  const err = await dzTweenFrames(base, DZ.path, offs);
+  if (err) return dzSetStatus("❌ " + err);
+  DZ.anim.cache = {};
+  try { S.tree = (await api.refresh_tree()).tree; renderTree(); } catch (e) { /* */ }
+  await dzTimelineRefresh(); dzOnionUpdate(); dzTimelineBadges();
+  dzSetStatus("🚶 ¡Ciclo de caminata listo! " + totalFrames + " cuadros — dale ▶ para verlo. Probá distintos bounce/sway para ajustar.");
 }
 
 /* ══ 🎭 DIORAMA: compositing sin nodos ═══════════════════════════════════

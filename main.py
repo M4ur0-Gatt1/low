@@ -28,6 +28,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from config import Config, data_dir
 from providers import get_provider, PROVIDERS
 from code_runner import CodeRunner
+from low_anim import AnimationAPI
 from self_improvement import SelfImprovementSystem
 
 IGNORE_DIRS = {".git", "__pycache__", "node_modules", ".venv", "venv",
@@ -167,6 +168,7 @@ class Api:
         s._self_improvement = SelfImprovementSystem(data_dir())  # Sistema de automejora
         s._design_session_id = None  # sesión separada para modo diseño
         s._previous_session_id = None  # sesión anterior antes de entrar a diseño
+        s._anim = None       # AnimationAPI (bajo demanda, se crea al entrar a animación)
         s._initp()
 
     def cancel(s):
@@ -1734,6 +1736,129 @@ class Api:
         diag = os.path.join(base, "ui", "diag-tablet.html")
         webbrowser.open(diag)
         return {"ok": True}
+
+    # ── API de animación (bridge al motor Python) ──────────
+    def anim_init(s, name="animacion", width=1920, height=1080, fps=24, duration=240):
+        """Inicializa el motor de animación para el workspace actual."""
+        if not s.ws:
+            return {"error": "Abrí un proyecto primero"}
+        try:
+            s._anim = AnimationAPI()
+            s._anim.create_project(name, width, height, fps, duration)
+            return {"ok": True, "name": name, "fps": fps, "duration": duration}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def anim_add_actor(s, layer_name, actor_name, svg_content="", x=0, y=0):
+        """Añade un actor a la escena de animación."""
+        if not s._anim or not s._anim.current_scene:
+            return {"error": "Inicializá la animación primero (anim_init)"}
+        try:
+            actor = s._anim.add_actor(layer_name, actor_name, svg_content, x, y)
+            return {"ok": True, "name": actor.name, "svg_id": actor.svg_id}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def anim_add_keyframe(s, actor_name, frame, x=None, y=None, rotation=None,
+                          scale_x=None, scale_y=None, opacity=None):
+        """Añade un keyframe a un actor."""
+        if not s._anim:
+            return {"error": "animación no inicializada"}
+        try:
+            s._anim.add_keyframe(actor_name, frame, x=x, y=y, rotation=rotation,
+                                 scale_x=scale_x, scale_y=scale_y, opacity=opacity)
+            return {"ok": True, "actor": actor_name, "frame": frame}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def anim_render_frame(s, frame):
+        """Renderiza un frame a SVG string."""
+        if not s._anim or not s._anim.current_engine:
+            return {"error": "animación no inicializada"}
+        try:
+            svg = s._anim.render_frame(frame)
+            return {"svg": svg, "frame": frame}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def anim_generate_walk_cycle(s, actor_name, start_frame=0, duration=24):
+        """Genera un ciclo de caminata automático para un actor."""
+        if not s._anim:
+            return {"error": "animación no inicializada"}
+        try:
+            s._anim.generate_walk_cycle(actor_name, start_frame, duration)
+            return {"ok": True, "actor": actor_name, "start": start_frame, "duration": duration}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def anim_get_scene_assets(s, description=""):
+        """Genera prompts para assets visuales con IA."""
+        if not s._anim:
+            s._anim = AnimationAPI()
+        try:
+            prompts = s._anim.generate_scene_assets(description or "cartoon character")
+            return {"prompts": prompts}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def anim_save(s, folder=None):
+        """Guarda el proyecto de animación completo."""
+        if not s._anim:
+            return {"error": "nada para guardar"}
+        try:
+            dest = folder or (Path(s.ws) / "anim")
+            s._anim.save_project(str(dest))
+            return {"ok": True, "path": str(dest)}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def anim_load(s, folder=None):
+        """Carga un proyecto de animación."""
+        if not s.ws:
+            return {"error": "Abrí un proyecto primero"}
+        try:
+            src = folder or (Path(s.ws) / "anim")
+            s._anim = AnimationAPI()
+            s._anim.load_project(str(src))
+            sc = s._anim.current_scene
+            return {"ok": True, "name": sc.name if sc else "", "fps": sc.fps if sc else 24}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def anim_xsheet(s):
+        """Devuelve datos para la X-sheet (planilla de exposición)."""
+        if not s._anim or not s._anim.current_scene:
+            return {"error": "animación no inicializada"}
+        try:
+            sc = s._anim.current_scene
+            actors = sc.get_all_actors()
+            rows = []
+            total = sc.duration
+            for f in range(total):
+                row = {"frame": f + 1}
+                for a in actors:
+                    kf = a.get_state_at(f)
+                    if kf and kf[0]:
+                        row[a.name] = {
+                            "x": round(kf[0].x, 1),
+                            "y": round(kf[0].y, 1),
+                            "rot": round(kf[0].rotation, 1),
+                            "scl": round(kf[0].scale_x, 2),
+                        }
+                rows.append(row)
+            return {"rows": rows, "actors": [a.name for a in actors], "total": total}
+        except Exception as e:
+            return {"error": str(e)}
+
+    def anim_export_video(s, output_path, scene_id=None, preset="hd"):
+        """Exporta la animación a video MP4."""
+        if not s._anim:
+            return {"error": "animación no inicializada"}
+        try:
+            result = s._anim.export(output_path, preset=preset)
+            return {"ok": True, "result": str(result)}
+        except Exception as e:
+            return {"error": str(e)}
 
     def get_optimization_suggestions(s):
         """Obtiene sugerencias de optimización basadas en análisis."""
