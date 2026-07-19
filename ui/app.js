@@ -5972,7 +5972,8 @@ function dz3dToggle() {
   $("#dz3DBtn").classList.add("active");
   dz3dBuild();
   dzSetStatus("Espacio 3D — arrastrá: orbitar · Shift: panear · rueda: zoom · " +
-    "clic en un plano lo activa · lápiz/pincel dibujan sobre el plano activo · Z con el slider");
+    "clic en un plano lo activa · lápiz/pincel dibujan sobre el plano · mover imanta a las guías (Alt: libre) · " +
+    "Z: manejador al costado del plano o slider");
 }
 
 function dz3dKids(svg) {
@@ -5998,14 +5999,20 @@ function dz3dBuild() {
   const W = vb[2] || 1080, H = vb[3] || 1080;
   const G = Math.max(W, H) * 1.6;                       // tamaño del piso/ejes
 
+  DZ.d3.vb = vb;                                        // para reglas y manejador Z
   const stage = document.createElement("div");
   stage.id = "dz3dStage";
+  stage.classList.add("show-mesh", "show-rulers");
   stage.innerHTML = `
     <div class="dz3d-world" id="dz3dWorld">
       <div class="dz3d-grid" style="width:${G}px;height:${G}px;margin-left:${-G / 2}px;margin-top:${-G / 2}px;transform:translateY(${H / 2}px) rotateX(90deg)"></div>
       <div class="dz3d-axis ax-x" style="width:${G}px;margin-left:${-G / 2}px;transform:translateY(${H / 2}px)"></div>
       <div class="dz3d-axis ax-y" style="height:${G}px;margin-top:${-G / 2}px"></div>
       <div class="dz3d-axis ax-z" style="width:${G}px;margin-left:${-G / 2}px;transform:translateY(${H / 2}px) rotateY(90deg)"></div>
+      <div class="dz3d-zhandle" id="dz3dZH" hidden
+        title="Manejador del eje Z: arrastrá para acercar/alejar el plano activo en profundidad">
+        <span class="zh-a">▲</span><span class="zh-z">Z</span><span class="zh-a">▼</span>
+      </div>
     </div>
     <div class="dz3d-gizmo">
       <span class="dz3d-axlbl x" title="Eje X (ancho del lienzo)">X</span>
@@ -6015,6 +6022,9 @@ function dz3dBuild() {
       <button data-v="front" title="De frente (como el lienzo plano)">Frente</button>
       <button data-v="top" title="Desde arriba: se ve la separación en Z">Arriba</button>
       <button data-v="side" title="De costado: los planos de perfil">Lado</button>
+      <span class="vsep"></span>
+      <button data-t="mesh" class="active" title="Malla de edición: grilla sobre el plano activo">Malla</button>
+      <button data-t="rulers" class="active" title="Reglas X·Y en unidades del lienzo sobre el plano activo">Reglas</button>
       <button class="dz3d-x" title="Salir del espacio 3D">${icoUse("i-x")}</button>
     </div>
     <div class="dz3d-zbar" id="dz3dZbar" hidden>
@@ -6041,7 +6051,9 @@ function dz3dBuild() {
     cs.setAttribute("viewBox", vb.join(" "));
     cs.setAttribute("width", W); cs.setAttribute("height", H);
     defs.forEach(d => cs.appendChild(d.cloneNode(true)));
-    cs.appendChild(el.cloneNode(true));
+    const clone = el.cloneNode(true);
+    clone.setAttribute("data-dz3d", "content");
+    dz3dPlaneUI(cs, vb, clone);        // malla + contenido + reglas X·Y + guías
     card.appendChild(cs);
     const tag = document.createElement("span");
     tag.className = "dz3d-tag";
@@ -6087,20 +6099,41 @@ function dz3dBuild() {
     dz3dApply();
   }, { passive: false });
 
-  // ── barra Z (manejo del eje de profundidad del plano activo) ──
-  const zSet = (z, commit) => {
+  // ── toggles de malla y reglas ──
+  stage.querySelectorAll(".dz3d-gizmo [data-t]").forEach(b => b.onclick = () => {
+    const on = stage.classList.toggle("show-" + b.dataset.t);
+    b.classList.toggle("active", on);
+  });
+
+  // ── barra Z (slider) + manejador Z arrastrable ──
+  $("#dz3dZr").addEventListener("input", e => dz3dSetZ(DZ.d3.act, e.target.value, false));
+  $("#dz3dZr").addEventListener("change", e => dz3dSetZ(DZ.d3.act, e.target.value, true));
+  $("#dz3dZn").addEventListener("change", e => dz3dSetZ(DZ.d3.act, e.target.value, true));
+  const zh = $("#dz3dZH");
+  zh.addEventListener("pointerdown", e => {
+    e.stopPropagation(); e.preventDefault();
     const i = DZ.d3.act; if (i < 0) return;
-    const el = DZ.d3.els[i];
-    z = Math.max(-60, Math.min(400, Math.round(+z || 0)));
-    if (z === 0) el.removeAttribute("data-z"); else el.setAttribute("data-z", z);
-    $("#dz3dZr").value = z; $("#dz3dZn").value = z;
-    const card = world.querySelector(`.dz3d-card[data-i="${i}"]`);
-    if (card) dz3dCardZ(card, el);
-    if (commit) { DZ.dirty = true; dzPersist(); dzZPanelRender(); }
-  };
-  $("#dz3dZr").addEventListener("input", e => zSet(e.target.value, false));
-  $("#dz3dZr").addEventListener("change", e => zSet(e.target.value, true));
-  $("#dz3dZn").addEventListener("change", e => zSet(e.target.value, true));
+    const z0 = parseFloat(DZ.d3.els[i].getAttribute("data-z")) || 0;
+    const dir = dz3dZDir();                       // eje Z del mundo, en px de pantalla
+    const L2 = dir.x * dir.x + dir.y * dir.y;
+    const sx = e.clientX, sy = e.clientY;
+    zh.setPointerCapture(e.pointerId);
+    zh.classList.add("drag");
+    const move = ev => {
+      // proyecta el arrastre sobre la dirección del eje Z en pantalla;
+      // de frente (el eje apunta a cámara) cae al arrastre vertical
+      const dz = L2 < 0.01 ? (sy - ev.clientY) * 0.8
+        : ((ev.clientX - sx) * dir.x + (ev.clientY - sy) * dir.y) / L2;
+      dz3dSetZ(i, z0 + dz, false);
+    };
+    const up = () => {
+      zh.removeEventListener("pointermove", move); zh.removeEventListener("pointerup", up);
+      zh.classList.remove("drag");
+      dz3dSetZ(i, +$("#dz3dZr").value, true);
+    };
+    zh.addEventListener("pointermove", move);
+    zh.addEventListener("pointerup", up);
+  });
 
   dz3dApply();
   if (DZ.d3.act >= 0 && DZ.d3.act < kids.length) dz3dActivate(DZ.d3.act);
@@ -6136,6 +6169,85 @@ function dz3dActivate(i) {
   $("#dz3dZname").textContent = dzLayerLabel(el);
   const z = parseFloat(el.getAttribute("data-z")) || 0;
   $("#dz3dZr").value = z; $("#dz3dZn").value = z;
+  const zh = $("#dz3dZH");
+  if (zh) { zh.hidden = false; dz3dZHandlePlace(); }
+}
+
+/* mueve el plano activo en el eje Z (slider, manejador y teclado comparten esto) */
+function dz3dSetZ(i, z, commit) {
+  const d3 = DZ.d3; if (!d3 || i < 0) return;
+  const el = d3.els[i];
+  z = Math.max(-60, Math.min(400, Math.round(+z || 0)));
+  if (z === 0) el.removeAttribute("data-z"); else el.setAttribute("data-z", z);
+  $("#dz3dZr").value = z; $("#dz3dZn").value = z;
+  const card = document.querySelector(`#dz3dWorld .dz3d-card[data-i="${i}"]`);
+  if (card) dz3dCardZ(card, el);
+  if (i === d3.act) dz3dZHandlePlace();
+  if (commit) { DZ.dirty = true; dzPersist(); dzZPanelRender(); }
+}
+
+/* dirección del eje Z del mundo en PANTALLA (px por unidad de data-z) */
+function dz3dZDir() {
+  const w = $("#dz3dWorld");
+  const m = new DOMMatrix(getComputedStyle(w).transform);
+  const o = m.transformPoint(new DOMPoint(0, 0, 0));
+  const p = m.transformPoint(new DOMPoint(0, 0, -DZ3D_DEPTH));
+  return { x: p.x - o.x, y: p.y - o.y };
+}
+
+/* pega el manejador Z al borde derecho del plano activo, a su profundidad */
+function dz3dZHandlePlace() {
+  const d3 = DZ.d3, zh = $("#dz3dZH");
+  if (!d3 || !zh || d3.act < 0) return;
+  const el = d3.els[d3.act];
+  const z = parseFloat(el.getAttribute("data-z")) || 0;
+  const W = (d3.vb && d3.vb[2]) || 1080;
+  zh.style.transform =
+    `translateZ(${(-z * DZ3D_DEPTH).toFixed(1)}px) translate(${W / 2 + 30}px, 0)`;
+}
+
+/* malla de edición + reglas X·Y + capa de guías del plano — UI del visor:
+   vive SOLO en el svg del plano, jamás se guarda al archivo */
+function dz3dPlaneUI(cs, vb, contentNode) {
+  const [x0, y0, W, H] = [vb[0], vb[1], vb[2] || 1080, vb[3] || 1080];
+  const mk = (tag, at) => {
+    const n = document.createElementNS(SVGNS, tag);
+    for (const k in at) n.setAttribute(k, at[k]);
+    return n;
+  };
+  const step = W > 1600 ? 100 : 50, major = step * 2;
+  // malla (detrás del dibujo)
+  const mesh = mk("g", { "data-dz3d": "mesh", class: "dz3d-mesh" });
+  for (let x = x0; x <= x0 + W + 0.1; x += step)
+    mesh.appendChild(mk("line", { x1: x, y1: y0, x2: x, y2: y0 + H,
+      class: (x - x0) % major === 0 ? "mj" : "mn" }));
+  for (let y = y0; y <= y0 + H + 0.1; y += step)
+    mesh.appendChild(mk("line", { x1: x0, y1: y, x2: x0 + W, y2: y,
+      class: (y - y0) % major === 0 ? "mj" : "mn" }));
+  cs.appendChild(mesh);
+  cs.appendChild(contentNode);
+  // reglas: X arriba (rojo) · Y a la izquierda (verde), en unidades del lienzo
+  const rul = mk("g", { "data-dz3d": "rulers", class: "dz3d-rulers" });
+  rul.appendChild(mk("rect", { x: x0, y: y0, width: W, height: 17, class: "rbg" }));
+  rul.appendChild(mk("rect", { x: x0, y: y0, width: 17, height: H, class: "rbg" }));
+  for (let x = x0; x <= x0 + W + 0.1; x += step) {
+    const mj = (x - x0) % major === 0;
+    rul.appendChild(mk("line", { x1: x, y1: y0, x2: x, y2: y0 + (mj ? 13 : 7), class: "rx" }));
+    if (mj && x > x0) {
+      const t = mk("text", { x: x + 3, y: y0 + 13, class: "rt" });
+      t.textContent = x; rul.appendChild(t);
+    }
+  }
+  for (let y = y0; y <= y0 + H + 0.1; y += step) {
+    const mj = (y - y0) % major === 0;
+    rul.appendChild(mk("line", { x1: x0, y1: y, x2: x0 + (mj ? 13 : 7), y2: y, class: "ry" }));
+    if (mj && y > y0) {
+      const t = mk("text", { x: x0 + 3, y: y - 4, class: "rt" });
+      t.textContent = y; rul.appendChild(t);
+    }
+  }
+  cs.appendChild(rul);
+  cs.appendChild(mk("g", { "data-dz3d": "guides" }));
 }
 
 /* refresca el contenido del plano i desde el svg real (tras dibujar/mover) */
@@ -6146,7 +6258,8 @@ function dz3dSyncCard(i) {
   if (!card || !el) return;
   const cs = card.querySelector("svg");
   const clone = el.cloneNode(true);
-  cs.replaceChild(clone, cs.lastElementChild);
+  clone.setAttribute("data-dz3d", "content");
+  cs.replaceChild(clone, cs.querySelector('[data-dz3d="content"]'));
   dz3dCardZ(card, el);
 }
 
@@ -6212,19 +6325,55 @@ function dz3dWireCard(card, cs, el, i) {
       return;
     }
 
-    // ── mover la capa DENTRO de su plano (ejes X·Y locales) ──
+    // ── mover la capa DENTRO de su plano (ejes X·Y locales) con guías ──
     if (tool === "select" || tool === "direct") {
       const sx = e.offsetX, sy = e.offsetY;
-      const clone = cs.lastElementChild;
+      const clone = cs.querySelector('[data-dz3d="content"]');
       const start = dzReadPos(clone);
+      const guides = cs.querySelector('[data-dz3d="guides"]');
+      const vb = (cs.getAttribute("viewBox") || "0 0 1080 1080").split(/\s+/).map(Number);
+      const [x0, y0, W, H] = [vb[0], vb[1], vb[2] || 1080, vb[3] || 1080];
+      // guías inteligentes: centro y bordes del lienzo + centros de las otras capas
+      let b0 = null;
+      try { b0 = clone.getBBox(); } catch (err) { /* sin render */ }
+      const tX = [x0 + W / 2], tY = [y0 + H / 2];
+      document.querySelectorAll("#dz3dWorld .dz3d-card").forEach(c => {
+        if (+c.dataset.i === i) return;
+        try {
+          const b = c.querySelector('[data-dz3d="content"]').getBBox();
+          if (b.width || b.height) { tX.push(b.x + b.width / 2); tY.push(b.y + b.height / 2); }
+        } catch (err) { /* vacía */ }
+      });
+      const SNAP = 8;
       let dx = 0, dy = 0;
       cs.setPointerCapture(e.pointerId);
       const move = ev => {
         dx = ev.offsetX - sx; dy = ev.offsetY - sy;
+        guides.innerHTML = "";
+        if (b0 && !ev.altKey) {                       // Alt = mover libre, sin imán
+          const cx = b0.x + b0.width / 2 + dx, cy = b0.y + b0.height / 2 + dy;
+          let gx = null, gy = null;
+          for (const t of tX) if (Math.abs(cx - t) < SNAP) { dx += t - cx; gx = t; break; }
+          for (const t of tY) if (Math.abs(cy - t) < SNAP) { dy += t - cy; gy = t; break; }
+          if (gx === null && Math.abs(b0.x + dx - x0) < SNAP) { dx = x0 - b0.x; gx = x0; }
+          if (gx === null && Math.abs(b0.x + b0.width + dx - (x0 + W)) < SNAP) { dx = x0 + W - b0.x - b0.width; gx = x0 + W; }
+          if (gy === null && Math.abs(b0.y + dy - y0) < SNAP) { dy = y0 - b0.y; gy = y0; }
+          if (gy === null && Math.abs(b0.y + b0.height + dy - (y0 + H)) < SNAP) { dy = y0 + H - b0.y - b0.height; gy = y0 + H; }
+          const gl = (x1, y1, x2, y2) => {
+            const l = document.createElementNS(SVGNS, "line");
+            l.setAttribute("x1", x1); l.setAttribute("y1", y1);
+            l.setAttribute("x2", x2); l.setAttribute("y2", y2);
+            l.setAttribute("class", "dz3d-gl");
+            guides.appendChild(l);
+          };
+          if (gx !== null) gl(gx, y0, gx, y0 + H);
+          if (gy !== null) gl(x0, gy, x0 + W, gy);
+        }
         dzWritePos(clone, start, dx, dy);
       };
       const up = () => {
         cs.removeEventListener("pointermove", move); cs.removeEventListener("pointerup", up);
+        guides.innerHTML = "";
         if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
         dzSnapshot();
         dzWritePos(el, dzReadPos(el), dx, dy);

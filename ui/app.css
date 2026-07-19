@@ -623,16 +623,48 @@ body.light .krow input[type="datetime-local"] { color-scheme: light; }
 .dz3d-grid {
   position: absolute; left: 0; top: 0;
   background:
-    repeating-linear-gradient(0deg, rgba(255,255,255,.06) 0 1px, transparent 1px 90px),
-    repeating-linear-gradient(90deg, rgba(255,255,255,.06) 0 1px, transparent 1px 90px);
-  border: 1px solid rgba(255,255,255,.08);
+    repeating-linear-gradient(0deg, rgba(255,255,255,.16) 0 1px, transparent 1px 450px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.16) 0 1px, transparent 1px 450px),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.07) 0 1px, transparent 1px 90px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.07) 0 1px, transparent 1px 90px);
+  border: 1px solid rgba(255,255,255,.14);
 }
 body.light .dz3d-grid {
   background:
-    repeating-linear-gradient(0deg, rgba(0,0,0,.07) 0 1px, transparent 1px 90px),
-    repeating-linear-gradient(90deg, rgba(0,0,0,.07) 0 1px, transparent 1px 90px);
-  border-color: rgba(0,0,0,.09);
+    repeating-linear-gradient(0deg, rgba(0,0,0,.16) 0 1px, transparent 1px 450px),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.16) 0 1px, transparent 1px 450px),
+    repeating-linear-gradient(0deg, rgba(0,0,0,.08) 0 1px, transparent 1px 90px),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.08) 0 1px, transparent 1px 90px);
+  border-color: rgba(0,0,0,.14);
 }
+/* malla de edición + reglas del plano activo (toggle en el gizmo) */
+.dz3d-mesh, .dz3d-rulers { display: none; pointer-events: none; }
+#dz3dStage.show-mesh .dz3d-card.act .dz3d-mesh { display: block; }
+#dz3dStage.show-rulers .dz3d-card.act .dz3d-rulers { display: block; }
+.dz3d-mesh line.mn { stroke: rgba(51,181,232,.14); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.dz3d-mesh line.mj { stroke: rgba(51,181,232,.30); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.dz3d-rulers .rbg { fill: rgba(11,11,12,.72); }
+body.light .dz3d-rulers .rbg { fill: rgba(245,244,241,.78); }
+.dz3d-rulers .rx { stroke: #E5484D; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.dz3d-rulers .ry { stroke: #46A758; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.dz3d-rulers .rt { fill: var(--mut); font: 400 10px 'JetBrains Mono', monospace; }
+/* guías inteligentes durante el arrastre */
+.dz3d-gl {
+  stroke: #E93D82; stroke-width: 1.4; vector-effect: non-scaling-stroke;
+  stroke-dasharray: 6 4;
+}
+/* manejador del eje Z (pegado al plano activo) */
+.dz3d-zhandle {
+  position: absolute; left: 50%; top: 50%; width: 30px; height: 64px;
+  margin: -32px 0 0 -15px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; border-radius: 9px; cursor: grab; user-select: none;
+  background: rgba(62,159,217,.16); border: 1.5px solid #3E9FD9;
+  color: #3E9FD9;
+}
+.dz3d-zhandle.drag { cursor: grabbing; background: rgba(62,159,217,.32); }
+.dz3d-zhandle .zh-z { font: 700 13px 'JetBrains Mono', monospace; }
+.dz3d-zhandle .zh-a { font-size: 9px; line-height: 1; opacity: .8; }
 .dz3d-axis { position: absolute; left: 0; top: 0; pointer-events: none; }
 .dz3d-axis.ax-x { height: 2px; background: linear-gradient(90deg, transparent, #E5484D 30%, #E5484D 70%, transparent); }
 .dz3d-axis.ax-y { width: 2px; background: linear-gradient(180deg, transparent, #46A758 30%, #46A758 70%, transparent); }
