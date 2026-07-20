@@ -2819,8 +2819,9 @@ async function dzVectorize() {
     póster serigrafiado.</div>
     <div class="krow"><label>Modo</label>
       <select id="vzMode" class="langsel">
+        <option value="contorno" selected>Contorno (animación) — trazos largos y unificados, sin puntitos</option>
         <option value="lineas">Líneas — sigue el trazo del dibujo (tinta)</option>
-        <option value="color" selected>Color — formas planas por color</option>
+        <option value="color">Color — formas planas por color</option>
       </select>
       <label class="soc-l2">Detalle</label>
       <select id="vzDetail" class="langsel">

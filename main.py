@@ -969,6 +969,12 @@ class Api:
         "medium": {"filter_speckle": 6,  "color_precision": 6, "path_precision": 6},
         "high":   {"filter_speckle": 3,  "color_precision": 8, "path_precision": 8},
     }
+    # preset de CONTORNO (animación): trazos largos y unificados, sin puntitos.
+    # filter_speckle alto mata blobs chicos; corner/length/splice altos favorecen
+    # curvas largas y continuas en vez de fragmentos.
+    _VTRACE_CONTOUR = {"filter_speckle": 12, "path_precision": 6,
+                       "corner_threshold": 80, "length_threshold": 8.0,
+                       "splice_threshold": 60}
 
     _VTRACE_KEY = (255, 0, 254)   # magenta imposible: marca el fondo eliminado
 
@@ -1004,7 +1010,7 @@ class Api:
                 a[mask] = (*KEY, 255)
                 key_used = True
 
-        if mode == "lineas":
+        if mode in ("lineas", "contorno"):
             rgb = a[..., :3].astype(np.float32)
             # redondear: el umbral de Otsu es un índice de bin entero — con
             # floats, la tinta del bin exacto quedaba afuera de lum <= t
@@ -1026,15 +1032,39 @@ class Api:
                 v = wB * wF * (mB - mF) ** 2
                 if v > best_v:
                     best_v, best_t = v, t
-            out = np.full(a.shape, 255, dtype=np.uint8)
-            out[lum <= best_t] = (0, 0, 0, 255)
+            ink = Image.fromarray(np.where(lum <= best_t, 0, 255).astype(np.uint8), "L")
+            if mode == "contorno":
+                # CIERRE morfológico: une los cortes de la línea en contornos
+                # LARGOS y continuos (para animación), en vez de trocitos sueltos.
+                # min=oscuro crece (conecta), max=oscuro se achica (vuelve al grosor).
+                from PIL import ImageFilter
+                ink = ink.filter(ImageFilter.MinFilter(3)).filter(ImageFilter.MinFilter(3))
+                ink = ink.filter(ImageFilter.MaxFilter(3)).filter(ImageFilter.MaxFilter(3))
             buf = io.BytesIO()
-            Image.fromarray(out, "RGBA").convert("RGB").save(buf, "PNG")
+            ink.convert("RGB").save(buf, "PNG")
             return buf.getvalue(), None             # binario: sin color llave
 
         buf = io.BytesIO()
         Image.fromarray(a.astype(np.uint8), "RGBA").convert("RGB").save(buf, "PNG")
         return buf.getvalue(), (KEY if key_used else None)
+
+    @staticmethod
+    def _drop_tiny_paths(svg, min_px=6.0):
+        """Borra los <path> cuyo bounding box es más chico que min_px — los
+        'puntitos de vector' que ensucian el calco de líneas para animación."""
+        def repl(m):
+            tag = m.group(0)
+            dm = re.search(r'\bd="([^"]+)"', tag)
+            if not dm:
+                return tag
+            nums = [float(x) for x in re.findall(r'-?\d+(?:\.\d+)?', dm.group(1))]
+            xs, ys = nums[0::2], nums[1::2]
+            if len(xs) < 2:
+                return ""
+            if max(max(xs) - min(xs), max(ys) - min(ys)) < min_px:
+                return ""
+            return tag
+        return re.sub(r"<path\b[^>]*/?>", repl, svg)
 
     @staticmethod
     def _strip_key_paths(svg, key):
@@ -1085,8 +1115,11 @@ class Api:
                    remove_bg=False, bg_tol=32):
         """PNG/JPG (bytes) → (svg_str, error). vtracer local (offline, gratis)
         primero; si no está, fal.ai recraft/vectorize (IA, needs key).
-        mode: 'color' (formas por color) | 'lineas' (calca solo el trazo)."""
-        opt = s._VTRACE_PRESETS.get(detail, s._VTRACE_PRESETS["medium"])
+        mode: 'color' (formas por color) | 'lineas' (calca el trazo) |
+        'contorno' (trazos largos unificados sin puntitos, para animación)."""
+        binary = mode in ("lineas", "contorno")
+        opt = s._VTRACE_CONTOUR if mode == "contorno" \
+            else s._VTRACE_PRESETS.get(detail, s._VTRACE_PRESETS["medium"])
         key = None
         try:
             png_bytes, key = s._prep_raster(png_bytes, mode, remove_bg, bg_tol)
@@ -1099,7 +1132,7 @@ class Api:
             tout = Path(tempfile.mktemp(suffix=".svg"))
             tin.write_bytes(png_bytes)
             last_err = s._vtrace_safe(str(tin), str(tout), dict(
-                colormode="binary" if mode == "lineas" else "color",
+                colormode="binary" if binary else "color",
                 mode="spline", hierarchical="stacked", **opt))
             svg = "" if last_err or not tout.exists() \
                 else tout.read_text(encoding="utf-8", errors="replace")
@@ -1113,6 +1146,8 @@ class Api:
             elif "<svg" in svg:
                 if key:
                     svg = s._strip_key_paths(svg, key)
+                if mode == "contorno":
+                    svg = s._drop_tiny_paths(svg, 6.0)   # fuera los puntitos
                 return svg, None
         except Exception as e:
             last_err = str(e)[:200]
@@ -2044,7 +2079,7 @@ class Api:
             {"type": "function", "function": {"name": "web_search", "description": "Busca en internet (DuckDuckGo, sin API key) y devuelve los primeros resultados con título, URL y resumen. Usalo para info actual, documentación, precios, noticias, etc. Después podés leer una URL con web_fetch.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}}},
             {"type": "function", "function": {"name": "web_fetch", "description": "Descarga una URL y devuelve su texto legible (quita HTML/scripts). Usalo para LEER una página, doc o API pública. Devuelve hasta ~8000 caracteres.", "parameters": {"type": "object", "properties": {"url": {"type": "string"}}, "required": ["url"]}}},
             {"type": "function", "function": {"name": "ask_model", "description": "Delega una SUBTAREA a OTRO modelo para AHORRAR recursos: mandá lo simple/mecánico a uno barato o rápido y reservá el modelo actual (caro) para lo complejo. Devuelve la respuesta de ese modelo como texto para que la uses. 'provider' = uno de los configurados con key (ej. groq, digitalocean, siliconflow, deepseek, glm, qwen, nvidia, custom). 'model' opcional (default: el rápido del proveedor). Ideal para: resumir, traducir, reformatear, generar texto trivial, clasificar, listar ideas, boilerplate. NO delegues tareas que necesiten tus herramientas (archivos, git, imagenes). Podés hacer varias ask_model en paralelo mental para comparar respuestas.", "parameters": {"type": "object", "properties": {"provider": {"type": "string", "description": "proveedor destino (con key configurada)"}, "prompt": {"type": "string", "description": "la subtarea, autocontenida (incluí todo el contexto que el otro modelo necesita)"}, "model": {"type": "string", "description": "modelo especifico del proveedor (opcional)"}}, "required": ["provider", "prompt"]}}},
-            {"type": "function", "function": {"name": "vectorize", "description": "Convierte una imagen raster del workspace (PNG/JPG) en un SVG VECTORIAL EDITABLE (la 'calca'). Usalo para NO escribir coordenadas SVG a mano (eso sale tosco): parti de una foto, boceto o imagen generada y obtene vectores limpios y editables. 'detail': low|medium|high (mas detalle = mas trazos). Guarda el .svg en el workspace y lo abre en el editor de vectores.", "parameters": {"type": "object", "properties": {"image": {"type": "string", "description": "ruta a la imagen PNG/JPG en el workspace"}, "out": {"type": "string", "description": "ruta .svg destino (opcional)"}, "detail": {"type": "string"}, "mode": {"type": "string", "description": "color (formas por color, default) | lineas (calca SOLO el trazo/tinta — ideal para line-art y bocetos)"}, "remove_bg": {"type": "boolean", "description": "true: quita el fondo detectado por las esquinas antes de trazar (como la varita de Photoshop)"}, "bg_tol": {"type": "integer", "description": "tolerancia del fondo 4-96 (default 32)"}}, "required": ["image"]}}},
+            {"type": "function", "function": {"name": "vectorize", "description": "Convierte una imagen raster del workspace (PNG/JPG) en un SVG VECTORIAL EDITABLE (la 'calca'). Usalo para NO escribir coordenadas SVG a mano (eso sale tosco): parti de una foto, boceto o imagen generada y obtene vectores limpios y editables. 'detail': low|medium|high (mas detalle = mas trazos). Guarda el .svg en el workspace y lo abre en el editor de vectores.", "parameters": {"type": "object", "properties": {"image": {"type": "string", "description": "ruta a la imagen PNG/JPG en el workspace"}, "out": {"type": "string", "description": "ruta .svg destino (opcional)"}, "detail": {"type": "string"}, "mode": {"type": "string", "description": "color (formas por color, default) | lineas (calca SOLO el trazo/tinta — ideal para line-art y bocetos) | contorno (trazos LARGOS y unificados sin puntitos — el mejor para ANIMACION, limpia los fragmentos de vector)"}, "remove_bg": {"type": "boolean", "description": "true: quita el fondo detectado por las esquinas antes de trazar (como la varita de Photoshop)"}, "bg_tol": {"type": "integer", "description": "tolerancia del fondo 4-96 (default 32)"}}, "required": ["image"]}}},
             {"type": "function", "function": {"name": "illustrate", "description": "LA MEJOR forma de crear una ILUSTRACION sofisticada como VECTOR editable: genera un raster de alta calidad con IA (diffusion) desde tu descripcion y lo VECTORIZA a SVG. Evita el SVG tosco escrito a mano — usalo en vez de dibujar paths cuando quieras algo pulido (personajes, escenas, logos con detalle). 'prompt' detallado (estilo, colores, composicion, fondo). 'detail': low|medium|high. Guarda y abre el .svg editable en el editor ✒.", "parameters": {"type": "object", "properties": {"prompt": {"type": "string"}, "out": {"type": "string", "description": "ruta .svg destino (opcional)"}, "detail": {"type": "string"}, "size": {"type": "string", "description": "ej 1024x1024"}}, "required": ["prompt"]}}},
             {"type": "function", "function": {"name": "anim", "description": "Estudio de ANIMACION 2D profesional (motor propio de LOW: timeline, rigging con huesos/IK, compositor de nodos, export MP4/GIF/Lottie). Ideal para ANIMAR los SVG que diseñás. Acciones (campo 'action') con sus 'params': 'new' {name,width,height,fps,duration} crea un proyecto en el workspace; 'add_actor' {layer,name,svg_path (ruta a un .svg del workspace) o svg (inline),x,y}; 'keyframe' {actor,frame,x,y,rotation,scale_x,scale_y,opacity} pone un cuadro clave; 'walk_cycle' {actor,start,duration} ciclo de caminata automatico; 'render' {output,format(mp4/gif/png),preset(hd/web/4k/gif)} exporta el video; 'storyboard' {script} arma un storyboard desde un guion. Flujo tipico: diseñá el personaje (generate_image/save_character), guardalo como SVG, luego anim new -> add_actor -> keyframe/walk_cycle -> render.", "parameters": {"type": "object", "properties": {"action": {"type": "string", "description": "new | add_actor | keyframe | walk_cycle | render | storyboard"}, "params": {"type": "object", "description": "campos segun la accion (ver descripcion)"}}, "required": ["action"]}}},
         ]
