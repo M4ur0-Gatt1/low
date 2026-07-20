@@ -6349,6 +6349,8 @@ function dz3dBuild() {
         title="Manejador del eje Z: arrastrá para acercar/alejar el plano activo en profundidad">
         <span class="zh-a">▲</span><span class="zh-z">Z</span><span class="zh-a">▼</span>
       </div>
+      <div class="dz3d-rothandle" id="dz3dRotH" hidden
+        title="Rotar el plano activo: arrastrá horizontal (eje Y) o vertical (eje X) · doble clic lo endereza">⟲</div>
     </div>
     <div class="dz3d-gizmo">
       <span class="dz3d-axlbl x" title="Eje X (ancho del lienzo)">X</span>
@@ -6358,6 +6360,8 @@ function dz3dBuild() {
       <button data-v="front" title="De frente (como el lienzo plano)">Frente</button>
       <button data-v="top" title="Desde arriba: se ve la separación en Z">Arriba</button>
       <button data-v="side" title="De costado: los planos de perfil">Lado</button>
+      <span class="vsep"></span>
+      <button class="dz3d-add" title="Agregar un plano nuevo frente a la cámara para dibujar">＋ Plano</button>
       <span class="vsep"></span>
       <button data-t="mesh" class="active" title="Malla de edición: grilla sobre el plano activo">Malla</button>
       <button data-t="rulers" class="active" title="Reglas X·Y en unidades del lienzo sobre el plano activo">Reglas</button>
@@ -6369,7 +6373,13 @@ function dz3dBuild() {
       <input type="range" id="dz3dZr" min="-60" max="400" step="1" value="0"
         title="Profundidad del plano activo: negativo = más cerca de la cámara, 0 = plano de acción, positivo = fondo">
       <input type="number" id="dz3dZn" min="-60" max="400" step="1" value="0" class="dz-win">
-      <span class="dz-hint">cerca ← 0 → lejos · mueve el parallax del export</span>
+      <span class="vsep"></span>
+      <span class="dz-hint">orientar</span>
+      <button class="dz3d-or" data-or="front" title="Frente (mira al frente, como el lienzo plano)">Frente</button>
+      <button class="dz3d-or" data-or="floor" title="Piso (acostado, horizontal)">Piso</button>
+      <button class="dz3d-or" data-or="left" title="Pared izquierda">◀</button>
+      <button class="dz3d-or" data-or="right" title="Pared derecha">▶</button>
+      <button class="dz3d-or" data-or="face" title="Girar el plano para que mire de frente a la cámara actual (billboard)">↺ cámara</button>
     </div>`;
   cv.appendChild(stage);
 
@@ -6440,6 +6450,14 @@ function dz3dBuild() {
     const on = stage.classList.toggle("show-" + b.dataset.t);
     b.classList.toggle("active", on);
   });
+  // ── nuevo plano + presets de orientación (dibujar 2D en 3D tipo Feather) ──
+  stage.querySelector(".dz3d-add").onclick = dz3dAddPlane;
+  stage.querySelectorAll(".dz3d-or").forEach(b => b.onclick = () => {
+    const i = DZ.d3.act; if (i < 0) return;
+    const OR = { front: [0, 0], floor: [90, 0], left: [0, 90], right: [0, -90] };
+    if (b.dataset.or === "face") dz3dSetRot(i, -DZ.d3.rx, -DZ.d3.ry, true);   // billboard
+    else { const [rx, ry] = OR[b.dataset.or]; dz3dSetRot(i, rx, ry, true); }
+  });
 
   // ── barra Z (slider) + manejador Z arrastrable ──
   $("#dz3dZr").addEventListener("input", e => dz3dSetZ(DZ.d3.act, e.target.value, false));
@@ -6470,17 +6488,86 @@ function dz3dBuild() {
     zh.addEventListener("pointermove", move);
     zh.addEventListener("pointerup", up);
   });
+  // ── manejador de ROTACIÓN del plano activo (⟲): horizontal=Y, vertical=X ──
+  const rh = $("#dz3dRotH");
+  rh.addEventListener("pointerdown", e => {
+    e.stopPropagation(); e.preventDefault();
+    const i = DZ.d3.act; if (i < 0) return;
+    const [rx0, ry0] = dz3dRot(DZ.d3.els[i]);
+    const sx = e.clientX, sy = e.clientY;
+    rh.setPointerCapture(e.pointerId);
+    rh.classList.add("drag");
+    const move = ev => {
+      let ry = ry0 + (ev.clientX - sx) * 0.5;
+      let rx = rx0 - (ev.clientY - sy) * 0.5;
+      if (ev.shiftKey) { ry = Math.round(ry / 15) * 15; rx = Math.round(rx / 15) * 15; }
+      rx = Math.max(-90, Math.min(90, rx)); ry = Math.max(-180, Math.min(180, ry));
+      dz3dSetRot(i, rx, ry, false);
+    };
+    const up = () => {
+      rh.removeEventListener("pointermove", move); rh.removeEventListener("pointerup", up);
+      rh.classList.remove("drag");
+      const [rx, ry] = dz3dRot(DZ.d3.els[i]);
+      dz3dSetRot(i, rx, ry, true);
+    };
+    rh.addEventListener("pointermove", move);
+    rh.addEventListener("pointerup", up);
+  });
+  rh.addEventListener("dblclick", e => {
+    e.stopPropagation();
+    if (DZ.d3.act >= 0) dz3dSetRot(DZ.d3.act, 0, 0, true);   // enderezar
+  });
 
   dz3dApply();
   if (DZ.d3.act >= 0 && DZ.d3.act < kids.length) dz3dActivate(DZ.d3.act);
   else if (kids.length === 1) dz3dActivate(0);
 }
 
+/* orientación 3D del plano (data-rot3d="rx,ry") — lo que hace que se pueda
+   dibujar 2D sobre planos inclinados como Feather, no solo apilados en Z */
+function dz3dRot(el) {
+  const r = (el.getAttribute("data-rot3d") || "0,0").split(",").map(Number);
+  return [r[0] || 0, r[1] || 0];
+}
 function dz3dCardZ(card, el) {
   const z = parseFloat(el.getAttribute("data-z")) || 0;
-  card.style.transform = `translateZ(${(-z * DZ3D_DEPTH).toFixed(1)}px)`;
+  const [rx, ry] = dz3dRot(el);
+  // el plano se traslada en Z y se orienta libremente; se dibuja igual porque
+  // los pointer events se proyectan a coordenadas locales del plano rotado
+  card.style.transform = `translateZ(${(-z * DZ3D_DEPTH).toFixed(1)}px) ` +
+    `rotateX(${rx}deg) rotateY(${ry}deg)`;
   const tag = card.querySelector(".dz3d-tag");
-  if (tag) tag.textContent = dzLayerLabel(el) + " · z=" + z;
+  if (tag) tag.textContent = dzLayerLabel(el) + " · z=" + z +
+    (rx || ry ? ` · ${Math.round(rx)}°/${Math.round(ry)}°` : "");
+}
+/* fija la orientación del plano i (presets y arrastre comparten esto) */
+function dz3dSetRot(i, rx, ry, commit) {
+  const d3 = DZ.d3; if (!d3 || i < 0) return;
+  const el = d3.els[i];
+  rx = Math.round(rx); ry = Math.round(ry);
+  if (!rx && !ry) el.removeAttribute("data-rot3d");
+  else el.setAttribute("data-rot3d", rx + "," + ry);
+  const card = document.querySelector(`#dz3dWorld .dz3d-card[data-i="${i}"]`);
+  if (card) dz3dCardZ(card, el);
+  if (i === d3.act) dz3dZHandlePlace();
+  if (commit) { DZ.dirty = true; dzPersist(); }
+}
+/* agrega un plano nuevo para dibujar, orientado frente a la cámara (billboard) */
+function dz3dAddPlane() {
+  const svg = $("#dzCanvas").querySelector("svg");
+  if (!svg || !DZ.d3) return;
+  dzSnapshot();
+  const g = document.createElementNS(SVGNS, "g");
+  g.setAttribute("data-low", "plano");
+  // frente a la cámara actual: contrarrestar la órbita del mundo
+  const rx = Math.round(-DZ.d3.rx), ry = Math.round(-DZ.d3.ry);
+  if (rx || ry) g.setAttribute("data-rot3d", rx + "," + ry);
+  svg.appendChild(g);
+  DZ.dirty = true;
+  dz3dBuild();
+  dz3dActivate(DZ.d3.els.length - 1);
+  dzSetTool("pencil");
+  dzSetStatus("Plano nuevo frente a la cámara — dibujá con lápiz/pincel. Orientalo con los presets o el manejador ⟲.");
 }
 
 function dz3dApply() {
@@ -6505,8 +6592,10 @@ function dz3dActivate(i) {
   $("#dz3dZname").textContent = dzLayerLabel(el);
   const z = parseFloat(el.getAttribute("data-z")) || 0;
   $("#dz3dZr").value = z; $("#dz3dZn").value = z;
-  const zh = $("#dz3dZH");
-  if (zh) { zh.hidden = false; dz3dZHandlePlace(); }
+  const zh = $("#dz3dZH"), rh = $("#dz3dRotH");
+  if (zh) zh.hidden = false;
+  if (rh) rh.hidden = false;
+  dz3dZHandlePlace();
 }
 
 /* mueve el plano activo en el eje Z (slider, manejador y teclado comparten esto) */
@@ -6531,15 +6620,18 @@ function dz3dZDir() {
   return { x: p.x - o.x, y: p.y - o.y };
 }
 
-/* pega el manejador Z al borde derecho del plano activo, a su profundidad */
+/* pega los manejadores Z (derecha) y rotación (arriba-izq) al plano activo,
+   compartiendo su profundidad y orientación para que floten sobre el plano */
 function dz3dZHandlePlace() {
-  const d3 = DZ.d3, zh = $("#dz3dZH");
-  if (!d3 || !zh || d3.act < 0) return;
+  const d3 = DZ.d3, zh = $("#dz3dZH"), rh = $("#dz3dRotH");
+  if (!d3 || d3.act < 0) return;
   const el = d3.els[d3.act];
   const z = parseFloat(el.getAttribute("data-z")) || 0;
-  const W = (d3.vb && d3.vb[2]) || 1080;
-  zh.style.transform =
-    `translateZ(${(-z * DZ3D_DEPTH).toFixed(1)}px) translate(${W / 2 + 30}px, 0)`;
+  const [rx, ry] = dz3dRot(el);
+  const W = (d3.vb && d3.vb[2]) || 1080, H = (d3.vb && d3.vb[3]) || 1080;
+  const base = `translateZ(${(-z * DZ3D_DEPTH).toFixed(1)}px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+  if (zh) zh.style.transform = base + ` translate(${W / 2 + 30}px, 0)`;
+  if (rh) rh.style.transform = base + ` translate(${-W / 2 - 30}px, ${-H / 2}px)`;
 }
 
 /* malla de edición + reglas X·Y + capa de guías del plano — UI del visor:

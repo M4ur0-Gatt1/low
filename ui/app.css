@@ -709,11 +709,29 @@ body.light .dz3d-card { background: rgba(0,0,0,.015); outline-color: rgba(0,0,0,
   background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
   padding: 7px 12px;
 }
-.dz3d-zbar input[type="range"] { width: 220px; accent-color: #3E9FD9; }
+.dz3d-zbar input[type="range"] { width: 150px; accent-color: #3E9FD9; }
 .dz3d-zname {
   font: 600 11px 'JetBrains Mono', monospace; color: var(--txt);
-  max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 130px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* botones de la barra 3D: nuevo plano y presets de orientación */
+.dz3d-add, .dz3d-or {
+  background: transparent; border: 1px solid var(--line); border-radius: 7px;
+  padding: 4px 9px; color: var(--mut); font: 500 11px 'Figtree', sans-serif;
+}
+.dz3d-add:hover, .dz3d-or:hover { color: var(--txt); border-color: var(--mut); }
+.dz3d-add { color: var(--cyan); border-color: var(--cyan); }
+.dz3d-add:hover { background: var(--cyansoft); }
+.dz3d-or.active { color: var(--red); border-color: var(--red); background: var(--redsoft); }
+/* manejador de rotar el plano activo (arrastrar) */
+.dz3d-rothandle {
+  position: absolute; left: 50%; top: 50%; width: 30px; height: 30px;
+  margin: -15px 0 0 -15px; border-radius: 50%; cursor: grab; user-select: none;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(233,61,130,.16); border: 1.5px solid #E93D82; color: #E93D82;
+  font-size: 15px;
+}
+.dz3d-rothandle.drag { cursor: grabbing; background: rgba(233,61,130,.34); }
 
 /* visor de artefactos (render en vivo dentro de Fidel) */
 #artView {
