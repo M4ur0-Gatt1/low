@@ -680,7 +680,10 @@ body.light .dz3d-rulers .rbg { fill: rgba(245,244,241,.78); }
 /* solo el plano ACTIVO muestra su marco (para saber dónde dibujás) */
 .dz3d-card.act { outline: 2px solid var(--red); background: rgba(240,69,14,.03); }
 .dz3d-card:not(.act):hover { outline: 1px solid rgba(120,120,120,.35); }
-.dz3d-card svg { display: block; cursor: crosshair; }
+/* los svg de los planos NO llevan el fondo blanco del lienzo (.dz-canvas svg
+   background:#fff) — eso hacía que cada plano/línea se viera como un rectángulo
+   BLANCO opaco tapando todo en el 3D. Transparentes: solo se ve el dibujo. */
+.dz3d-card svg { display: block; cursor: crosshair; background: none !important; }
 .dz3d-tag {
   position: absolute; left: 0; top: -26px; padding: 2px 9px; white-space: nowrap;
   background: var(--panel); border: 1px solid var(--line); border-radius: 99px;
