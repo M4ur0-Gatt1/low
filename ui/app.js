@@ -4101,29 +4101,122 @@ function dzDropperPick(e) {
   if (sw) { DZ.drawW = Math.round(sw); const i = $("#dzDrawW"); if (i) i.value = DZ.drawW; }
   dzSetStatus("💧 Tomé relleno " + (fill || "—") + " · trazo " + (stroke || "—"));
 }
-/* ══ Balde (G): busca el elemento PINTABLE bajo el cursor, bajando por
-   grupos (<g>, <a>) hasta encontrar path/rect/circle/ellipse/polygon/
-   polyline/line/text. Shift+clic pinta el trazo en vez el relleno. ══ */
-const DZ_PAINTABLE = new Set(["path","rect","circle","ellipse","polygon","polyline","line","text"]);
-function dzBucketApply(e) {
-  let el = document.elementFromPoint(e.clientX, e.clientY);
-  if (!el || !el.closest || !el.closest("#dzCanvas svg") || el.closest("g.dz-onion")) return;
-  if (el.closest("[data-locked]")) return;             // capa bloqueada 🔒
-  // bajar por grupos: el balde pinta el primer elemento "pintable"
-  while (el && !DZ_PAINTABLE.has(el.tagName.toLowerCase())) {
-    const g = el.closest("g, a");
-    if (!g) break;
-    // buscar el primer hijo pintable dentro del grupo
-    const child = g.querySelector("path,rect,circle,ellipse,polygon,polyline,line,text");
-    if (child) { el = child; break; }
-    // si no, subir al padre y probar de nuevo
-    el = g.parentElement;
-  }
-  if (!el || el.tagName.toLowerCase() === "svg") return;
+/* ══ Balde (G): RELLENO POR ÁREA (flood fill, estilo Toon Boom). Clic dentro
+   de una zona cerrada por líneas y la pinta con una forma vectorial nueva,
+   detrás de las líneas. Antes recoloreaba el elemento bajo el cursor, pero
+   sobre líneas (fill=none) o zonas cerradas eso "no hacía nada" — por eso ahora
+   trabaja por región. Shift = pinta con el color de trazo. ══ */
+async function dzBucketApply(e) {
+  const svg = $("#dzCanvas").querySelector("svg");
+  if (!svg) return;
+  const vb = dzVB(), W = vb[2] || 1080, H = vb[3] || 1080;
+  const p = dzToUser(e.clientX, e.clientY);
+  dzSetStatus("🪣 Rellenando la zona…");
+  // rasterizar el dibujo (sin overlays de UI ni planos 3D)
+  const clean = svg.cloneNode(true);
+  clean.querySelectorAll(".dz-onion,.dz-penui,[data-dz3d]").forEach(n => n.remove());
+  clean.removeAttribute("style");
+  let durl;
+  try { durl = await dzRasterize(clean.outerHTML, 1000); }
+  catch (err) { return dzSetStatus("🪣 no pude preparar el relleno"); }
+  const img = new Image();
+  try { await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = durl; }); }
+  catch (err) { return dzSetStatus("🪣 no pude cargar el raster"); }
+  const rw = img.width, rh = img.height;
+  const c = document.createElement("canvas"); c.width = rw; c.height = rh;
+  const ctx = c.getContext("2d"); ctx.drawImage(img, 0, 0);
+  let data;
+  try { data = ctx.getImageData(0, 0, rw, rh); }
+  catch (err) { return dzSetStatus("🪣 no pude leer los píxeles"); }
+  const sx = Math.round((p.x - vb[0]) / W * rw), sy = Math.round((p.y - vb[1]) / H * rh);
+  if (sx < 0 || sy < 0 || sx >= rw || sy >= rh) return dzSetStatus("🪣 clic fuera del lienzo");
+  const res = dzFloodMask(data, rw, rh, sx, sy, 64);
+  if (!res) return dzSetStatus("🪣 no hay una zona para rellenar ahí");
+  if (res.count > rw * rh * 0.9) return dzSetStatus("🪣 la zona no está cerrada — cerrá el contorno con líneas");
+  const loops = dzTraceMaskJS(res.mask, rw, rh);
+  if (!loops.length) return dzSetStatus("🪣 no pude trazar la zona");
+  const sxU = W / rw, syU = H / rh;
+  const parts = loops.map(loop => {
+    let pts = loop.slice(0, -1).map(([x, y]) => [vb[0] + x * sxU, vb[1] + y * syU]);
+    pts = dzRDP(pts, 1.3 * sxU);
+    return pts.length >= 3 ? dzSmoothPath(pts) + " Z" : "";
+  }).filter(Boolean);
+  if (!parts.length) return dzSetStatus("🪣 zona muy chica");
   dzSnapshot();
-  if (e.shiftKey) el.setAttribute("stroke", DZ.drawColor || "#1a1a1a");
-  else el.setAttribute("fill", DZ.fillColor || "#F0450E");
+  const path = document.createElementNS(SVGNS, "path");
+  path.setAttribute("d", parts.join(" "));
+  path.setAttribute("fill", e.shiftKey ? (DZ.drawColor || "#1a1a1a") : (DZ.fillColor || "#F0450E"));
+  path.setAttribute("fill-rule", "evenodd");
+  path.setAttribute("data-low", "fill");
+  // detrás de las líneas, pero por encima de un fondo de página que cubra el lienzo
+  let ref = [...svg.children].find(n => !DZ_SKIP_TAGS.includes(n.tagName.toLowerCase()));
+  while (ref && ref.tagName.toLowerCase() === "rect" &&
+         (+ref.getAttribute("width") || 0) * (+ref.getAttribute("height") || 0) >= W * H * 0.9)
+    ref = ref.nextElementSibling;
+  svg.insertBefore(path, ref || null);
   dzMarkDirty(); dzBuildLayers();
+  dzSetStatus("🪣 Zona rellenada");
+}
+/* flood fill 4-conexo sobre el ImageData; frena en píxeles de distinto color
+   (las líneas). Devuelve {mask, count} o null. */
+function dzFloodMask(imgData, w, h, sx, sy, tol) {
+  const d = imgData.data;
+  const seed = (sy * w + sx) * 4;
+  const sr = d[seed], sg = d[seed + 1], sb = d[seed + 2];
+  const mask = new Uint8Array(w * h);
+  const stack = [sy * w + sx];
+  let count = 0;
+  while (stack.length) {
+    const m = stack.pop();
+    if (mask[m]) continue;
+    const i = m * 4;
+    if (Math.abs(d[i] - sr) + Math.abs(d[i + 1] - sg) + Math.abs(d[i + 2] - sb) > tol) continue;
+    mask[m] = 1; count++;
+    const x = m % w, y = (m / w) | 0;
+    if (x + 1 < w) stack.push(m + 1);
+    if (x - 1 >= 0) stack.push(m - 1);
+    if (y + 1 < h) stack.push(m + w);
+    if (y - 1 >= 0) stack.push(m - w);
+  }
+  return count > 4 ? { mask, count } : null;
+}
+/* traza los bordes de la máscara en lazos cerrados (borde exterior + huecos) */
+function dzTraceMaskJS(mask, w, h) {
+  const get = (x, y) => (x >= 0 && y >= 0 && x < w && y < h) ? mask[y * w + x] : 0;
+  const adj = new Map();
+  const add = (a, b) => {
+    let l = adj.get(a); if (!l) { l = []; adj.set(a, l); } l.push(b);
+    let m = adj.get(b); if (!m) { m = []; adj.set(b, m); } m.push(a);
+  };
+  const K = (x, y) => x * (h + 2) + y;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (!mask[y * w + x]) continue;
+    if (!get(x, y - 1)) add(K(x, y), K(x + 1, y));
+    if (!get(x, y + 1)) add(K(x, y + 1), K(x + 1, y + 1));
+    if (!get(x - 1, y)) add(K(x, y), K(x, y + 1));
+    if (!get(x + 1, y)) add(K(x + 1, y), K(x + 1, y + 1));
+  }
+  const px = k => Math.floor(k / (h + 2)), py = k => k % (h + 2);
+  const used = new Set();
+  const ek = (a, b) => a < b ? a + "_" + b : b + "_" + a;
+  const loops = [];
+  for (const start of adj.keys()) {
+    for (const first of adj.get(start)) {
+      if (used.has(ek(start, first))) continue;
+      used.add(ek(start, first));
+      const loop = [start, first]; let prev = start, cur = first, guard = 0;
+      while (cur !== start && guard++ < 200000) {
+        const nbrs = adj.get(cur) || [];
+        let nb = null;
+        for (const cd of nbrs) if (cd !== prev && !used.has(ek(cur, cd))) { nb = cd; break; }
+        if (nb === null) for (const cd of nbrs) if (!used.has(ek(cur, cd))) { nb = cd; break; }
+        if (nb === null) break;
+        used.add(ek(cur, nb)); loop.push(nb); prev = cur; cur = nb;
+      }
+      if (loop.length >= 8) loops.push(loop.map(k => [px(k), py(k)]));
+    }
+  }
+  return loops;
 }
 
 /* ══ Regla / Hilo tensado (R): herramienta de línea recta interactiva.
