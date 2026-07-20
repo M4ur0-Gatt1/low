@@ -671,12 +671,15 @@ body.light .dz3d-rulers .rbg { fill: rgba(245,244,241,.78); }
 .dz3d-axis.ax-z { height: 2px; background: linear-gradient(90deg, transparent, #3E9FD9 30%, #3E9FD9 70%, transparent); }
 .dz3d-card {
   position: absolute; left: 50%; top: 50%;
-  background: rgba(255,255,255,.015);
-  outline: 1px solid rgba(255,255,255,.10);
+  background: none; outline: none;     /* SIN rectángulo: cada capa mostraba un
+                                          recuadro blanco del tamaño del lienzo
+                                          → "capas blancas con cada línea". Ahora
+                                          solo flota el contenido del plano. */
   transition: outline-color .12s ease;
 }
-body.light .dz3d-card { background: rgba(0,0,0,.015); outline-color: rgba(0,0,0,.12); }
+/* solo el plano ACTIVO muestra su marco (para saber dónde dibujás) */
 .dz3d-card.act { outline: 2px solid var(--red); background: rgba(240,69,14,.03); }
+.dz3d-card:not(.act):hover { outline: 1px solid rgba(120,120,120,.35); }
 .dz3d-card svg { display: block; cursor: crosshair; }
 .dz3d-tag {
   position: absolute; left: 0; top: -26px; padding: 2px 9px; white-space: nowrap;

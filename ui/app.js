@@ -6829,8 +6829,11 @@ function dz3dBuild() {
   });
 
   dz3dApply();
+  // activar SIEMPRE un plano al entrar (el del frente) para que la barra Z y su
+  // manejador estén activos de una — antes, con varias capas no se activaba
+  // ninguno y el 'selector del eje Z' parecía no hacer nada
   if (DZ.d3.act >= 0 && DZ.d3.act < kids.length) dz3dActivate(DZ.d3.act);
-  else if (kids.length === 1) dz3dActivate(0);
+  else if (kids.length) dz3dActivate(kids.length - 1);
 }
 
 /* orientación 3D del plano (data-rot3d="rx,ry") — lo que hace que se pueda
