@@ -677,6 +677,11 @@ body.light .dz3d-rulers .rbg { fill: rgba(245,244,241,.78); }
 /* los svg de los planos SIEMPRE transparentes (el fondo blanco del lienzo 2D
    .dz-canvas svg NO aplica acá) — un fondo acá = un rectángulo tapando todo */
 .dz3d-card svg { display: block; cursor: crosshair; background: transparent !important; }
+/* el FONDO del lienzo (rect que cubre todo el viewBox) queda FANTASMA en 3D:
+   no tapa la escena, no recibe trazos ni clics, y el archivo lo conserva.
+   El !important le gana a .act (si quedó activo desde el panel de capas). */
+.dz3d-card.dz3d-bg { opacity: .08; pointer-events: none !important; }
+.dz3d-card.dz3d-bg .dz3d-tag { display: none; }
 /* al DIBUJAR, solo la superficie del plano ACTIVO recibe el trazo  el dibujo
    cae en el plano que elegiste (piso/pared/el que sea), no en el que quedó
    arriba (el papel blanco). Con la flecha de selección, todos son clickeables
