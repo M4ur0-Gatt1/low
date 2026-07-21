@@ -1000,30 +1000,50 @@ body.light .dz3d-rulers .rbg { fill: rgba(245,244,241,.78); }
   font: 500 9.5px 'JetBrains Mono', monospace; color: var(--mut); padding: 4px 0;
   border-right: 1px solid var(--line2);
 }
-.dz-tlg-col.cur { background: var(--redsoft); color: var(--red); }
+.dz-tlg-col { position: relative; }
+.dz-tlg-col.mj { color: var(--txt); border-right-color: var(--line); }
+.dz-tlg-col.cur { background: var(--redsoft); color: var(--red); box-shadow: inset 0 -2px 0 var(--red); }
+/* marcas 🔑 (clave de dibujo) y 📹 (clave de cámara) bajo el número */
+.dz-tlg-col i { position: absolute; bottom: 1px; left: 50%; width: 5px; height: 5px; border-radius: 99px; transform: translateX(-50%); }
+.dz-tlg-col i.k { background: var(--orange); }
+.dz-tlg-col i.c { background: var(--cyan); transform: translateX(-50%) translateY(-6px); }
 .dz-tlg-row { display: flex; border-bottom: 1px solid var(--line2); }
+.dz-tlg-row.cam { border-top: 1px solid var(--line); background: rgba(51,181,232,.04); }
 .dz-tlg-lhead {
-  width: 168px; flex: none; display: flex; align-items: center; gap: 6px; padding: 3px 8px;
+  width: 168px; flex: none; display: flex; align-items: center; gap: 5px; padding: 3px 8px;
   border-right: 1px solid var(--line); background: var(--panel);
+  position: sticky; left: 0; z-index: 1;
 }
 .dz-tlg-name {
   flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   font: 500 10.5px 'JetBrains Mono', monospace; color: var(--txt);
 }
 .dz-tlg-z {
-  width: 42px; flex: none; background: var(--bg); border: 1px solid var(--line);
+  width: 40px; flex: none; background: var(--bg); border: 1px solid var(--line);
   border-radius: 4px; color: var(--cyan); font: 400 10px 'JetBrains Mono', monospace;
   padding: 2px 3px; outline: none; text-align: center;
 }
 .dz-tlg-z:focus { border-color: var(--cyan); }
 .dz-tlg-cells { display: flex; }
 .dz-tlg-cell {
-  width: 22px; flex: none; height: 24px; cursor: pointer;
-  border-right: 1px solid var(--line2);
+  width: 22px; flex: none; height: 22px; cursor: pointer;
+  border-right: 1px solid var(--line2); position: relative;
 }
-.dz-tlg-cell.on { background: var(--cyan); opacity: .55; }
-.dz-tlg-cell.on:hover { opacity: .85; }
-.dz-tlg-cell.cur { box-shadow: inset 0 0 0 1px var(--red); }
+/* exposición estilo OpenToonz: inicio de toma = bloque sólido con borde;
+   sostenido = franja de continuación más tenue (la toma "se mantiene") */
+.dz-tlg-cell.start { background: var(--cyan); box-shadow: inset 0 0 0 1px var(--cyanh); }
+.dz-tlg-cell.held { background: var(--cyansoft); }
+.dz-tlg-cell.held::before {
+  content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px;
+  background: var(--cyan); opacity: .5; transform: translateX(-50%);
+}
+.dz-tlg-cell.cam.key { background: var(--cyan); }
+.dz-tlg-cell.cam.key::after {
+  content: "📹"; position: absolute; inset: 0; font-size: 9px; text-align: center; line-height: 22px;
+}
+.dz-tlg-cell:hover { outline: 1px solid var(--mut); outline-offset: -1px; }
+/* playhead: columna del cuadro actual resaltada en todas las filas */
+.dz-tlg-cell.cur { box-shadow: inset 1px 0 0 var(--red), inset -1px 0 0 var(--red); background-color: rgba(240,69,14,.08); }
 /* 🎭 diorama: vista lateral del multiplano — compositing sin nodos */
 .dz-zpanel {
   position: absolute; left: 60px; bottom: 120px; z-index: 8; width: 340px;

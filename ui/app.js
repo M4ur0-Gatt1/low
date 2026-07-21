@@ -6454,10 +6454,16 @@ async function dzTlGridRender() {
   perFrame.forEach(set => set.forEach(k => { if (!order.includes(k)) order.push(k); }));
   order.reverse();   // al frente arriba (como Illustrator/PS)
   const cur = DZ.anim.idx;
-  // columnas (números de cuadro)
-  $("#dzTlgCols").innerHTML = DZ.anim.frames.map((f, i) =>
-    `<span class="dz-tlg-col${i === cur ? " cur" : ""}" data-i="${i}">${i + 1}</span>`).join("");
-  // capas del cuadro actual (para Z/visibilidad en vivo)
+  const keys = (DZ.scene && DZ.scene.keys) || [];   // fotogramas clave de dibujo
+  const cams = (DZ.scene && DZ.scene.cam) || {};    // claves de cámara
+  const fnum = i => dzFrameNum(DZ.anim.frames[i]);
+  // ── encabezado: números de cuadro (cada 5 resaltado) + marcas 🔑/📹 + playhead ──
+  $("#dzTlgCols").innerHTML = DZ.anim.frames.map((f, i) => {
+    const n = i + 1, mj = (n % 5 === 0), num = fnum(i);
+    const mark = (keys.includes(num) ? "<i class='k'></i>" : "") + (cams[num] ? "<i class='c'></i>" : "");
+    return `<span class="dz-tlg-col${i === cur ? " cur" : ""}${mj ? " mj" : ""}" data-i="${i}">` +
+           `${mj || i === cur ? n : ""}${mark}</span>`;
+  }).join("");
   const liveSvg = $("#dzCanvas").querySelector("svg");
   const rows = $("#dzTlgRows");
   rows.innerHTML = "";
@@ -6468,33 +6474,43 @@ async function dzTlGridRender() {
     const liveEl = id && liveSvg ? liveSvg.querySelector("#" + CSS.escape(id)) : null;
     const z = liveEl ? (parseFloat(liveEl.getAttribute("data-z")) || 0) : 0;
     const hidden = liveEl && liveEl.getAttribute("display") === "none";
-    // panel izquierdo de la capa: 👁 · nombre · Z (coherente con el diorama)
+    const locked = liveEl && liveEl.hasAttribute("data-locked");
+    // panel izquierdo de la capa (columna, como OpenToonz): 👁 · 🔒 · nombre · Z
     const head = document.createElement("div");
     head.className = "dz-tlg-lhead";
     head.innerHTML =
-      `<span class="dz-eye" title="${hidden ? "Mostrar" : "Ocultar"}">${hidden ? "◌" : "👁"}</span>` +
+      `<span class="dz-eye eye" title="${hidden ? "Mostrar" : "Ocultar"}">${hidden ? "◌" : "👁"}</span>` +
+      `<span class="dz-eye lock" title="${locked ? "Desbloquear" : "Bloquear"}" style="opacity:${locked ? 1 : .4}">${locked ? "🔒" : "🔓"}</span>` +
       `<span class="dz-tlg-name" title="${key}">${key}</span>` +
       `<input class="dz-tlg-z" type="number" step="10" value="${z}" title="Profundidad Z (multiplano) — la misma del diorama"${liveEl ? "" : " disabled"}>`;
-    head.querySelector(".dz-eye").onclick = () => {
+    head.querySelector(".eye").onclick = () => {
       if (!liveEl) return; dzSnapshot();
       hidden ? liveEl.removeAttribute("display") : liveEl.setAttribute("display", "none");
-      dzMarkDirty(); dzTlGridRender();
+      dzMarkDirty(); dzBuildLayers(); dzTlGridRender();
+    };
+    head.querySelector(".lock").onclick = () => {
+      if (!liveEl) return; dzSnapshot();
+      locked ? liveEl.removeAttribute("data-locked") : liveEl.setAttribute("data-locked", "1");
+      dzMarkDirty(); dzBuildLayers(); dzTlGridRender();
     };
     head.querySelector(".dz-tlg-z").onchange = (e) => {
       if (!liveEl) return; dzSnapshot();
       const v = Math.max(-60, Math.min(400, Math.round(+e.target.value || 0)));
       if (v === 0) liveEl.removeAttribute("data-z"); else liveEl.setAttribute("data-z", v);
       dzMarkDirty(); dzBuildLayers();
-      if (DZ.d3) dz3dBuild();               // el diorama/3D refleja el Z al instante
+      if (DZ.d3) dz3dBuild();
       dzZPanelRender();
     };
     row.appendChild(head);
-    // celdas por cuadro
+    // celdas: EXPOSICIÓN estilo OpenToonz — inicio de toma sólido, sostenidos
+    // con línea de continuación; clic navega al cuadro
     const cells = document.createElement("div");
     cells.className = "dz-tlg-cells";
     perFrame.forEach((set, i) => {
+      const on = set.has(key), prevOn = i > 0 && perFrame[i - 1].has(key);
       const c = document.createElement("span");
-      c.className = "dz-tlg-cell" + (set.has(key) ? " on" : "") + (i === cur ? " cur" : "");
+      c.className = "dz-tlg-cell" +
+        (on ? (prevOn ? " held" : " start") : "") + (i === cur ? " cur" : "");
       c.dataset.i = i;
       c.onclick = () => { dzAnimStopIf(); dzGoFrame(i); };
       cells.appendChild(c);
@@ -6502,6 +6518,23 @@ async function dzTlGridRender() {
     row.appendChild(cells);
     rows.appendChild(row);
   });
+  // ── fila de CÁMARA (track propio, como OpenToonz) ──
+  const camRow = document.createElement("div");
+  camRow.className = "dz-tlg-row cam";
+  camRow.innerHTML = `<div class="dz-tlg-lhead"><span class="dz-eye">📹</span>` +
+    `<span class="dz-tlg-name">Cámara</span></div>`;
+  const camCells = document.createElement("div");
+  camCells.className = "dz-tlg-cells";
+  DZ.anim.frames.forEach((f, i) => {
+    const has = !!cams[fnum(i)];
+    const c = document.createElement("span");
+    c.className = "dz-tlg-cell cam" + (has ? " key" : "") + (i === cur ? " cur" : "");
+    c.dataset.i = i;
+    c.onclick = () => { dzAnimStopIf(); dzGoFrame(i); };
+    camCells.appendChild(c);
+  });
+  camRow.appendChild(camCells);
+  rows.appendChild(camRow);
   $("#dzTlgCols").querySelectorAll(".dz-tlg-col").forEach(c =>
     c.onclick = () => { dzAnimStopIf(); dzGoFrame(+c.dataset.i); });
 }
