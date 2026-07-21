@@ -60,9 +60,9 @@ class _CallbackHandler(BaseHTTPRequestHandler):
         params = dict(urllib.parse.parse_qsl(q))
         _CallbackHandler.result = params
         if "code" in params:
-            body = "<html><body><h2>✅ Autorizado</h2><p>Ya podés cerrar esta ventana.</p></body></html>"
+            body = "<html><body><h2> Autorizado</h2><p>Ya podés cerrar esta ventana.</p></body></html>"
         else:
-            body = f"<html><body><h2>❌ Error</h2><pre>{params}</pre></body></html>"
+            body = f"<html><body><h2> Error</h2><pre>{params}</pre></body></html>"
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))

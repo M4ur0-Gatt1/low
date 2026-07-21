@@ -19,9 +19,13 @@ class DigitalOceanProvider(OpenAICompatProvider):
     # (anthropic-claude-*, openai-gpt-*/o*) requieren un tier de suscripción alto
     # y devuelven 403 "not available for your subscription tier". Los ABIERTOS
     # andan en el tier base. Por eso el default y el fallback son abiertos.
+    # Incluye modelos de VISIÓN (-vl, -vision) para ask_model con imágenes.
     MODELS = ["deepseek-v4-pro", "deepseek-3.2", "glm-5.2", "kimi-k2.6",
               "llama-4-maverick", "llama3.3-70b-instruct", "qwen3-coder-flash",
-              "openai-gpt-oss-120b", "mistral-3-14B"]
+              "openai-gpt-oss-120b", "mistral-3-14B",
+              # Visión (multimodal: texto + imagen)
+              "llama-3.2-11b-vision-instruct", "llama-3.2-90b-vision-instruct",
+              "nemotron-nano-12b-v2-vl"]
 
     @staticmethod
     def provider_name(): return "DigitalOcean"

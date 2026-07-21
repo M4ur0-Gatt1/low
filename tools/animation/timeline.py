@@ -12,7 +12,6 @@ Features:
 import math
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Tuple, Callable
-import numpy as np
 
 
 class EasingCurve:

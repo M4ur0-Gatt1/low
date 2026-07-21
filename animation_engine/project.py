@@ -401,7 +401,7 @@ class AnimationProject:
         tmp_dir = self.ws / ".low" / "tmp_export"
         frames = self.export_frame_sequence(scene_id, tmp_dir, "frame")
         if not frames:
-            return "❌ No hay frames para exportar"
+            return " No hay frames para exportar"
         # Use ffmpeg
         try:
             cmd = [
@@ -415,10 +415,10 @@ class AnimationProject:
             ]
             result = subprocess.run(cmd, capture_output=True, text=True)
             if result.returncode != 0:
-                return f"❌ ffmpeg falló: {result.stderr[:500]}"
-            return f"✅ Video exportado: {out_path}"
+                return f" ffmpeg falló: {result.stderr[:500]}"
+            return f" Video exportado: {out_path}"
         except FileNotFoundError:
-            return "❌ ffmpeg no encontrado. Instalar con: apt install ffmpeg  (Linux)  o  brew install ffmpeg  (macOS)  o  descargar desde ffmpeg.org (Windows)"
+            return " ffmpeg no encontrado. Instalar con: apt install ffmpeg  (Linux)  o  brew install ffmpeg  (macOS)  o  descargar desde ffmpeg.org (Windows)"
         finally:
             if tmp_dir.exists():
                 shutil.rmtree(tmp_dir, ignore_errors=True)

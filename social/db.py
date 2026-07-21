@@ -5,10 +5,16 @@ from config import data_dir
 
 def connect():
     db = data_dir() / "social.db"
-    conn = sqlite3.connect(str(db))
+    # Cada thread usa SU conexión (SocialService.conn es thread-local): pywebview
+    # atiende cada llamada js_api en un thread distinto y el scheduler corre en
+    # otro — compartir UNA conexión entre threads rompe aunque sqlite sea
+    # "serialized" (los cursores/fetch se pisan: "bad parameter or API misuse").
+    # WAL permite lectores+escritor concurrentes entre conexiones.
+    conn = sqlite3.connect(str(db), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
+    conn.execute("PRAGMA busy_timeout=5000")
     return conn
 
 

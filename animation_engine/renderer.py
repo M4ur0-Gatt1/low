@@ -29,7 +29,7 @@ class FrameRenderer:
         self.height = height
 
     def svg_to_png(self, svg: str, scale: float = 1.0) -> bytes:
-        """SVG string → PNG bytes."""
+        """SVG string  PNG bytes."""
         if not HAS_CAIRO:
             # Fallback: save as SVG, no PNG conversion
             return svg.encode("utf-8")
@@ -44,7 +44,7 @@ class FrameRenderer:
             return None
 
     def svg_to_image(self, svg: str, scale: float = 1.0):
-        """SVG string → PIL Image."""
+        """SVG string  PIL Image."""
         png_bytes = self.svg_to_png(svg, scale)
         if not HAS_PIL or not png_bytes:
             return None
@@ -118,11 +118,11 @@ def render_to_video(project_file: Path, scene_id: str, out_path: Path,
     tmp = out_path.parent / ".tmp_render"
     frames = render_sequence(project_file, scene_id, tmp, "frame", scale)
     if not frames:
-        return "❌ No se pudieron renderizar los frames"
+        return " No se pudieron renderizar los frames"
     # Check if we have PNG or SVG
     ext = frames[0].suffix.lower()
     if ext == ".svg":
-        return "❌ PNG conversion not available. Install cairosvg: pip install cairosvg"
+        return " PNG conversion not available. Install cairosvg: pip install cairosvg"
     try:
         cmd = [
             "ffmpeg", "-y",
@@ -136,24 +136,24 @@ def render_to_video(project_file: Path, scene_id: str, out_path: Path,
         ]
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
-            return f"❌ ffmpeg: {result.stderr[:500]}"
+            return f" ffmpeg: {result.stderr[:500]}"
         # Clean up
         import shutil
         shutil.rmtree(tmp, ignore_errors=True)
-        return f"✅ Video exportado: {out_path}"
+        return f" Video exportado: {out_path}"
     except FileNotFoundError:
-        return "❌ ffmpeg no encontrado. Instalar: apt/brew install ffmpeg"
+        return " ffmpeg no encontrado. Instalar: apt/brew install ffmpeg"
 
 
 def render_gif(project_file: Path, scene_id: str, out_path: Path,
                 fps: int = 12, scale: float = 0.5, optimize: bool = True) -> str:
     """Renderiza a GIF animado (usando imageio o PIL)."""
     if not HAS_PIL:
-        return "❌ PIL no disponible: pip install pillow"
+        return " PIL no disponible: pip install pillow"
     tmp = out_path.parent / ".tmp_gif"
     frames = render_sequence(project_file, scene_id, tmp, "frame", scale)
     if not frames:
-        return "❌ No frames"
+        return " No frames"
     images = []
     for f in frames:
         if f.suffix.lower() == ".png":
@@ -162,7 +162,7 @@ def render_gif(project_file: Path, scene_id: str, out_path: Path,
             # Skip SVG, can't make GIF without conversion
             pass
     if not images:
-        return "❌ No hay imágenes PNG para hacer GIF"
+        return " No hay imágenes PNG para hacer GIF"
     # Save GIF
     dur = int(1000 / fps)
     images[0].save(
@@ -171,4 +171,4 @@ def render_gif(project_file: Path, scene_id: str, out_path: Path,
     )
     import shutil
     shutil.rmtree(tmp, ignore_errors=True)
-    return f"✅ GIF generado: {out_path}"
+    return f" GIF generado: {out_path}"

@@ -4,8 +4,14 @@ from . import db
 
 
 class BrandManager:
-    def __init__(self, conn):
-        self.conn = conn
+    def __init__(self, owner):
+        """owner: SocialService (usa su .conn thread-local) o una conexión
+        sqlite directa (tests/scripts)."""
+        self._owner = owner
+
+    @property
+    def conn(self):
+        return self._owner.conn if hasattr(self._owner, "conn") else self._owner
 
     @property
     def brand_id(self):

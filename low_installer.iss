@@ -1,12 +1,12 @@
 ; Instalador de LOW — editor de diseño/animación con agente IA
-; Compilar (desde build_exe.py): python build_exe.py release
-;   → genera dist/LOW.exe (onefile) y Output/LOWSetup-<ver>.exe
-; Manual: ISCC.exe /DAppVersion=3.19.0 low_installer.iss
+; Compilar: ISCC.exe low_installer.iss
 
 #define AppName "LOW"
-; /DAppVersion se pasa desde build_exe.py. Default solo para build manual.
+; La versión se puede pasar por línea de comandos: ISCC /DAppVersion=3.5.0
+; (el workflow la deriva del tag). El default acá es solo para builds manuales
+; y debe coincidir con LOW_VERSION en main.py.
 #ifndef AppVersion
-  #define AppVersion "0.0.0-dev"
+  #define AppVersion "3.22.9"
 #endif
 #define AppExe "LOW.exe"
 
@@ -18,7 +18,7 @@ AppPublisher=Mauro Gatti · Tropa Circa
 DefaultDirName={localappdata}\Programs\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
-; instalación por usuario: no pide permisos de administrador
+; instalaciÃ³n por usuario: no pide permisos de administrador
 PrivilegesRequired=lowest
 OutputDir=Output
 OutputBaseFilename=LOWSetup-{#AppVersion}
@@ -35,7 +35,6 @@ Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
-; En modo release (--onefile) el .exe es autónomo, no necesita DLLs ni carpetas extras.
 Source: "dist\{#AppExe}"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
@@ -46,5 +45,7 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopico
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
-; Config e historial quedan en %APPDATA%\LOW por si reinstala.
+; la config y el historial quedan en %APPDATA%\LOW por si reinstala;
+; solo se borra lo instalado
 Type: filesandordirs; Name: "{app}"
+

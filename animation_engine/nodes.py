@@ -12,8 +12,6 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from xml.etree import ElementTree as ET
 
-import numpy as np
-
 
 @dataclass
 class NodePort:

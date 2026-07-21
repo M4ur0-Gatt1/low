@@ -1,8 +1,9 @@
+import os
 from pydo import Client
 
-client = Client(
-    api_key="sk-do-HSCFb9aBZiRVAhFNqjlKwRFG6FVmw9wgPtL7YtbbqMcMGN0gQtUoRvr-nR"
-)
+# la key va por variable de entorno — NUNCA hardcodeada (quedó una expuesta en
+# el historial de git hasta v3.19.0: revocarla en cloud.digitalocean.com)
+client = Client(api_key=os.environ.get("DO_API_KEY", ""))
 
 # Listar modelos
 models = client.models.list()

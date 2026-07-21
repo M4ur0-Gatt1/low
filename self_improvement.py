@@ -211,7 +211,7 @@ class SelfImprovementSystem:
             
             if metric.success_rate < 0.7:
                 suggestions.append(
-                    f"⚠️ {metric.provider}:{metric.model} tiene baja tasa de éxito ({metric.success_rate:.1%}). "
+                    f" {metric.provider}:{metric.model} tiene baja tasa de éxito ({metric.success_rate:.1%}). "
                     f"Considera cambiar a otro modelo."
                 )
             
@@ -229,7 +229,7 @@ class SelfImprovementSystem:
             success_rate = usage.success_count / usage.usage_count
             if success_rate < 0.6:
                 suggestions.append(
-                    f"🔧 {tool_name} falla frecuentemente ({success_rate:.1%}). "
+                    f" {tool_name} falla frecuentemente ({success_rate:.1%}). "
                     f"Revisa su configuración o evítala."
                 )
         
@@ -237,7 +237,7 @@ class SelfImprovementSystem:
         for pattern in self.error_patterns:
             if pattern.frequency >= 3:
                 suggestions.append(
-                    f"❌ Error recurrente: {pattern.error_type} ({pattern.frequency} veces). "
+                    f" Error recurrente: {pattern.error_type} ({pattern.frequency} veces). "
                     f"Sugerencia: {pattern.suggested_fix or 'Revisar configuración'}"
                 )
         

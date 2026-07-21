@@ -12,7 +12,7 @@ const MODE_BY_EXT = {
 const extOf = p => { const m = /\.[^.\\/]+$/.exec(p || ""); return m ? m[0].toLowerCase() : ""; };
 const esHtml = t => (t && t.path && /\.html?$/i.test(t.path)) ||
                     /^\s*(<!doctype html|<html)/i.test(cm ? cm.getValue() : "");
-// lenguaje del RUNNER por extensión (para ▶ Ejecutar en modo "auto")
+// lenguaje del RUNNER por extensión (para  Ejecutar en modo "auto")
 const RUN_LANG_BY_EXT = {
   ".py": "python", ".js": "javascript", ".mjs": "javascript", ".ts": "typescript",
   ".sh": "bash", ".bash": "bash", ".ps1": "powershell", ".go": "go", ".rb": "ruby",
@@ -52,7 +52,7 @@ window.__errs = [];
 function reportErr(msg) {
   window.__errs.push(msg);
   try { if (api) api.log_js(msg); } catch (e) { /* sin puente */ }
-  try { sysMsg("❌ Error interno: " + msg); } catch (e) { /* UI no lista */ }
+  try { sysMsg(" Error interno: " + msg); } catch (e) { /* UI no lista */ }
 }
 window.addEventListener("error", e =>
   reportErr(`${e.message} @${(e.filename || "").split("/").pop()}:${e.lineno}`));
@@ -74,12 +74,12 @@ window.LOW = {
       if (m.event === "sys") { sysMsg(m.data); persist("system", m.data); }
       if (m.event === "ws") setWs(m.data);
       if (m.event === "wrote") onWrote(m.data.path, m.data.range);
-      if (m.event === "think_start") { stopThinking(); setStatus("💭 Razonando…"); planDone(); S.thinkEl = thinkMsg(); }
+      if (m.event === "think_start") { stopThinking(); setStatus(" Razonando…"); planDone(); S.thinkEl = thinkMsg(); }
       if (m.event === "think_delta" && S.thinkEl) { S.thinkEl.querySelector(".think-body").textContent += m.data; scrollMsgs(); }
       if (m.event === "think_end" && S.thinkEl) {
         S.thinkEl.classList.add("done", "collapsed");
         S.thinkEl.querySelector(".think-toggle").textContent = "mostrar";
-        S.thinkEl.querySelector(".think-head").firstChild.textContent = "💭 Pensó unos instantes ";
+        S.thinkEl.querySelector(".think-head").firstChild.textContent = " Pensó unos instantes ";
         S.thinkEl = null;
       }
       if (m.event === "agent_start") { stopThinking(); setStatus("✍ Escribiendo…"); planDone(); S.streamEl = agentMsg("").querySelector(".m-txt"); }
@@ -92,18 +92,18 @@ window.LOW = {
         const toolRes = m.data.res;
         const fileName = m.data.file || "";
         let toolDesc = "";
-        if (toolName === "read_file") toolDesc = `📖 Leyendo ${fileName}`;
-        else if (toolName === "write_file") toolDesc = `✏️ Escribiendo ${fileName}`;
-        else if (toolName === "edit_file") toolDesc = `✏️ Editando ${fileName}`;
-        else if (toolName === "exec_cmd") toolDesc = "⚡ Ejecutando comando";
-        else if (toolName === "run_code") toolDesc = "▶ Ejecutando código";
-        else if (toolName === "list_files") toolDesc = "📁 Listando archivos";
-        else if (toolName === "search_code") toolDesc = "🔍 Buscando código";
-        else if (toolName === "generate_image") toolDesc = "🖼 Generando imagen";
-        else if (toolName === "ask_model") toolDesc = "🤝 Consultando otro modelo";
-        else if (toolName === "web_search") toolDesc = "🌐 Buscando en la web";
-        else if (toolName === "git") toolDesc = "⎇ git";
-        else toolDesc = `🔧 ${toolName}`;
+        if (toolName === "read_file") toolDesc = ` Leyendo ${fileName}`;
+        else if (toolName === "write_file") toolDesc = ` Escribiendo ${fileName}`;
+        else if (toolName === "edit_file") toolDesc = ` Editando ${fileName}`;
+        else if (toolName === "exec_cmd") toolDesc = " Ejecutando comando";
+        else if (toolName === "run_code") toolDesc = " Ejecutando código";
+        else if (toolName === "list_files") toolDesc = " Listando archivos";
+        else if (toolName === "search_code") toolDesc = " Buscando código";
+        else if (toolName === "generate_image") toolDesc = " Generando imagen";
+        else if (toolName === "ask_model") toolDesc = " Consultando otro modelo";
+        else if (toolName === "web_search") toolDesc = " Buscando en la web";
+        else if (toolName === "git") toolDesc = " git";
+        else toolDesc = ` ${toolName}`;
         setStatus(toolDesc);
         // indicador persistente (heartbeat) + paso en la tarjeta de actividad
         // (persistente, ya no un mensaje que desaparece a los 3s)
@@ -114,7 +114,7 @@ window.LOW = {
   },
 };
 
-/* ── rasterizar SVG → PNG dataURL (para que el modelo "vea" lo que dibujó) ──
+/* ── rasterizar SVG  PNG dataURL (para que el modelo "vea" lo que dibujó) ──
    Lo llama Python por evaluate_js y sondea window.__raster hasta que esté listo.
    Sentinela: "PENDING" mientras carga, "data:..." si salió, "ERR:..." si falló.
    Es async (decodificar la imagen), por eso el patrón de polling. */
@@ -248,9 +248,9 @@ async function init() {
   restorePanelSizes();
   initSplitters();
   sysMsg("LOW v" + (S.version || "?") + " — listo.\n" +
-         "⚙ API keys · 📁 proyecto · 🔎 junto al modelo: buscador entre todos los modelos de la API.\n" +
-         "barra izquierda: ✒ Diseño (editor de vectores SVG), 🧊 Artefactos (vista previa en vivo), " +
-         "⟳ Rutinas, 🔧 Herramientas, 🖧 Servidores SSH, ⟲ Historial, ▦ Ranking.\n" +
+         " API keys ·  proyecto · <i class="fas fa-search"></i> junto al modelo: buscador entre todos los modelos de la API.\n" +
+         "barra izquierda: <i class="fas fa-pen-fancy"></i> Diseño (editor de vectores SVG), <i class="fas fa-cube"></i> Artefactos (vista previa en vivo), " +
+         " Rutinas,  Herramientas, <i class="fas fa-network-wired"></i> Servidores SSH,  Historial, <i class="fas fa-th"></i> Ranking.\n" +
          "El agente sabe git, ssh y scp: pedile «subí esto a github» o «entrá al server X y…».\n" +
          "Aprende solo: /habilidades y /lecciones (global) y /memoria (de este proyecto).\n" +
          "Comandos: /commit /push /git /ssh /compare /ranking /undo /history /resume /run /files /search /preview /habilidades /lecciones /memoria · Zoom Ctrl +/−/0");
@@ -261,7 +261,7 @@ async function init() {
   api.ollama_models().then(ms => {
     if (ms && ms.length) {
       S.ollama = ms;
-      sysMsg("🦙 Ollama detectado (" + ms.length + " modelos locales, sin límites ni filtros): " +
+      sysMsg("<i class="fas fa-robot"></i> Ollama detectado (" + ms.length + " modelos locales, sin límites ni filtros): " +
              "elegí el proveedor «custom» para usarlos — " + ms.slice(0, 4).join(", "));
     }
   }).catch(() => {});
@@ -272,12 +272,12 @@ function setWs(d) {
   $("#projName").textContent = d.ws.split(/[\\/]/).pop().toUpperCase();
   $("#branch").textContent = d.branch ? "⑂ " + d.branch : "";
   renderTree();
-  sysMsg("📁 Workspace: " + d.ws);
-  persist("system", "📁 Workspace: " + d.ws);
+  sysMsg(" Workspace: " + d.ws);
+  persist("system", " Workspace: " + d.ws);
 }
 
 function showNoWorkspace() {
-  sysMsg("⚠️ No hay workspace abierto. Abre una carpeta de proyecto para comenzar.");
+  sysMsg(" No hay workspace abierto. Abre una carpeta de proyecto para comenzar.");
   $("#projName").textContent = "SIN PROYECTO";
   $("#branch").textContent = "";
   S.ws = null;
@@ -293,11 +293,11 @@ async function onWrote(path, range) {
   const r = await api.refresh_tree();
   S.tree = r.tree;
   renderTree();
-  if (SVG_RE.test(path)) {          // vectores → entorno de diseño interactivo
+  if (SVG_RE.test(path)) {          // vectores  entorno de diseño interactivo
     await openDesign(path);
     return;
   }
-  if (IMG_RE.test(path)) {          // raster → visor + miniatura en el chat
+  if (IMG_RE.test(path)) {          // raster  visor + miniatura en el chat
     await openImage(path, true);
     return;
   }
@@ -376,7 +376,7 @@ function updChainBadge() {
     return;
   }
   const parts = chain.map((c, i) => 
-    (i === 0 ? "⚡ " : "🔄 ") + c.provider + " · " + (c.model || "default"));
+    (i === 0 ? " " : " ") + c.provider + " · " + (c.model || "default"));
   $("#provDot").title = "Cadena de failover:\n" + parts.join("\n");
   // el dot parpadea en naranja si el activo NO es el primero de la cadena (failover ya ocurrió)
   const activeOk = chain.length > 0 && chain[0].provider === providerName($("#selProv").value);
@@ -470,6 +470,7 @@ function bind() {
     $("#abAgent").classList.toggle("active", a.style.display !== "none");
   };
   $("#abArtifacts").onclick = showArtifacts;
+  $("#abSocial").onclick = modalSocial;
   $("#abRoutines").onclick = modalRoutines;
   $("#abTools").onclick = modalTools;
   $("#abServers").onclick = modalServers;
@@ -499,6 +500,9 @@ function bind() {
   $("#dzSave").onclick = dzSave;
   $("#dzCanvas").addEventListener("mousedown", dzPointerDown);
   $("#dzHandle").addEventListener("mousedown", dzHandleDown);
+  document.querySelectorAll("#dzSelBox .dz-sh").forEach(sh =>
+    sh.addEventListener("mousedown", e =>
+      dzBoxHandleDown(e, +sh.dataset.hx, +sh.dataset.hy)));
   $("#dzExt").onclick = () => { if (DZ.path) api.preview_html(DZ.path, $("#dzCanvas").innerHTML); };
   $("#dzZoomIn").onclick = () => dzZoom(0.15);
   $("#dzZoomOut").onclick = () => dzZoom(-0.15);
@@ -512,6 +516,7 @@ $("#dzDiscBtn").onclick = () => dzDiscToggle();
   $("#tlMove").onclick = dzMoveTween;
   $("#tlRec").onclick = dzRecToggle;
   $("#tlPuppet").onclick = dzPuppetToggle;
+  $("#tlWalk").onclick = dzWalkCycleModal;
   // scrub del X-sheet: arrastrá sobre los cuadros para hojearlos (flipping)
   $("#tlFrames").addEventListener("mousedown", (e) => {
     if (!DZ.anim) return;
@@ -589,7 +594,7 @@ $("#dzDiscBtn").onclick = () => dzDiscToggle();
     e.preventDefault();
     dzZoomAt(e.deltaY < 0 ? 1.12 : 1 / 1.12, e.clientX, e.clientY);
   }, { passive: false });
-  // regla: clic derecho fija punto de fuga → prevenir menú contextual
+  // regla: clic derecho fija punto de fuga  prevenir menú contextual
   $("#dzCanvas").addEventListener("contextmenu", (e) => {
     if (DZ.tool === "ruler") e.preventDefault();
   });
@@ -600,7 +605,7 @@ $("#dzDiscBtn").onclick = () => dzDiscToggle();
     if (!DZ.anim) return;
     DZ.anim.loop = !(DZ.anim.loop !== false);   // toggle (default true)
     $("#tlLoop").classList.toggle("active", DZ.anim.loop);
-    dzSetStatus(DZ.anim.loop ? "🔁 Loop activado" : "▶ Reproducción única (sin loop)");
+    dzSetStatus(DZ.anim.loop ? " Loop activado" : " Reproducción única (sin loop)");
   };
   // modo dibujo (zen): pantalla limpia, solo lienzo + herramientas
   $("#dzZen").onclick = dzZenToggle;
@@ -613,7 +618,7 @@ $("#dzDiscBtn").onclick = () => dzDiscToggle();
     if (!DZ.anim) return;
     if (!confirm("¿Borrar este cuadro? (no se puede deshacer)")) return;
     const r = await api.del_frame(DZ.path);
-    if (r && r.error) return sysMsg("❌ " + r.error);
+    if (r && r.error) return sysMsg(" " + r.error);
     try { S.tree = (await api.refresh_tree()).tree; renderTree(); } catch (e) { /* */ }
     await openDesign(r.path);
     $("#dzTimeline").hidden = false;
@@ -627,7 +632,7 @@ $("#dzDiscBtn").onclick = () => dzDiscToggle();
     $("#dzOnionPanel").hidden = !DZ.anim.onion;
     dzOnionUpdate();
   };
-  // panel 🧅 flotante: configuración en vivo + arrastrable por el encabezado
+  // panel <i class="fas fa-layer-group"></i> flotante: configuración en vivo + arrastrable por el encabezado
   const opCfg = dzOnionCfg();
   $("#opBefore").value = opCfg.before; $("#opAfter").value = opCfg.after;
   $("#opAlpha").value = opCfg.alpha;
@@ -663,6 +668,7 @@ $("#dzDiscBtn").onclick = () => dzDiscToggle();
   });
   // X-sheet: toggle, cerrar y arrastre del panel
   $("#tlXs").onclick = dzXsToggle;
+  $("#tlLayers").onclick = dzTlGridToggle;
   $("#dzXsClose").onclick = () => { $("#dzXsheet").hidden = true; $("#tlXs").classList.remove("active"); };
   $("#dzXsHead").addEventListener("mousedown", (e) => {
     if (e.target.id === "dzXsClose") return;
@@ -678,8 +684,27 @@ $("#dzDiscBtn").onclick = () => dzDiscToggle();
     const up = () => { document.removeEventListener("mousemove", move); document.removeEventListener("mouseup", up); };
     document.addEventListener("mousemove", move); document.addEventListener("mouseup", up);
   });
-  // 🎭 diorama: toggle, cerrar y arrastre del panel
+  // <i class="fas fa-masks-theater"></i> diorama: toggle, cerrar y arrastre del panel
   $("#dzZBtn").onclick = dzZPanelToggle;
+  $("#dz3DBtn").onclick = dz3dToggle;
+  $("#dzRulersBtn").onclick = dzRulersToggle;
+  $("#dzGridBtn").onclick = dzGridToggle;
+  $("#dzGuidesBtn").onclick = dzGuidesToggle;
+  // panel de capas estilo Photoshop (fusión + acciones)
+  $("#dzLayNew").onclick = dzLayerNew;
+  $("#dzLayDup").onclick = () => { if (DZ.sel) dzDuplicate(); };
+  $("#dzLayGroup").onclick = e => dzGroupSel(e.shiftKey);
+  $("#dzLayMerge").onclick = dzLayerMergeDown;
+  $("#dzLayUp").onclick = () => dzLayerMove(1);
+  $("#dzLayDown").onclick = () => dzLayerMove(-1);
+  $("#dzLayDel").onclick = () => { if (DZ.sel) dzDeleteSelected(); };
+  $("#dzBlend").onchange = e => dzLayerBlend(e.target.value);
+  $("#dzLayOpacity").oninput = e => dzLayerOpacity(e.target.value, false);
+  $("#dzLayOpacity").onchange = e => dzLayerOpacity(e.target.value, true);
+  $("#dzRlTop").addEventListener("pointerdown", e => dzRulerPull(e, "h"));
+  $("#dzRlBottom").addEventListener("pointerdown", e => dzRulerPull(e, "h"));
+  $("#dzRlLeft").addEventListener("pointerdown", e => dzRulerPull(e, "v"));
+  $("#dzRlRight").addEventListener("pointerdown", e => dzRulerPull(e, "v"));
   $("#dzZpClose").onclick = () => { $("#dzZPanel").hidden = true; $("#dzZBtn").classList.remove("active"); };
   $("#dzZpHead").addEventListener("mousedown", (e) => {
     if (e.target.id === "dzZpClose") return;
@@ -729,11 +754,11 @@ $("#dzDiscBtn").onclick = () => dzDiscToggle();
   $("#rigId").addEventListener("keydown", (e) => {
     if (e.key !== "Enter") return;
     e.preventDefault();
-    if (!DZ.sel) return dzSetStatus("◆ Seleccioná la pieza primero (flecha blanca D)");
+    if (!DZ.sel) return dzSetStatus(" Seleccioná la pieza primero (flecha blanca D)");
     const id = $("#rigId").value.trim().replace(/[^\w\-áéíóúñÁÉÍÓÚÑ]/g, "_");
     if (!id) return;
     dzSnapshot(); DZ.sel.id = id; dzBuildLayers(); dzRigPanelSync();
-    dzSetStatus("◆ pieza «" + id + "» lista — posala y clavá con K");
+    dzSetStatus(" pieza «" + id + "» lista — posala y clavá con K");
   });
   ["rigX", "rigY", "rigR", "rigS"].forEach(id => {
     $("#" + id).addEventListener("input", () => {
@@ -742,15 +767,15 @@ $("#dzDiscBtn").onclick = () => dzDiscToggle();
       dzRigApplyTo(DZ.sel, k); dzPositionHandle();      // preview en vivo
     });
     $("#" + id).addEventListener("change", () => {
-      if (!DZ.sel || !DZ.sel.id) return dzSetStatus("◆ La pieza necesita nombre (id) — escribilo arriba y Enter");
+      if (!DZ.sel || !DZ.sel.id) return dzSetStatus(" La pieza necesita nombre (id) — escribilo arriba y Enter");
       dzRigSetKey(DZ.sel.id, dzRigCur(), dzRigReadPanel());   // auto-clave AE-style
-      dzSetStatus("◆ clave en el cuadro " + dzRigCur());
+      dzSetStatus(" clave en el cuadro " + dzRigCur());
     });
   });
   $("#rigKey").onclick = () => {
-    if (!DZ.sel || !DZ.sel.id) return dzSetStatus("◆ Seleccioná y nombrá la pieza primero");
+    if (!DZ.sel || !DZ.sel.id) return dzSetStatus(" Seleccioná y nombrá la pieza primero");
     dzRigSetKey(DZ.sel.id, dzRigCur(), dzRigReadPanel());
-    dzSetStatus("◆ pose clavada en el cuadro " + dzRigCur());
+    dzSetStatus(" pose clavada en el cuadro " + dzRigCur());
   };
   $("#rigDel").onclick = () => {
     if (DZ.sel && DZ.sel.id) dzRigDelKey(DZ.sel.id, dzRigCur());
@@ -804,6 +829,8 @@ $("#dzDiscBtn").onclick = () => dzDiscToggle();
   document.addEventListener("keydown", e => {
     if ($("#designView").hidden || /^(INPUT|TEXTAREA|SELECT)$/.test((e.target.tagName || ""))) return;
     if (e.key === "Tab") { e.preventDefault(); dzZenToggle(); return; }   // modo dibujo
+    if (e.key === "F7") { e.preventDefault(); dzLayersToggle(); return; } // capas
+    if (e.ctrlKey && e.key.toLowerCase() === "r") { e.preventDefault(); dzRulersToggle(); return; } // reglas 2D
     if ((e.key === "Delete" || e.key === "Backspace") && DZ.sel) {
       e.preventDefault(); dzDeleteSelected();
     }
@@ -820,7 +847,7 @@ $("#dzDiscBtn").onclick = () => dzDiscToggle();
       dzZoomAt(e.altKey ? 1 / 1.2 : 1.2, c.left + c.width / 2, c.top + c.height / 2);
       return;
     }
-    // atajos configurables (⚙ Preferencias): una tecla → una acción
+    // atajos configurables ( Preferencias): una tecla  una acción
     if (!e.ctrlKey && !e.altKey && !e.metaKey && e.key.length === 1) {
       if (!DZ.keyrev) dzKeysLoad();
       const k = e.key === "=" ? "+" : e.key.toLowerCase();   // = suma sin Shift
@@ -939,7 +966,7 @@ function renderTabs() {
     el.onauxclick = e => { if (e.button === 1) closeTab(t.id); };
     bar.appendChild(el);
   }
-  // ＋ archivo nuevo, siempre al final de las solapas
+  //  archivo nuevo, siempre al final de las solapas
   const plus = document.createElement("div");
   plus.className = "tab tab-plus"; plus.title = "Archivo nuevo (Ctrl+N)";
   plus.textContent = "+";
@@ -962,7 +989,7 @@ function renderTree() {
       el.style.paddingLeft = (8 + depth * 14) + "px";
       if (it.dir) {
         const open = S.expanded.has(it.path);
-        el.textContent = (open ? "▾ " : "▸ ") + it.name;
+        el.textContent = (open ? " " : " ") + it.name;
         el.onclick = () => {
           open ? S.expanded.delete(it.path) : S.expanded.add(it.path);
           renderTree();
@@ -991,19 +1018,19 @@ async function pickWs() {
   $("#projName").textContent = r.ws.split(/[\\/]/).pop().toUpperCase();
   $("#branch").textContent = r.branch ? "⑂ " + r.branch : "";
   renderTree();
-  sysMsg("📁 Workspace: " + r.ws); persist("system", "📁 Workspace: " + r.ws);
+  sysMsg(" Workspace: " + r.ws); persist("system", " Workspace: " + r.ws);
 }
 
 async function openFile(path, range) {
-  if (SVG_RE.test(path)) return openDesign(path);  // vectores → entorno de diseño
-  if (IMG_RE.test(path)) return openImage(path);   // imágenes → visor, no al editor
-  if (DOC_RE.test(path)) {                          // .docx/.pdf → su app (Word…)
+  if (SVG_RE.test(path)) return openDesign(path);  // vectores  entorno de diseño
+  if (IMG_RE.test(path)) return openImage(path);   // imágenes  visor, no al editor
+  if (DOC_RE.test(path)) {                          // .docx/.pdf  su app (Word…)
     const r = await api.open_external(path);
-    if (r && r.error) sysMsg("❌ No pude abrirlo: " + r.error);
+    if (r && r.error) sysMsg(" No pude abrirlo: " + r.error);
     return;
   }
   const r = await api.open_file(path);
-  if (r.error) return sysMsg("❌ " + r.error);
+  if (r.error) return sysMsg(" " + r.error);
   const existed = S.tabs.find(t => t.id === r.path);
   addTab(r.path, r.name, r.content, r.lang);
   // si el tab ya existía, su doc quedó desactualizado: refrescar con lo nuevo
@@ -1032,7 +1059,7 @@ function highlightRange(start, end) {
 /* ── visor de imágenes / SVG dentro de LOW (reusa el panel de artefactos) ── */
 async function openImage(path, alsoChat) {
   const r = await api.image_data(path);
-  if (!r || r.error) return sysMsg("❌ No pude abrir la imagen: " + ((r && r.error) || path));
+  if (!r || r.error) return sysMsg(" No pude abrir la imagen: " + ((r && r.error) || path));
   const name = r.name || path.split(/[\\/]/).pop();
   // renderizar centrada sobre fondo tipo lienzo, con la imagen escalada al panel
   const html = '<body style="margin:0;height:100vh;display:flex;align-items:center;' +
@@ -1064,7 +1091,7 @@ async function galleryNav(dir) {
   let i = cur ? imgs.indexOf(cur.path) : -1;
   i = i === -1 ? 0 : (i + dir + imgs.length) % imgs.length;
   const p = imgs[i];
-  setStatus(`🖼 ${i + 1}/${imgs.length}`);
+  setStatus(` ${i + 1}/${imgs.length}`);
   if (SVG_RE.test(p)) { closeArtifacts(); await openDesign(p); }
   else await openImage(p);
 }
@@ -1084,7 +1111,7 @@ async function save() {
   t.modified = false;
   document.title = "LOW — " + t.name;
   renderTabs(); renderTree();
-  setStatus("💾 " + r.name);
+  setStatus(" " + r.name);
 }
 
 /* ── ejecutar ── */
@@ -1103,17 +1130,17 @@ async function run() {
       const name = t && t.name ? t.name : "vista previa.html";
       addArtifact(name, cm.getValue(), t && t.path ? t.path : "");
       showArtifacts();
-      termLine("🎨 Artefacto renderizado dentro de LOW (botón ⧉ para el navegador)", "t-ok");
-      setStatus("🎨 Vista previa en vivo");
+      termLine(" Artefacto renderizado dentro de LOW (botón  para el navegador)", "t-ok");
+      setStatus(" Vista previa en vivo");
       return;
     }
     const lang = effectiveLang();
     termLine("➜ run " + lang, "t-ok");
-    setStatus("⚡ Ejecutando…");
+    setStatus(" Ejecutando…");
     const t0 = performance.now();
     const r = await api.run_code(code, lang);
     const seg = ((performance.now() - t0) / 1000).toFixed(1);
-    if (r.error) termLine("❌ " + r.error, "t-err");
+    if (r.error) termLine(" " + r.error, "t-err");
     else {
       if (r.stdout) termLine(r.stdout.replace(/\n$/, ""));
       if (r.stderr) termLine(r.stderr.replace(/\n$/, ""), "t-err");
@@ -1123,7 +1150,7 @@ async function run() {
     }
     setStatus("Listo");
   } catch (e) {
-    termLine("❌ Ejecutar falló: " + (e.message || e), "t-err");
+    termLine(" Ejecutar falló: " + (e.message || e), "t-err");
     reportErr("run: " + (e.message || e));
     setStatus("Error");
   }
@@ -1149,7 +1176,7 @@ function startThinking() {
   clearInterval(S.thinkTimer);
   const tick = () => {
     const s = Math.round((Date.now() - S.thinkT0) / 1000);
-    setStatus(`🧠 Pensando… ${s}s` + (s > 20 ? " (los modelos que razonan tardan más)" : ""));
+    setStatus(` Pensando… ${s}s` + (s > 20 ? " (los modelos que razonan tardan más)" : ""));
   };
   tick();
   S.thinkTimer = setInterval(tick, 1000);
@@ -1177,7 +1204,7 @@ function userMsg(text, imgDataUrl) {
 async function attachImageDialog() {
   const img = await api.pick_image();
   if (!img) return;
-  if (img.error) { sysMsg("❌ " + img.error); return; }
+  if (img.error) { sysMsg(" " + img.error); return; }
   setAttachedImage(img);
 }
 
@@ -1219,7 +1246,7 @@ function chatImage(dataUrl, name) {
   img.src = dataUrl; img.title = name + " — clic para verla en grande";
   img.onclick = () => { addArtifact(name, imgHtml(dataUrl), name); showArtifacts(); };
   const cap = document.createElement("div");
-  cap.className = "m-img-cap"; cap.textContent = "🖼 " + name;
+  cap.className = "m-img-cap"; cap.textContent = " " + name;
   d.appendChild(img); d.appendChild(cap);
   $("#msgs").appendChild(d); scrollMsgs();
 }
@@ -1234,7 +1261,7 @@ function agentMsg(text) {
   w.className = "m-agent";
   const h = document.createElement("div");
   h.className = "m-head";
-  h.innerHTML = '<div class="m-ava">★</div>';
+  h.innerHTML = '<div class="m-ava"></div>';
   const who = document.createElement("span");
   who.className = "m-who";
   who.textContent = "LOW · " + ($("#selProv").value || "?") + " · " + ($("#selModel").value || "?");
@@ -1248,7 +1275,7 @@ function agentMsg(text) {
 
 function sysMsg(text) {
   const d = document.createElement("div");
-  // sin prefijo fijo: los mensajes ya traen su propio marcador (✅❌⚠…) cuando
+  // sin prefijo fijo: los mensajes ya traen su propio marcador (…) cuando
   // corresponde — duplicarlo con un icono genérico solo sumaba ruido visual
   d.className = "m-sys"; d.textContent = text;
   $("#msgs").appendChild(d); scrollMsgs();
@@ -1259,7 +1286,7 @@ function sysMsg(text) {
 function thinkMsg() {
   const w = document.createElement("div");
   w.className = "m-think";
-  w.innerHTML = '<div class="think-head">💭 Pensando… <span class="think-toggle">ocultar</span></div>' +
+  w.innerHTML = '<div class="think-head"> Pensando… <span class="think-toggle">ocultar</span></div>' +
                 '<div class="think-body"></div>';
   const tog = w.querySelector(".think-toggle");
   tog.onclick = () => {
@@ -1284,12 +1311,12 @@ function toolStep(desc, res) {
   const d = document.createElement("div");
   d.className = "step";
   const short = (res || "").split("\n")[0].slice(0, 70);
-  const ok = !/^\s*❌/.test(res || "");
+  const ok = !/^\s*/.test(res || "");
   d.innerHTML = `<span class="ck"></span> <span class="fn"></span> <span></span>`;
   const ck = d.querySelector(".ck");
   ck.textContent = ok ? "✓" : "✗";
   if (!ok) ck.style.color = "var(--red)";
-  d.children[1].textContent = desc;        // texto amigable (📖 Leyendo X, ✏️ …)
+  d.children[1].textContent = desc;        // texto amigable ( Leyendo X,  …)
   d.children[2].textContent = short;
   body.appendChild(d);
   S.plan.steps++;
@@ -1333,7 +1360,7 @@ async function send() {
   clearAttachedImage();
   const p = S.providers.find(x => x.name === $("#selProv").value);
   if (!p || (!p.has_key && p.name !== "custom")) {
-    agentMsg("Configura la API key (⚙) para empezar");
+    agentMsg("Configura la API key () para empezar");
     return;
   }
   startThinking();
@@ -1351,7 +1378,7 @@ async function send() {
     stopThinking();
     planDone();
     S.streamEl = null; S.thinkEl = null;
-    agentMsg("❌ Falló la llamada: " + (e.message || e));
+    agentMsg(" Falló la llamada: " + (e.message || e));
     reportErr("send_chat: " + (e.message || e));
     setStatus("Error");
   } finally {
@@ -1396,7 +1423,7 @@ function stopHeartbeat() {
 function cancelRequest() {
   api.cancel();
   stopThinking();
-  setStatus("⏹ Deteniendo…");
+  setStatus(" Deteniendo…");
 }
 
 /* ── comandos slash ── */
@@ -1425,13 +1452,13 @@ async function command(msg) {
 async function history_() {
   const files = await api.history();
   if (!files.length) return sysMsg("Sin historial");
-  for (const f of files) sysMsg(`📁 ${f.id}: ${f.first}`);
-  sysMsg("💡 /resume <id> para restaurar");
+  for (const f of files) sysMsg(` ${f.id}: ${f.first}`);
+  sysMsg(" /resume <id> para restaurar");
 }
 
 async function resume(sid) {
   const msgs = await api.resume(sid);
-  if (msgs.error) return sysMsg("❌ " + msgs.error);
+  if (msgs.error) return sysMsg(" " + msgs.error);
   S.chatId = sid;
   $("#msgs").innerHTML = "";
   for (const m of msgs) {
@@ -1439,7 +1466,7 @@ async function resume(sid) {
     else if (m.role === "LOW") agentMsg(m.content);
     else sysMsg(m.content);
   }
-  sysMsg(`📂 Restaurada (${msgs.length} msgs)`);
+  sysMsg(` Restaurada (${msgs.length} msgs)`);
   renderChatTabs();
 }
 
@@ -1510,9 +1537,9 @@ async function switchChat(id) {
 async function closeChat(id, label) {
   if (!id) return;
   const r = await api.delete_session(id);
-  if (r && r.error) return sysMsg("❌ No pude cerrar la conversación: " + r.error);
+  if (r && r.error) return sysMsg(" No pude cerrar la conversación: " + r.error);
   S.chats = (r && r.chats) || [];
-  // si cerré la que estaba abierta, el backend arrancó una nueva → limpiar chat
+  // si cerré la que estaba abierta, el backend arrancó una nueva  limpiar chat
   if (r && r.was_active) {
     S.chatId = r.session_id;
     $("#msgs").innerHTML = "";
@@ -1582,7 +1609,7 @@ function initSplitters() {
 async function showLeaderboard() {
   const r = await api.leaderboard();
   if (!r.n_desafios) return sysMsg("Todavía no hay desafíos guardados — corré uno con ⚖");
-  let txt = `🏆 Tabla de posiciones (${r.n_desafios} desafíos)\n`;
+  let txt = `<i class="fas fa-trophy"></i> Tabla de posiciones (${r.n_desafios} desafíos)\n`;
   r.tabla.slice(0, 10).forEach((d, i) => {
     txt += `${i + 1}. ${d.model} — ${d.wins} victorias · ${d.tasa}% funciona · ${d.lat_prom}ms prom\n`;
   });
@@ -1608,7 +1635,7 @@ async function propose(code) {
   card.className = "card";
   const row = document.createElement("div");
   row.className = "chg-row";
-  row.innerHTML = '<span class="pen">✎</span><span class="file"></span>' +
+  row.innerHTML = '<span class="pen"></span><span class="file"></span>' +
     `<span class="plus">+${st.adds}</span><span class="minus">−${st.dels}</span>` +
     '<span class="flex1"></span><span class="verdiff">Ver diff</span>';
   row.querySelector(".file").textContent = t ? t.name : "editor";
@@ -1620,7 +1647,7 @@ async function propose(code) {
   const no = document.createElement("button");
   no.className = "no"; no.textContent = "Rechazar";
   const done = msg => { ok.disabled = no.disabled = true; setStatus(msg); };
-  ok.onclick = () => { clearAgentLines(); S.pending = null; done("✅ Cambios aceptados"); };
+  ok.onclick = () => { clearAgentLines(); S.pending = null; done(" Cambios aceptados"); };
   no.onclick = () => {
     if (S.pending) {
       if (S.cur === S.pending.tid) { S.loading = true; cm.setValue(S.pending.old); S.loading = false; }
@@ -1643,7 +1670,9 @@ function clearAgentLines() {
 
 /* ── diff lado a lado (antes / después) ── */
 function esc(s) {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  // escapa también comillas: esc() se usa dentro de atributos title="…"
+  return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 function showDiff(oldTxt, newTxt, name) {
   // LCS por líneas para marcar agregados/borrados/iguales
@@ -1769,9 +1798,9 @@ function modalKeys() {
       try {
         JSON.parse(bj);           // valida antes de mandar
         const rb = await api.social_save_brand(bj);
-        if (rb && rb.error) sysMsg("⚠ Marca: " + rb.error);
+        if (rb && rb.error) sysMsg(" Marca: " + rb.error);
       } catch (e) {
-        sysMsg("⚠ El Brand Profile no es JSON válido — no se guardó (" + e.message + ")");
+        sysMsg(" El Brand Profile no es JSON válido — no se guardó (" + e.message + ")");
       }
     }
     S.agent = await api.save_agent_config($("#agSteps").value, $("#agConts").value, $("#agMem").value, $("#agVerify").checked, $("#agDesign").checked);
@@ -1785,19 +1814,19 @@ function modalKeys() {
     fillSelect($("#selModel"), st.models, st.model);
     updApis(st);
     closeModal();
-    sysMsg("✅ Configuración guardada");
+    sysMsg(" Configuración guardada");
   };
 }
 
-/* ── ⚙ → Redes Sociales: conexiones OAuth desde LOW ── */
+/* ──   Redes Sociales: conexiones OAuth desde LOW ── */
 async function renderSocialCfg(firstLoad) {
   const st = await api.social_state();
   if (!$("#socRows")) return;                       // el modal ya se cerró
-  if (st && st.error) { $("#socRows").textContent = "⚠ " + st.error; return; }
+  if (st && st.error) { $("#socRows").textContent = " " + st.error; return; }
   $("#socRedir").textContent = st.redirect_uri || "";
   $("#socRows").innerHTML = (st.platforms || []).map(p => p.connected
     ? `<div class="krow soc-row" data-k="${p.key}"><label>${p.label}</label>
-         <span class="soc-st" title="${esc(p.handle || "")}">● ${esc(p.handle || "conectado")}</span>
+         <span class="soc-st" title="${esc(p.handle || "")}"> ${esc(p.handle || "conectado")}</span>
          <button class="ghost soc-off" data-k="${p.key}">Desconectar</button></div>`
     : `<div class="krow soc-row" data-k="${p.key}"><label>${p.label}</label>
          <input class="soc-id" placeholder="Client ID${p.has_app ? " (ya guardado)" : ""}" spellcheck="false">
@@ -1811,11 +1840,11 @@ async function renderSocialCfg(firstLoad) {
       row.querySelector(".soc-id").value.trim(),
       row.querySelector(".soc-sec").value.trim());
     if (r && r.error) {
-      sysMsg("❌ " + b.dataset.k + ": " + r.error);
+      sysMsg(" " + b.dataset.k + ": " + r.error);
       b.disabled = false; b.textContent = "Conectar";
     } else {
-      sysMsg("✅ Cuenta conectada" + (r.handle ? ": " + r.handle : "") +
-             (r.warning ? " · ⚠ " + r.warning : ""));
+      sysMsg(" Cuenta conectada" + (r.handle ? ": " + r.handle : "") +
+             (r.warning ? " ·  " + r.warning : ""));
       renderSocialCfg(false);
     }
   });
@@ -1829,6 +1858,123 @@ async function renderSocialCfg(firstLoad) {
     $("#brandJson").value = JSON.stringify(st.brand || {}, null, 2);
 }
 
+/* ── Redes sociales: panel del módulo (nuevo post, cola, templates) ── */
+async function modalSocial() {
+  openModal(`<h2>Redes sociales</h2><div class="sub">Cargando…</div>`);
+  const st = await api.social_state();
+  if ($("#overlay").hidden) return;                 // lo cerraron mientras cargaba
+  if (st && st.error) {
+    openModal(`<h2>Redes sociales</h2><div class="sub">${esc(st.error)}</div>
+      <div class="m-actions"><button class="primary" id="mCancel">Cerrar</button></div>`);
+    $("#mCancel").onclick = closeModal;
+    return;
+  }
+  const nets = (st.platforms || []).filter(p => p.key !== "canva");
+  const conn = nets.filter(p => p.connected);
+  const canva = (st.platforms || []).find(p => p.key === "canva");
+  const chips = (st.platforms || []).map(p =>
+    `<span class="soc-chip${p.connected ? " on" : ""}" title="${esc(p.handle || (p.connected ? "conectada" : "sin conectar — Cuentas y marca"))}">${esc(p.label)}</span>`).join("");
+  const tplOpts = ['<option value="">Sin template (solo texto)</option>']
+    .concat((st.templates || []).map(t =>
+      `<option value="${t.id}">${esc(t.name || t.canva_template_id)}${t.format ? " · " + esc(t.format) : ""}</option>`)).join("");
+  const netOpts = conn.length
+    ? conn.map(p => `<option value="${p.key}">${esc(p.label)}</option>`).join("")
+    : '<option value="">Sin cuentas conectadas</option>';
+  // estado  [ícono del set, etiqueta]
+  const ST = { draft: ["i-pencil", "borrador"], validated: ["i-check", "validado"],
+               rendering: ["i-image", "render"], ready: ["i-artifact", "listo"],
+               scheduled: ["i-clock", "programado"], publishing: ["i-send", "publicando"],
+               published: ["i-check", "publicado"], failed: ["i-x", "falló"] };
+  const rows = (st.queue || []).map(q => {
+    const [ico, lbl] = ST[q.status] || ["i-file", q.status];
+    return `<div class="q-row st-${q.status}">
+      <span class="q-st" title="${esc(q.error || lbl)}">${icoUse(ico)} ${lbl}</span>
+      <span class="q-net">${esc(q.network)}</span>
+      <span class="q-cap" title="${esc(q.caption)}">${esc(q.caption) || "(sin texto)"}</span>
+      <span class="q-when">${esc((q.published_at || q.scheduled_at || "").replace("T", " ").slice(0, 16))}</span>
+      ${q.status === "published" || q.status === "publishing" ? ""
+        : `<button class="ibtn q-go" data-id="${q.id}" title="Validar contra la marca, renderizar y publicar ya">${icoUse("i-play")}</button>`}
+      ${q.status === "publishing" ? ""
+        : `<button class="ibtn q-del" data-id="${q.id}" title="Quitar de la cola">${icoUse("i-x")}</button>`}
+    </div>`;
+  }).join("") || '<div class="sub">La cola está vacía — creá tu primer post arriba.</div>';
+  openModal(`
+    <h2>Redes sociales</h2>
+    <div class="sub">El autopiloto de LOW: encolás el post, el agente lo valida
+    contra tu marca, lo renderiza con Canva (si elegís template) y lo publica
+    solo — ya o a la hora programada.</div>
+    <div class="soc-chips">${chips}
+      <div class="flex1"></div>
+      <button class="ghost soc-btn" id="socCfg" title="Conectar cuentas (OAuth) y editar la identidad de marca">${icoUse("i-gear")} Cuentas y marca</button>
+      ${canva && canva.connected ? `<button class="ghost soc-btn" id="socSync" title="Traer los Brand Templates de tu Canva">${icoUse("i-routine")} Templates</button>` : ""}
+    </div>
+    <h2 style="margin-top:14px">Nuevo post</h2>
+    <div class="krow"><label>Red</label><select id="socNet" class="langsel">${netOpts}</select>
+      <label class="soc-l2">Template</label><select id="socTpl" class="langsel">${tplOpts}</select></div>
+    <textarea id="socCopy" class="cmp-field" rows="3" spellcheck="false"
+      placeholder="¿Qué querés publicar? El agente lo adapta al tono de tu marca y a los límites de la red."></textarea>
+    <div class="krow"><label>Programar</label><input type="datetime-local" id="socWhen">
+      <button class="ghost soc-btn" id="socQueue" title="Queda en la cola y sale solo a la hora elegida">${icoUse("i-clock")} Programar</button>
+      <div class="flex1"></div>
+      <button class="primary soc-btn" id="socNow" title="Validar, renderizar y publicar ahora mismo">${icoUse("i-send")} Publicar ya</button></div>
+    <h2 style="margin-top:14px">Cola de contenido</h2>
+    <div id="socQ">${rows}</div>
+    <div class="m-actions">
+      <button class="ghost soc-btn" id="socRefresh">${icoUse("i-routine")} Actualizar</button>
+      <button class="primary" id="mCancel">Cerrar</button>
+    </div>`);
+  $("#mCancel").onclick = closeModal;
+  $("#socRefresh").onclick = modalSocial;
+  $("#socCfg").onclick = () => { closeModal(); modalKeys(); };
+  const sync = $("#socSync");
+  if (sync) sync.onclick = async () => {
+    sync.disabled = true; sync.textContent = "Sincronizando…";
+    const r = await api.social_sync_templates();
+    if (r && r.error) sysMsg("Templates: " + r.error);
+    else sysMsg(`${(r.templates || []).length} template(s) de Canva sincronizados`);
+    modalSocial();
+  };
+  const newPost = async (publishNow) => {
+    const net = $("#socNet").value;
+    const copy = $("#socCopy").value.trim();
+    const tpl = $("#socTpl").value;
+    const when = $("#socWhen").value;
+    if (!net) return sysMsg("Conectá una cuenta primero (Cuentas y marca)");
+    if (!copy) return sysMsg("Escribí el contenido del post");
+    if (!publishNow && !when) return sysMsg("Elegí fecha y hora para programarlo");
+    const btn = $(publishNow ? "#socNow" : "#socQueue");
+    const prev = btn.innerHTML;
+    btn.disabled = true; btn.textContent = publishNow ? "Publicando…" : "Encolando…";
+    const r = await api.social_enqueue(net, copy, tpl,
+      publishNow ? "" : new Date(when).toISOString());
+    if (r && r.error) {
+      sysMsg(r.error);
+      btn.disabled = false; btn.innerHTML = prev;
+      return;
+    }
+    if (publishNow) {
+      const p = await api.social_publish_now(r.qid);
+      if (p && p.error) sysMsg(p.error);
+    } else {
+      sysMsg(`Post #${r.qid} programado para ${when.replace("T", " ")} — sale solo`);
+    }
+    modalSocial();
+  };
+  $("#socNow").onclick = () => newPost(true);
+  $("#socQueue").onclick = () => newPost(false);
+  document.querySelectorAll("#socQ .q-go").forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    const p = await api.social_publish_now(b.dataset.id);
+    if (p && p.error) sysMsg(p.error);
+    modalSocial();
+  });
+  document.querySelectorAll("#socQ .q-del").forEach(b => b.onclick = async () => {
+    const r = await api.social_queue_delete(b.dataset.id);
+    if (r && r.error) sysMsg(r.error);
+    modalSocial();
+  });
+}
+
 function openModal(html) { $("#modal").innerHTML = html; $("#overlay").hidden = false; }
 function closeModal() { $("#overlay").hidden = true; }
 
@@ -1836,7 +1982,7 @@ function closeModal() { $("#overlay").hidden = true; }
 function modalModelSearch() {
   const opts = [...$("#selModel").options].map(o => o.value)
     .filter(v => v && v !== "(configura la key)");
-  if (!opts.length) return sysMsg("No hay modelos para buscar — configurá la API key del proveedor (⚙).");
+  if (!opts.length) return sysMsg("No hay modelos para buscar — configurá la API key del proveedor ().");
   const cur = $("#selModel").value;
   openModal(`<h2>Buscar modelo</h2>
     <div class="sub">Proveedor: <b>${$("#selProv").value}</b> · ${opts.length} modelos disponibles</div>
@@ -1856,7 +2002,7 @@ function modalModelSearch() {
       el.title = v;
       el.onclick = () => {
         $("#selModel").value = v; api.set_model(v); closeModal();
-        sysMsg("Modelo → " + v);
+        sysMsg("Modelo  " + v);
       };
       list.appendChild(el);
     }
@@ -1908,21 +2054,21 @@ async function imgEdit() {
   if (!a || !a.path || !prompt || S.imgBusy) return;
   ta.value = "";
   S.imgBusy = true;
-  imgDockStatus("🎨 Editando la imagen con IA (puede tardar ~medio minuto)…");
+  imgDockStatus(" Editando la imagen con IA (puede tardar ~medio minuto)…");
   try {
     const r = await api.edit_image(a.path, prompt);
-    if (r && r.error) { imgDockStatus("❌ " + r.error); return; }
-    imgDockStatus("✅ Versión nueva: " + (r.name || "") + " — la original queda intacta. ‹ › para comparar.");
+    if (r && r.error) { imgDockStatus(" " + r.error); return; }
+    imgDockStatus(" Versión nueva: " + (r.name || "") + " — la original queda intacta. ‹ › para comparar.");
     try { S.tree = (await api.refresh_tree()).tree; renderTree(); } catch (e) { /* */ }
     await openImage(r.path);
   } catch (e) {
-    imgDockStatus("❌ " + (e.message || e));
+    imgDockStatus(" " + (e.message || e));
   } finally {
     S.imgBusy = false;
   }
 }
 function showArtifacts() {
-  if (!(S.artifacts || []).length) { sysMsg("Todavía no hay artefactos — pedile al agente una página o app web, o abrí un .html y tocá ▶"); return; }
+  if (!(S.artifacts || []).length) { sysMsg("Todavía no hay artefactos — pedile al agente una página o app web, o abrí un .html y tocá "); return; }
   $("#artView").hidden = false;
   paintArtifact();
 }
@@ -1942,7 +2088,7 @@ const DZ_PAIRS = [
 async function openDesign(path) {
   if (DZ.path && DZ.path !== path) await dzPersist();
   const r = await api.image_data(path);
-  if (!r || r.error || !r.svg) return sysMsg("❌ No pude abrir el diseño: " + ((r && r.error) || path));
+  if (!r || r.error || !r.svg) return sysMsg(" No pude abrir el diseño: " + ((r && r.error) || path));
   DZ.path = path; DZ.sel = null;
   $("#dzTitle").textContent = r.name || path.split(/[\\/]/).pop();
   const cv = $("#dzCanvas");
@@ -1951,7 +2097,7 @@ async function openDesign(path) {
   cv.querySelectorAll("svg").forEach(n => n.remove());
   const tmp = document.createElement("div"); tmp.innerHTML = r.svg;
   const svg = tmp.querySelector("svg");
-  if (!svg) return sysMsg("❌ El archivo no tiene un <svg> válido: " + path);
+  if (!svg) return sysMsg(" El archivo no tiene un <svg> válido: " + path);
   cv.insertBefore(svg, $("#dzHandle"));
   if (!svg.getAttribute("width")) svg.style.width = "min(80vw, 900px)";
   DZ.zoom = 1; DZ.panX = 0; DZ.panY = 0; dzApplyZoom();
@@ -1963,9 +2109,10 @@ async function openDesign(path) {
   $("#dzHandle").hidden = true;
   $("#dzCode").hidden = true;
   dzBuildLayers();
+  if (DZ.d3) dz3dBuild();       // en espacio 3D: reconstruir los planos del cuadro nuevo
   $("#designView").hidden = false;
 }
-function closeDesign() { dzPersist(); $("#designView").hidden = true; DZ.sel = null; if (RULER) dzRulerClear(); }
+function closeDesign() { dzPersist(); if (DZ.d3) dz3dExit(true); $("#designView").hidden = true; DZ.sel = null; if (RULER) dzRulerClear(); }
 
 /* zoom del lienzo (no altera el SVG, solo la vista) */
 function dzApplyZoom() {
@@ -1979,6 +2126,7 @@ function dzApplyZoom() {
   dzPositionHandle();
   if (DZ.nodeEl && DZ.nodeEl.isConnected) dzNodesShow(DZ.nodeEl);   // reubicar nodos
   if (DZ.camMode) dzCamOverlay();                                    // y el encuadre
+  if (DZ.rulers || DZ.grid || (DZ.guides && DZ.guides.length)) dzRulersRender();
   dzPivotMark();
 }
 /* modo dibujo (Tab): oculta menús, paneles, timeline y dock — solo lienzo +
@@ -2018,7 +2166,7 @@ function dzFitView() {
       Math.min((c.width - 48) / r.width, (c.height - 48) / r.height)));
   dzApplyZoom();
 }
-/* ── 📄 Documento: tamaño del lienzo, presets y color de fondo ── */
+/* ──  Documento: tamaño del lienzo, presets y color de fondo ── */
 const DZ_DOC_PRESETS = [
   ["Cuadrado 1080×1080 (Instagram)", 1080, 1080],
   ["HD horizontal 1920×1080", 1920, 1080],
@@ -2035,7 +2183,7 @@ function dzDocModal() {
   const bg = [...svg.querySelectorAll("rect")].find(rc =>
     ((+rc.getAttribute("width") || 0) * (+rc.getAttribute("height") || 0)) >= vb[2] * vb[3] * 0.9);
   const bgColor = bg ? dzHex(bg.getAttribute("fill")) || "#ffffff" : "#ffffff";
-  openModal(`<h2>📄 Documento</h2>
+  openModal(`<h2> Documento</h2>
     <div class="sub">El tamaño define el viewBox del lienzo. Los elementos no se mueven:
     si achicás el documento pueden quedar afuera (los ves igual y los podés reacomodar).</div>
     <div class="dz-style-row">
@@ -2084,7 +2232,7 @@ function dzDocModal() {
       svg.insertBefore(rc, svg.firstChild);
     }
     dzMarkDirty(); dzBuildLayers(); dzFitView();
-    dzSetStatus(`📄 Documento: ${W}×${H}` + (noBg ? " · fondo transparente" : ""));
+    dzSetStatus(` Documento: ${W}×${H}` + (noBg ? " · fondo transparente" : ""));
   };
 }
 /* paneo del lienzo: espacio+arrastrar o botón del medio (mano de Toon Boom).
@@ -2119,7 +2267,7 @@ function dzZoomAt(factor, clientX, clientY) {
   // centro visual actual del lienzo en pantalla (incluye el pan ya aplicado)
   const r = svg.getBoundingClientRect();
   const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-  // el offset cursor→centro se escala por k; ajusto el pan para cancelar la deriva
+  // el offset cursorcentro se escala por k; ajusto el pan para cancelar la deriva
   DZ.panX = (DZ.panX || 0) + (clientX - cx) * (1 - k);
   DZ.panY = (DZ.panY || 0) + (clientY - cy) * (1 - k);
   DZ.zoom = z1;
@@ -2134,15 +2282,17 @@ function dzSelect(el) {
   dzBuildLayers();
   if (DZ.rigMode) dzRigPanelSync();
   dzStyleSync(el);
+  dzLayerToolsSync(el);
   dzPivotMark();
   // modo comentario: el dock ahora apunta SOLO a este elemento
-  $("#dzPrompt").placeholder = `💬 Comentario sobre <${el.tagName.toLowerCase()}> — LOW edita SOLO ese elemento`;
+  $("#dzPrompt").placeholder = `<i class="fas fa-comment-dots"></i> Comentario sobre <${el.tagName.toLowerCase()}> — LOW edita SOLO ese elemento`;
 }
 function dzDeselect() {
   if (DZ.sel) { DZ.sel.classList.remove("dz-sel"); DZ.sel = null; }
   dzClearMulti();
   $("#dzProps").hidden = true; $("#dzEmpty").hidden = false;
   $("#dzHandle").hidden = true; $("#dzPin").hidden = true;
+  const box = $("#dzSelBox"); if (box) box.hidden = true;
   const rot = $("#dzRotate"); if (rot) rot.hidden = true;
   const pv = $("#dzPivot"); if (pv) pv.hidden = true;
   dzBuildLayers();
@@ -2151,14 +2301,19 @@ function dzDeselect() {
 /* ubica el tirador de resize (esquina inferior-derecha) y el pin de comentario
    (esquina superior-izquierda) sobre el elemento seleccionado */
 function dzPositionHandle() {
-  const h = $("#dzHandle"), pin = $("#dzPin"), rot = $("#dzRotate");
-  if (!DZ.sel) { h.hidden = true; pin.hidden = true; if (rot) rot.hidden = true; return; }
+  const h = $("#dzHandle"), pin = $("#dzPin"), rot = $("#dzRotate"), box = $("#dzSelBox");
+  h.hidden = true;                             // la caja PS reemplaza al tirador único
+  if (!DZ.sel) { pin.hidden = true; if (rot) rot.hidden = true; if (box) box.hidden = true; return; }
   try {
     const cvRect = $("#dzCanvas").getBoundingClientRect();
     const b = DZ.sel.getBoundingClientRect();
-    h.style.left = (b.right - cvRect.left) + "px";
-    h.style.top = (b.bottom - cvRect.top) + "px";
-    h.hidden = false;
+    if (box) {
+      box.style.left = (b.left - cvRect.left) + "px";
+      box.style.top = (b.top - cvRect.top) + "px";
+      box.style.width = Math.max(1, b.width) + "px";
+      box.style.height = Math.max(1, b.height) + "px";
+      box.hidden = false;
+    }
     pin.style.left = (b.left - cvRect.left + 4) + "px";
     pin.style.top = (b.top - cvRect.top) + "px";
     pin.hidden = false;
@@ -2167,10 +2322,47 @@ function dzPositionHandle() {
       rot.style.top = (b.top - cvRect.top - 22) + "px";
       rot.hidden = false;
     }
-  } catch (e) { h.hidden = true; pin.hidden = true; if (rot) rot.hidden = true; }
+  } catch (e) { pin.hidden = true; if (rot) rot.hidden = true; if (box) box.hidden = true; }
+}
+/* resize desde cualquiera de los 8 tiradores, anclado al tirador OPUESTO
+   (transformación libre de Photoshop). hx,hy ∈ {-1,0,1}. */
+function dzBoxHandleDown(e, hx, hy) {
+  if (!DZ.sel) return;
+  e.preventDefault(); e.stopPropagation();
+  dzSnapshot();
+  const el = DZ.sel;
+  const start = dzToUser(e.clientX, e.clientY);
+  const bb = el.getBoundingClientRect();
+  const p1 = dzToUser(bb.left, bb.top), p2 = dzToUser(bb.right, bb.bottom);
+  const w0 = Math.max(1, p2.x - p1.x), h0 = Math.max(1, p2.y - p1.y);
+  let lb = null; try { lb = el.getBBox(); } catch (err) { /* sin bbox */ }
+  if (!lb) return;
+  const tr0 = el.getAttribute("transform") || "";
+  // ancla LOCAL = tirador opuesto (si agarro la derecha, fijo la izquierda)
+  const axL = hx > 0 ? lb.x : hx < 0 ? lb.x + lb.width : lb.x + lb.width / 2;
+  const ayL = hy > 0 ? lb.y : hy < 0 ? lb.y + lb.height : lb.y + lb.height / 2;
+  const corner = hx !== 0 && hy !== 0;
+  const move = (ev) => {
+    const p = dzToUser(ev.clientX, ev.clientY);
+    const dx = (p.x - start.x) * hx, dy = (p.y - start.y) * hy;
+    let kx = hx ? Math.max(0.05, (w0 + dx) / w0) : 1;
+    let ky = hy ? Math.max(0.05, (h0 + dy) / h0) : 1;
+    // esquina: proporcional por defecto; Shift = deformar libre
+    if (corner && !ev.shiftKey) { const k = Math.max(kx, ky); kx = ky = k; }
+    const tsc = `translate(${(axL * (1 - kx)).toFixed(2)} ${(ayL * (1 - ky)).toFixed(2)}) scale(${kx.toFixed(4)} ${ky.toFixed(4)})`;
+    el.setAttribute("transform", (tr0 ? tr0 + " " : "") + tsc);
+    dzPositionHandle();
+  };
+  const up = () => {
+    document.removeEventListener("mousemove", move);
+    document.removeEventListener("mouseup", up);
+    dzBuildInspector(el); dzMarkDirty();
+  };
+  document.addEventListener("mousemove", move);
+  document.addEventListener("mouseup", up);
 }
 
-/* ══ rigging (pivotes 📌): fija el eje de rotación de un elemento/parte del
+/* ══ rigging (pivotes ): fija el eje de rotación de un elemento/parte del
    cuerpo — el posado cutout de Toon Boom (peg pivots). El pivote se guarda
    en data-pivot y la rotación gira alrededor de él. ══ */
 function dzPivotClick(e) {
@@ -2184,13 +2376,13 @@ function dzPivotClick(e) {
   if (e.altKey && target.hasAttribute("data-pivot")) {
     target.removeAttribute("data-pivot");
     dzSelect(target); dzMarkDirty();
-    dzSetStatus("📌 Pivote quitado — la rotación vuelve al centro");
+    dzSetStatus(" Pivote quitado — la rotación vuelve al centro");
     return;
   }
   const p = dzToUser(e.clientX, e.clientY);
   target.setAttribute("data-pivot", `${Math.round(p.x)} ${Math.round(p.y)}`);
   dzSelect(target); dzMarkDirty();
-  dzSetStatus("📌 Pivote fijado — rotá con la manija ⟳ y gira desde acá (hombro, codo, cadera…). Alt+clic lo quita.");
+  dzSetStatus(" Pivote fijado — rotá con la manija  y gira desde acá (hombro, codo, cadera…). Alt+clic lo quita.");
 }
 function dzPivotMark() {
   const m = $("#dzPivot");
@@ -2203,7 +2395,7 @@ function dzPivotMark() {
   m.hidden = false;
 }
 
-/* rotación (manija ⟳ arriba de la selección): gira alrededor del PIVOTE si
+/* rotación (manija  arriba de la selección): gira alrededor del PIVOTE si
    el elemento tiene uno (rig cutout) o del centro si no; Shift ajusta de a
    15°. Reemplaza SOLO el rotate() agregado por este mismo arrastre. */
 function dzRotateDown(e) {
@@ -2243,12 +2435,12 @@ function dzRotateDown(e) {
 async function designEntry() {
   if (DZ.path) { $("#designView").hidden = false; return; }
   const r = await api.new_design();
-  if (r && r.error) return sysMsg("❌ " + r.error);
+  if (r && r.error) return sysMsg(" " + r.error);
   if (r && r.path) {
     try { S.tree = (await api.refresh_tree()).tree; renderTree(); } catch (e) { /* */ }
     await openDesign(r.path);
     try { dzFitView(); } catch (e) { /* */ }
-    dzSetStatus("🎨 Página en blanco lista — dibujá con las herramientas de la izquierda o pedile un diseño a LOW abajo. 📄 cambia el tamaño del lienzo.");
+    dzSetStatus(" Página en blanco lista — dibujá con las herramientas de la izquierda o pedile un diseño a LOW abajo.  cambia el tamaño del lienzo.");
   }
 }
 
@@ -2261,16 +2453,26 @@ function dzToUser(clientX, clientY) {
 }
 
 /* mousedown en el lienzo: selecciona el elemento y prepara arrastre para mover */
+/* paneles/UI flotante DENTRO de #dzCanvas: sus clics NO deben iniciar dibujo ni
+   selección (antes el lienzo hacía preventDefault y se comía los inputs  "los
+   valores del papel cebolla no cambian" + trazos fantasma) */
+const DZ_UI_SEL = ".dz-onionpanel,.dz-zpanel,.dz-xsheet,.dz-tlgrid,.dz-disc," +
+  ".dz-pendbg,.dz3d-gizmo,.dz3d-zbar,.dz3d-zhandle,.dz3d-rothandle,.dz-rulers," +
+  ".dz-selbox,.dz-cam,#dzCam";
+function dzOnUiPanel(e) {
+  return e.target && e.target.closest && e.target.closest(DZ_UI_SEL);
+}
 function dzPointerDown(e) {
+  if (dzOnUiPanel(e)) return;   // clic en un panel flotante: no seleccionar
   dzReleaseFocus();
   if (dzPanMaybe(e)) return;                           // espacio/botón medio: panear
   if (e.target.id === "dzHandle" || e.target.id === "dzRotate") return;   // tiradores propios
   if (e.target.closest && e.target.closest("#dzCam")) return;             // la cámara maneja lo suyo
   if (!["select", "direct"].includes(DZ.tool || "select")) return;   // otras: pointer events
   let el = e.target;
-  if (!el || el === $("#dzCanvas") || el.tagName.toLowerCase() === "svg") { dzDeselect(); return; }
+  if (!el || el === $("#dzCanvas") || el.tagName.toLowerCase() === "svg") { dzMarqueeStart(e); return; }
   if (el.closest && el.closest("g.dz-onion")) { dzDeselect(); return; }
-  if (el.closest && el.closest("[data-locked]")) { dzDeselect(); return; }   // capa bloqueada 🔒
+  if (el.closest && el.closest("[data-locked]")) { dzDeselect(); return; }   // capa bloqueada <i class="fas fa-lock"></i>
   // clic dentro de un grupo real (<g> guardado): seleccionar el GRUPO (como
   // Illustrator); doble clic entraría al hijo — acá con Shift+clic alcanza
   const grp = el.closest && el.closest('#dzCanvas svg > g:not(.dz-onion)');
@@ -2284,18 +2486,18 @@ function dzPointerDown(e) {
     else { DZ.multi.push(el); el.classList.add("dz-msel"); }
     if (DZ.sel && !DZ.multi.includes(DZ.sel)) { DZ.multi.push(DZ.sel); DZ.sel.classList.add("dz-msel"); }
     dzSelect(el);
-    dzSetStatus(DZ.multi.length > 1 ? "⧉ " + DZ.multi.length + " elementos seleccionados — Ctrl+G agrupa, arrastrá para moverlos juntos" : "");
+    dzSetStatus(DZ.multi.length > 1 ? " " + DZ.multi.length + " elementos seleccionados — Ctrl+G agrupa, arrastrá para moverlos juntos" : "");
     return;
   }
-  // clic normal sobre algo fuera de la multi → limpiarla
+  // clic normal sobre algo fuera de la multi  limpiarla
   if (DZ.multi.length && !DZ.multi.includes(el)) dzClearMulti();
   if (el !== DZ.sel) dzSelect(el);
   const start = dzToUser(e.clientX, e.clientY);
   const pack = (DZ.multi.length > 1 && DZ.multi.includes(el)) ? DZ.multi : [el];
   const bases = pack.map(n => ({ n, base: dzReadPos(n) }));
   let moved = false;
-  // ◆ modo rig + pieza con nombre: el arrastre POSA (clave), no toca el dibujo.
-  // Grabando (🎥): el arrastre ES la actuación — se muestrea con su tiempo real.
+  //  modo rig + pieza con nombre: el arrastre POSA (clave), no toca el dibujo.
+  // Grabando (<i class="fas fa-video"></i>): el arrastre ES la actuación — se muestrea con su tiempo real.
   let rigDrag = null;
   if (DZ.rigMode && pack.length === 1 && el.id) {
     const recNow = DZ.perf && DZ.perf.rec;
@@ -2306,13 +2508,13 @@ function dzPointerDown(e) {
                 a0: Math.atan2(start.y - pv.y, start.x - pv.x) };
     if (recNow) { recNow.active = el.id; recNow.take[el.id] = recNow.take[el.id] || []; }
   }
-  // ⏺ grabación armada: este arrastre ES la actuación — muestrear el gesto
+  // <i class="fas fa-stop-circle"></i> grabación armada: este arrastre ES la actuación — muestrear el gesto
   let rec = null;
   if (DZ.rec && DZ.rec.armed) {
     const path = dzElPath(el);
     if (path) {
       rec = { el, path, samples: [[0, 0, 0]], t0: performance.now(), last: [0, 0] };
-      dzSetStatus("⏺ GRABANDO el movimiento… soltá para terminar");
+      dzSetStatus("<i class="fas fa-stop-circle"></i> GRABANDO el movimiento… soltá para terminar");
     }
   }
   const move = (ev) => {
@@ -2347,7 +2549,7 @@ function dzPointerDown(e) {
       DZ.perf.rec.active = null;               // la pieza vuelve al replay de su pista
     } else if (moved && rigDrag && rigDrag.pose) {
       dzRigSetKey(rigDrag.id, dzRigCur(), rigDrag.pose);
-      dzSetStatus("◆ pose clavada en el cuadro " + dzRigCur() + " (Shift al arrastrar = rotar)");
+      dzSetStatus(" pose clavada en el cuadro " + dzRigCur() + " (Shift al arrastrar = rotar)");
     }
     if (moved) { dzBuildInspector(el); if (!rigDrag) dzMarkDirty(); }
     if (rec && moved) dzRecFinish(rec);
@@ -2359,6 +2561,60 @@ function dzPointerDown(e) {
 function dzClearMulti() {
   (DZ.multi || []).forEach(n => n.classList && n.classList.remove("dz-msel"));
   DZ.multi = [];
+}
+
+/* ── selección por marquee (arrastrar un rectángulo en el fondo del lienzo) ──
+   Selecciona en grupo todo lo que el rectángulo TOCA (como Illustrator).
+   Shift = sumar a la selección; Alt = solo lo que quede COMPLETAMENTE adentro. */
+function dzMarqueeStart(e) {
+  e.preventDefault();
+  const cv = $("#dzCanvas");
+  const cvRect = cv.getBoundingClientRect();
+  const x0 = e.clientX, y0 = e.clientY;
+  const box = document.createElement("div");
+  box.className = "dz-marquee";
+  cv.appendChild(box);
+  let moved = false;
+  const draw = (ev) => {
+    const l = Math.min(x0, ev.clientX), t = Math.min(y0, ev.clientY);
+    const w = Math.abs(ev.clientX - x0), h = Math.abs(ev.clientY - y0);
+    box.style.left = (l - cvRect.left) + "px"; box.style.top = (t - cvRect.top) + "px";
+    box.style.width = w + "px"; box.style.height = h + "px";
+    if (w + h > 3) moved = true;
+  };
+  const up = (ev) => {
+    document.removeEventListener("mousemove", draw);
+    document.removeEventListener("mouseup", up);
+    box.remove();
+    if (!moved) { if (!ev.shiftKey) dzDeselect(); return; }   // clic simple  deseleccionar
+    dzMarqueeSelect(Math.min(x0, ev.clientX), Math.min(y0, ev.clientY),
+                    Math.max(x0, ev.clientX), Math.max(y0, ev.clientY),
+                    ev.shiftKey, ev.altKey);
+  };
+  document.addEventListener("mousemove", draw);
+  document.addEventListener("mouseup", up);
+}
+function dzMarqueeSelect(l, t, r, b, additive, contained) {
+  const svg = $("#dzCanvas").querySelector("svg");
+  if (!svg) return;
+  const kids = [...svg.children].filter(n =>
+    !DZ_SKIP_TAGS.includes(n.tagName.toLowerCase()) &&
+    !(n.classList && (n.classList.contains("dz-onion") || n.classList.contains("dz-penui"))) &&
+    !n.hasAttribute("data-locked") && n.getAttribute("display") !== "none");
+  if (!additive) dzClearMulti();
+  DZ.multi = DZ.multi || [];
+  kids.forEach(el => {
+    let bb; try { bb = el.getBoundingClientRect(); } catch (e) { return; }
+    if (!bb.width && !bb.height) return;
+    const hit = contained
+      ? (bb.left >= l && bb.top >= t && bb.right <= r && bb.bottom <= b)
+      : !(bb.right < l || bb.left > r || bb.bottom < t || bb.top > b);   // toca
+    if (hit && !DZ.multi.includes(el)) { DZ.multi.push(el); el.classList.add("dz-msel"); }
+  });
+  if (DZ.multi.length) {
+    dzSelect(DZ.multi[DZ.multi.length - 1]);   // el "activo" es el último; la multi manda al mover
+    dzSetStatus(" " + DZ.multi.length + " elemento(s) seleccionado(s) — Ctrl+G agrupa · arrastrá para moverlos juntos · Shift suma · Alt = solo los de adentro");
+  } else { dzDeselect(); dzSetStatus("Nada en el rango"); }
 }
 
 /* posición base de un elemento según su tipo (para mover con el mouse) */
@@ -2522,7 +2778,7 @@ function dzGroupSel(unwrap) {
   if (!svg) return;
   if (unwrap) {
     const g = DZ.sel;
-    if (!g || g.tagName.toLowerCase() !== "g") return dzSetStatus("⧉ Seleccioná un grupo para desagrupar");
+    if (!g || g.tagName.toLowerCase() !== "g") return dzSetStatus(" Seleccioná un grupo para desagrupar");
     dzSnapshot();
     const parent = g.parentNode;
     // si el grupo tiene transform, los hijos lo heredan individualmente
@@ -2533,11 +2789,11 @@ function dzGroupSel(unwrap) {
     });
     g.remove(); DZ.sel = null;
     dzDeselect(); dzMarkDirty(); dzBuildLayers();
-    dzSetStatus("⧉ Desagrupado");
+    dzSetStatus(" Desagrupado");
     return;
   }
   const pack = (DZ.multi || []).length > 1 ? DZ.multi.slice() : (DZ.sel ? [DZ.sel] : []);
-  if (pack.length < 2) return dzSetStatus("⧉ Shift+clic para seleccionar varios elementos y agruparlos");
+  if (pack.length < 2) return dzSetStatus(" Shift+clic para seleccionar varios elementos y agruparlos");
   dzSnapshot();
   const g = document.createElementNS(SVGNS, "g");
   // el grupo nace donde está el elemento más al frente (mantiene el orden z)
@@ -2546,7 +2802,7 @@ function dzGroupSel(unwrap) {
   inDom.forEach(n => { n.classList.remove("dz-msel"); g.appendChild(n); });
   DZ.multi = [];
   dzSelect(g); dzMarkDirty(); dzBuildLayers();
-  dzSetStatus("⧉ Grupo de " + inDom.length + " elementos (Ctrl+Shift+G desagrupa)");
+  dzSetStatus(" Grupo de " + inDom.length + " elementos (Ctrl+Shift+G desagrupa)");
 }
 
 /* ══ importar imagen como referencia/calco (nivel de imagen de OpenToonz) ══ */
@@ -2555,7 +2811,7 @@ async function dzImportImage() {
   if (!svg) return;
   const r = await api.import_ref_image();
   if (!r || r.cancel) return;
-  if (r.error) return sysMsg("❌ " + r.error);
+  if (r.error) return sysMsg(" " + r.error);
   dzSnapshot();
   const vb = (svg.getAttribute("viewBox") || "0 0 1080 1080").split(/\s+/).map(Number);
   const el = document.createElementNS(SVGNS, "image");
@@ -2605,9 +2861,9 @@ async function dzGenBg() {
   const prompt = await dzPromptModal("Generar fondo con IA",
     "describí el fondo (ej: cielo al atardecer con nubes suaves, estilo acuarela)");
   if (!prompt) return;
-  dzSetStatus("🖼 Generando fondo con IA…");
+  dzSetStatus(" Generando fondo con IA…");
   const r = await api.gen_background(prompt, "1024x1024");
-  if (!r || r.error) return dzSetStatus("❌ " + ((r && r.error) || "no se pudo generar el fondo"));
+  if (!r || r.error) return dzSetStatus(" " + ((r && r.error) || "no se pudo generar el fondo"));
   dzSnapshot();
   const vb = (svg.getAttribute("viewBox") || "0 0 1080 1080").split(/\s+/).map(Number);
   const el = document.createElementNS(SVGNS, "image");
@@ -2618,44 +2874,115 @@ async function dzGenBg() {
   el.setAttribute("data-bg", "1");
   svg.insertBefore(el, svg.firstChild);        // AL FONDO del eje z (detrás de todo)
   dzMarkDirty(); dzBuildLayers();
-  dzSetStatus("🖼 Fondo generado y enviado al fondo del lienzo (eje z)" +
+  dzSetStatus(" Fondo generado y enviado al fondo del lienzo (eje z)" +
               (r.used ? " · " + r.used : ""));
 }
 
-/* ── vectorizar: raster (imagen importada/generada) → trazos SVG editables ── */
+/* ── vectorizar: raster (imagen importada/generada)  trazos SVG editables ── */
 async function dzVectorize() {
   const svg = $("#dzCanvas").querySelector("svg");
   if (!svg) return dzSetStatus("Abrí o creá un diseño primero");
   // usar la imagen seleccionada, o la primera <image> del lienzo
   let img = (DZ.sel && DZ.sel.tagName && DZ.sel.tagName.toLowerCase() === "image")
     ? DZ.sel : svg.querySelector("image");
-  if (!img) return dzSetStatus("Importá o generá una imagen primero (🖼) y después vectorizá (✒)");
-  const href = img.getAttribute("href") ||
-    img.getAttributeNS("http://www.w3.org/1999/xlink", "href");
+  let href;
+  if (img) {
+    href = img.getAttribute("href") ||
+      img.getAttributeNS("http://www.w3.org/1999/xlink", "href");
+  } else {
+    // no hay imagen en el lienzo  elegir un archivo (p.ej. el PNG que generó
+    // el agente). Antes esto solo funcionaba con imágenes ya importadas.
+    dzSetStatus("Elegí la imagen a vectorizar (el PNG generado, un boceto…)");
+    const r = await api.import_ref_image();
+    if (!r || r.cancel) return dzSetStatus("");
+    if (r.error) return dzSetStatus(" " + r.error);
+    href = r.data;
+  }
   if (!href) return dzSetStatus("La imagen no tiene datos para vectorizar");
-  dzSetStatus("✒ Vectorizando la imagen a trazos editables…");
-  const r = await api.vectorize_image(href, "high");
-  if (!r || r.error) return dzSetStatus("❌ " + ((r && r.error) || "no se pudo vectorizar"));
-  let traced;
-  try { traced = new DOMParser().parseFromString(r.svg, "image/svg+xml").querySelector("svg"); }
-  catch (e) { return dzSetStatus("❌ el vectorizador devolvió SVG inválido"); }
-  if (!traced) return dzSetStatus("❌ el vectorizador no devolvió SVG");
-  const tw = parseFloat(traced.getAttribute("width")) || 512;
-  const th = parseFloat(traced.getAttribute("height")) || 512;
-  const ix = parseFloat(img.getAttribute("x")) || 0, iy = parseFloat(img.getAttribute("y")) || 0;
-  const iw = parseFloat(img.getAttribute("width")) || tw;
-  const ih = parseFloat(img.getAttribute("height")) || (iw * th / tw);
-  dzSnapshot();
-  const g = document.createElementNS(SVGNS, "g");
-  g.setAttribute("transform", `translate(${ix} ${iy}) scale(${iw / tw} ${ih / th})`);
-  [...traced.childNodes].forEach(n => {
-    if (n.nodeType === 1 && n.tagName.toLowerCase() !== "title")
-      g.appendChild(document.importNode(n, true));
-  });
-  img.parentNode.insertBefore(g, img.nextSibling);
-  img.remove();
-  dzSelect(g); dzMarkDirty(); dzBuildLayers();
-  dzSetStatus(`✒ Vectorizado: ${g.querySelectorAll("path").length} trazos editables (reemplazó la imagen)`);
+  openModal(`<h2>Calcar a vectores</h2>
+    <div class="sub">Convierte la imagen en trazos SVG editables siguiendo sus
+    líneas y colores. «Líneas» calca solo el trazo (tinta) — ideal para bocetos,
+    line-art y dibujos complejos; «Color» arma formas planas por color, como un
+    póster serigrafiado.</div>
+    <div class="krow"><label>Modo</label>
+      <select id="vzMode" class="langsel">
+        <option value="contorno" selected>Contorno (animación) — trazos largos y unificados, sin puntitos</option>
+        <option value="lineas">Líneas — sigue el trazo del dibujo (tinta)</option>
+        <option value="color">Color — formas planas por color</option>
+      </select>
+      <label class="soc-l2">Detalle</label>
+      <select id="vzDetail" class="langsel">
+        <option value="low">Bajo (simple)</option>
+        <option value="medium">Medio</option>
+        <option value="high" selected>Alto (complejo)</option>
+      </select></div>
+    <div class="krow"><label>Fondo</label>
+      <label class="agchk"><input type="checkbox" id="vzBg" checked>
+        quitar el fondo antes de calcar (detecta el color de las esquinas,
+        como la varita mágica de Photoshop)</label></div>
+    <div class="krow"><label>Tolerancia</label>
+      <input type="range" id="vzTol" min="4" max="96" value="32" style="flex:1"
+        title="Cuánto puede variar el color del fondo para ser eliminado">
+      <span class="dz-hint" id="vzTolLbl">32</span></div>
+    <div class="krow"><label>Referencia</label>
+      <label class="agchk"><input type="checkbox" id="vzKeep">
+        conservar la imagen original debajo (semitransparente, para seguir
+        calcando encima)</label></div>
+    <div class="m-actions">
+      <button class="ghost" id="mCancel">Cancelar</button>
+      <button class="primary" id="vzGo">Calcar</button>
+    </div>`);
+  $("#mCancel").onclick = closeModal;
+  $("#vzTol").oninput = e => { $("#vzTolLbl").textContent = e.target.value; };
+  $("#vzGo").onclick = async () => {
+    const mode = $("#vzMode").value, detail = $("#vzDetail").value;
+    const rmBg = $("#vzBg").checked, tol = +$("#vzTol").value;
+    const keep = $("#vzKeep").checked;
+    closeModal();
+    dzSetStatus(mode === "lineas"
+      ? "<i class="fas fa-pen-fancy"></i> Calcando las líneas del dibujo…"
+      : "<i class="fas fa-pen-fancy"></i> Calcando la imagen a formas de color…");
+    const r = await api.vectorize_image(href, detail, mode, rmBg, tol);
+    if (!r || r.error) return dzSetStatus(" " + ((r && r.error) || "no se pudo vectorizar"));
+    let traced;
+    try { traced = new DOMParser().parseFromString(r.svg, "image/svg+xml").querySelector("svg"); }
+    catch (e) { return dzSetStatus(" el vectorizador devolvió SVG inválido"); }
+    if (!traced) return dzSetStatus(" el vectorizador no devolvió SVG");
+    const tw = parseFloat(traced.getAttribute("width")) || 512;
+    const th = parseFloat(traced.getAttribute("height")) || 512;
+    const vb = (svg.getAttribute("viewBox") || "0 0 1080 1080").split(/\s+/).map(Number);
+    // si hay imagen fuente, calcar sobre su marco; si no (PNG generado), encajar
+    // el calco en el lienzo manteniendo proporción
+    let ix, iy, iw, ih;
+    if (img) {
+      ix = parseFloat(img.getAttribute("x")) || 0; iy = parseFloat(img.getAttribute("y")) || 0;
+      iw = parseFloat(img.getAttribute("width")) || tw;
+      ih = parseFloat(img.getAttribute("height")) || (iw * th / tw);
+    } else {
+      const k = Math.min((vb[2] || 1080) / tw, (vb[3] || 1080) / th);
+      iw = tw * k; ih = th * k;
+      ix = (vb[0] || 0) + ((vb[2] || 1080) - iw) / 2;
+      iy = (vb[1] || 0) + ((vb[3] || 1080) - ih) / 2;
+    }
+    dzSnapshot();
+    const g = document.createElementNS(SVGNS, "g");
+    g.setAttribute("transform", `translate(${ix} ${iy}) scale(${iw / tw} ${ih / th})`);
+    [...traced.childNodes].forEach(n => {
+      if (n.nodeType === 1 && n.tagName.toLowerCase() !== "title")
+        g.appendChild(document.importNode(n, true));
+    });
+    if (img) {
+      img.parentNode.insertBefore(g, img.nextSibling);
+      if (keep) img.setAttribute("opacity", "0.35");   // queda de referencia para calcar
+      else img.remove();
+    } else {
+      svg.appendChild(g);
+    }
+    dzSelect(g); dzMarkDirty(); dzBuildLayers();
+    const n = g.querySelectorAll("path").length;
+    dzSetStatus(`<i class="fas fa-pen-fancy"></i> Calco listo: ${n} trazo${n === 1 ? "" : "s"} editable${n === 1 ? "" : "s"}` +
+      (keep ? " — la imagen quedó debajo como referencia" : " (reemplazó la imagen)"));
+  };
 }
 
 /* ── coloreado inteligente / entintado con IA (FLUX Kontext / SiliconFlow) ── */
@@ -2665,13 +2992,13 @@ async function dzColorize() {
   const style = await dzPromptModal("Coloreado inteligente (IA)",
     "estilo/paleta (opcional): ej 'colores planos estilo anime, piel cálida, sombreado suave'", "");
   if (style === null) return;
-  dzSetStatus("🎨 Rasterizando el lienzo…");
+  dzSetStatus(" Rasterizando el lienzo…");
   let png;
   try { png = await dzRasterize(svg.outerHTML, 1280); }
-  catch (e) { return dzSetStatus("❌ No pude rasterizar el lienzo: " + (e.message || e)); }
-  dzSetStatus("🎨 Coloreando con IA… (puede tardar)");
+  catch (e) { return dzSetStatus(" No pude rasterizar el lienzo: " + (e.message || e)); }
+  dzSetStatus(" Coloreando con IA… (puede tardar)");
   const r = await api.ai_colorize(png, style);
-  if (!r || r.error) return dzSetStatus("❌ " + ((r && r.error) || "no se pudo colorear"));
+  if (!r || r.error) return dzSetStatus(" " + ((r && r.error) || "no se pudo colorear"));
   dzSnapshot();
   const vb = (svg.getAttribute("viewBox") || "0 0 1080 1080").split(/\s+/).map(Number);
   const el = document.createElementNS(SVGNS, "image");
@@ -2682,7 +3009,7 @@ async function dzColorize() {
   el.setAttribute("data-colorized", "1");
   svg.appendChild(el);                          // capa nueva arriba (comparás/ajustás)
   dzSelect(el); dzMarkDirty(); dzBuildLayers();
-  dzSetStatus("🎨 Coloreado con " + (r.used || "IA") +
+  dzSetStatus(" Coloreado con " + (r.used || "IA") +
               " — quedó como capa nueva arriba (movéla, bajale opacidad o borrala)");
 }
 
@@ -2815,7 +3142,7 @@ function dzPaletteRender() {
   box.appendChild(add);
   // acceso a paletas profesionales + armonías de color
   const pro = document.createElement("span");
-  pro.className = "dz-sw dz-sw-pro"; pro.textContent = "★";
+  pro.className = "dz-sw dz-sw-pro"; pro.textContent = "";
   pro.title = "Paletas profesionales y armonías de color";
   pro.onclick = dzPalettePro;
   box.appendChild(pro);
@@ -2834,20 +3161,22 @@ function dzDuplicate() {
   dzSelect(c); dzMarkDirty();
 }
 
-/* ══ herramientas de dibujo: lápiz ✏, pincel 🖌 (presión de tableta), pluma ✒ ══
+/* ══ herramientas de dibujo: lápiz , pincel <i class="fas fa-paint-brush"></i> (presión de tableta), pluma <i class="fas fa-pen-fancy"></i> ══
    Usan Pointer Events: una tableta Huion (Windows Ink) manda pointerType "pen"
-   con e.pressure real → el pincel modula el grosor con la presión. */
+   con e.pressure real  el pincel modula el grosor con la presión. */
 const SVGNS = "http://www.w3.org/2000/svg";
 let DRAW = null;   // trazo a mano alzada en curso
 let PEN = null;    // pluma vectorial en curso
 let RULER = null;  // regla/hilo: {a:{x,y}, el:SVGLineElement|null, vp:[{x,y}]} puntos de fuga
 
-const DZ_CURSORS = { select: "", direct: "default", nodes: "default", eraser: "cell",
+// select/direct  "" para que gane el CSS (flecha negra / flecha blanca);
+// nodes usa la flecha blanca también (edita puntos de vector)
+const DZ_CURSORS = { select: "", direct: "", nodes: "", eraser: "cell",
                      dropper: "copy", bucket: "pointer", hand: "grab",
                      pivot: "crosshair", ruler: "crosshair",
                      inflator: "cell", handler: "ew-resize", iron: "default",
                      pliers: "crosshair", magnet: "cell" };
-/* ══ 🩺 Diagnóstico de tableta: registra el flujo REAL de pointer events
+/* ══  Diagnóstico de tableta: registra el flujo REAL de pointer events
    (tipo · pointerId · pointerType · botones · presión · Δpx · Δms) en un panel
    en vivo, para ver qué emite la Huion de verdad en vez de suponerlo. ══ */
 function dzPenDebugToggle() {
@@ -2866,12 +3195,12 @@ function dzPenDebugToggle() {
       DZ._penDbgRawFn = null;
     }
     if (panel) panel.remove();
-    dzSetStatus("🩺 Diagnóstico de tableta OFF");
+    dzSetStatus(" Diagnóstico de tableta OFF");
     return;
   }
   panel = document.createElement("div");
   panel.id = "dzPenDbg"; panel.className = "dz-pendbg";
-  panel.innerHTML = '<div class="dz-pendbg-h">🩺 tableta — hacé UNA línea y sacá captura <span style="cursor:pointer;float:right;opacity:.7" title="Abrir diagnóstico completo en navegador" onclick="try{api.open_tablet_diag()}catch(e){}">🔗 externo</span></div><div id="dzPenDbgLog"></div>';
+  panel.innerHTML = '<div class="dz-pendbg-h"> tableta — hacé UNA línea y sacá captura <span style="cursor:pointer;float:right;opacity:.7" title="Abrir diagnóstico completo en navegador" onclick="try{api.open_tablet_diag()}catch(e){}">🔗 externo</span></div><div id="dzPenDbgLog"></div>';
   $("#dzCanvas").appendChild(panel);
   const log = $("#dzPenDbgLog");
   let lastT = 0, lastX = 0, lastY = 0, cnt = { down: 0, move: 0, up: 0, cancel: 0, raw: 0 }, buf = [];
@@ -2880,7 +3209,7 @@ function dzPenDebugToggle() {
     if (color) row.style.color = color;
     log.appendChild(row);
     while (log.childElementCount > 50) log.firstChild.remove();
-    $(".dz-pendbg-h").textContent = `🩺 down:${cnt.down} move:${cnt.move} raw:${cnt.raw} up:${cnt.up} cancel:${cnt.cancel||0}`;
+    $(".dz-pendbg-h").textContent = ` down:${cnt.down} move:${cnt.move} raw:${cnt.raw} up:${cnt.up} cancel:${cnt.cancel||0}`;
   };
   DZ._penDbgFn = (e) => {
     const cv = $("#dzCanvas");
@@ -2893,7 +3222,7 @@ function dzPenDebugToggle() {
     cnt[k] = (cnt[k] || 0) + 1;
     const co = (e.getCoalescedEvents && e.getCoalescedEvents().length) || 0;
     const pr = (e.pressure != null) ? e.pressure.toFixed(3) : "-";
-    const onCv = onCanvas ? "🎨" : "🌐";
+    const onCv = onCanvas ? "" : "";
     const line = `${onCv} ${k.padEnd(5)} id${e.pointerId} ${e.pointerType[0]} btn:${e.button} btns:${e.buttons} pr:${pr} tw:${(e.tiltX||0).toFixed(1)} Δ${dx},${dy} ${dt}ms${co?(" c"+co):""}`;
     let color = null;
     if (k === "down") color = "#33B5E8";
@@ -2907,7 +3236,7 @@ function dzPenDebugToggle() {
   DZ._penDbgRawFn = (e) => {
     cnt.raw = (cnt.raw || 0) + 1;
     const pr = (e.pressure != null) ? e.pressure.toFixed(3) : "-";
-    const line = `⚡ raw     id${e.pointerId} ${e.pointerType[0]} btns:${e.buttons} pr:${pr} tw:${(e.tiltX||0).toFixed(1)}`;
+    const line = ` raw     id${e.pointerId} ${e.pointerType[0]} btns:${e.buttons} pr:${pr} tw:${(e.tiltX||0).toFixed(1)}`;
     buf.push(line);
     if (buf.length % 50 === 0) { try { api.save_tablet_log && api.save_tablet_log(buf.join('\n')); } catch(e){} }
     addRow(line, "#FFA000");
@@ -2917,7 +3246,7 @@ function dzPenDebugToggle() {
   document.addEventListener("pointerup", DZ._penDbgFn, true);
   document.addEventListener("pointercancel", DZ._penDbgFn, true);
   $("#dzCanvas").addEventListener("pointerrawupdate", DZ._penDbgRawFn);
-  dzSetStatus("🩺 Diagnóstico ON — elegí Pincel, hacé UNA línea y mandame la captura del panel");
+  dzSetStatus(" Diagnóstico ON — elegí Pincel, hacé UNA línea y mandame la captura del panel");
 }
 
 function dzSetTool(t) {
@@ -2934,6 +3263,7 @@ function dzSetTool(t) {
   // el gotero/balde/nodos trabajan SOBRE la selección o eligiendo elemento: no deseleccionar
   if (!["select", "direct", "nodes", "dropper", "bucket", "iron", "magnet"].includes(t)) dzDeselect();
   dzSbTool(); dzToolOptsRender();
+  dz3dApplyToolClass();         // <i class="fas fa-lock"></i> solo el plano activo recibe eventos en modo dibujo
 }
 /* los clics del lienzo hacen preventDefault (para dibujar/arrastrar), y eso
    BLOQUEA el cambio de foco: si venías de escribir en el chat del dock, el
@@ -2946,7 +3276,7 @@ function dzReleaseFocus() {
 
 /* ── presión suavizada: buffer circular de las últimas N muestras.
    OpenToonz usa un track continuo con presión por punto (TThickPoint);
-   en la web la presión puede fluctuar frame a frame → media móvil.
+   en la web la presión puede fluctuar frame a frame  media móvil.
    Aplica curva gamma de sensibilidad (OpenToonz V_BrushPressureSensitivity). ── */
 function dzSmoothPressure(pr, track) {
   if (!track) return pr || 0.5;
@@ -2968,7 +3298,7 @@ function dzSmoothPressure(pr, track) {
    Principio: acumular todos los puntos y renderizar. El post-procesado
    (Ramer-Douglas-Peucker + Catmull-Rom) limpia el ruido después.
    
-   pointerdown con pointerType==="pen" → SIEMPRE inicia trazo.
+   pointerdown con pointerType==="pen"  SIEMPRE inicia trazo.
    El navegador solo dispara pointerdown con contacto real (spec).
    La presión solo afecta el GROSOR del trazo, no si se dibuja o no.
    ═══════════════════════════════════════════════════════════════════════ */
@@ -3069,11 +3399,14 @@ function dzDrawRaw(e) {
 }
 
 function dzDrawDown(e) {
+  if (dzOnUiPanel(e)) return;   // clic en un panel flotante: no dibujar
   dzReleaseFocus();
   const tool = DZ.tool || "select";
   if (DZ.spaceDown || e.button === 1 || tool === "hand") return;
   if (e.target.closest && e.target.closest("#dzCam")) return;
   if (tool === "select" || tool === "direct") return;
+  // ═══ 3D: si el clic es sobre un plano 3D, que lo maneje el handler 3D ═══
+  if (e.target.closest && e.target.closest("#dz3dStage")) return;
   const svg = $("#dzCanvas").querySelector("svg");
   if (!svg) return;
 
@@ -3139,9 +3472,9 @@ function dzDrawUp(e) {
   _drawFinish();
 }
 /* ══ post-procesado del trazo (como OpenToonz al soltar el lápiz):
-   1) media móvil → mata el temblor del pulso;
-   2) Ramer-Douglas-Peucker → deja SOLO los puntos que definen la forma;
-   3) Catmull-Rom → curva bezier limpia por esos puntos.
+   1) media móvil  mata el temblor del pulso;
+   2) Ramer-Douglas-Peucker  deja SOLO los puntos que definen la forma;
+   3) Catmull-Rom  curva bezier limpia por esos puntos.
    La intensidad la controla el deslizador «Suavizado» (0-100). ══ */
 function dzMovingAvg(pts, win) {
   if (win < 1 || pts.length < 3) return pts;
@@ -3247,7 +3580,7 @@ function dzPenScale() {
 function dzPenDown(p) {
   const svg = $("#dzCanvas").querySelector("svg");
   if (PEN && PEN.anchors.length >= 2) {
-    // clic sobre el PRIMER punto → cerrar el trazado (como Illustrator)
+    // clic sobre el PRIMER punto  cerrar el trazado (como Illustrator)
     const a0 = PEN.anchors[0], k = dzPenScale();
     if (Math.hypot(p.x - a0.x, p.y - a0.y) < 10 * k) {
       PEN.closed = true;
@@ -3268,7 +3601,7 @@ function dzPenDown(p) {
     PEN.guide.setAttribute("pointer-events", "none");
     svg.appendChild(PEN.el);
     svg.appendChild(PEN.guide);
-    dzSetStatus("✒ Pluma: clic = esquina · arrastrar = curva · clic en el 1er punto cierra · Backspace borra el último · Enter termina · Esc cancela");
+    dzSetStatus("<i class="fas fa-pen-fancy"></i> Pluma: clic = esquina · arrastrar = curva · clic en el 1er punto cierra · Backspace borra el último · Enter termina · Esc cancela");
   }
   PEN.anchors.push({ x: p.x, y: p.y, hx: p.x, hy: p.y });
   PEN.dragging = true;
@@ -3311,7 +3644,7 @@ function dzPenRender() {
   if (!PEN || !PEN.anchors.length) return;
   const A = PEN.anchors;
   PEN.el.setAttribute("d", dzPenPathD(A, false));
-  // ── capa guía: anclas ▪, manijas ─●, banda elástica ┈ ──
+  // ── capa guía: anclas ▪, manijas ─, banda elástica ┈ ──
   const k = dzPenScale();
   const g = PEN.guide;
   g.innerHTML = "";
@@ -3355,10 +3688,10 @@ function dzPenFinish(cancel) {
   } else {
     PEN.el.setAttribute("d", dzPenPathD(PEN.anchors, PEN.closed));
     if (PEN.closed && DZ.fillColor) PEN.el.setAttribute("fill", DZ.fillColor);
-    dzMirrorClone(PEN.el);                             // 🪞 modo espejo
+    dzMirrorClone(PEN.el);                             // <i class="fas fa-sync-alt"></i> modo espejo
     dzMarkDirty(); dzBuildLayers();
-    dzSetStatus(PEN.closed ? "✒ Trazado cerrado (relleno con el color actual) — editalo con nodos (A)" :
-                             "✒ Trazado listo — editalo con nodos (A)");
+    dzSetStatus(PEN.closed ? "<i class="fas fa-pen-fancy"></i> Trazado cerrado (relleno con el color actual) — editalo con nodos (A)" :
+                             "<i class="fas fa-pen-fancy"></i> Trazado listo — editalo con nodos (A)");
     PEN = null;
     return;
   }
@@ -3366,7 +3699,7 @@ function dzPenFinish(cancel) {
   dzSetStatus("");
 }
 
-/* ══ atajos de teclado configurables (Preferencias ⚙ del estudio) ══ */
+/* ══ atajos de teclado configurables (Preferencias  del estudio) ══ */
 const DZ_KEY_DEFAULTS = {
   select: "v", direct: "d", hand: "h", nodes: "a", pencil: "n", brush: "b", pen: "p",
   eraser: "e", dropper: "i", bucket: "g", camera: "c", pivot: "j",
@@ -3381,8 +3714,8 @@ const DZ_KEY_LABELS = {
   dropper: "Cuentagotas", bucket: "Balde de pintura", camera: "Cámara",
   pivot: "Pivote de rig", rect: "Rectángulo", ellipse: "Elipse",
   text: "Texto", line: "Línea", zoomin: "Acercar", zoomout: "Alejar",
-  zoom100: "Zoom 100%", zoomfit: "Ajustar a pantalla", rotl: "Girar vista ⟲",
-  rotr: "Girar vista ⟳", mirror: "Modo espejo", prevframe: "Cuadro anterior",
+  zoom100: "Zoom 100%", zoomfit: "Ajustar a pantalla", rotl: "Girar vista ",
+  rotr: "Girar vista ", mirror: "Modo espejo", prevframe: "Cuadro anterior",
   nextframe: "Cuadro siguiente",
 };
 function dzKeysLoad() {
@@ -3412,7 +3745,7 @@ function dzRunAction(act) {
   if (act === "prevframe" && DZ.anim) { dzAnimStopIf(); return dzGoFrame(Math.max(0, DZ.anim.idx - 1)); }
   if (act === "nextframe" && DZ.anim) { dzAnimStopIf(); return dzGoFrame(Math.min(DZ.anim.frames.length - 1, DZ.anim.idx + 1)); }
 }
-/* ⚙ Preferencias del estudio: reasignar atajos (clic en el campo y apretá la
+/*  Preferencias del estudio: reasignar atajos (clic en el campo y apretá la
    tecla nueva) + suavizado por defecto */
 function dzPrefsModal() {
   dzKeysLoad();
@@ -3420,7 +3753,7 @@ function dzPrefsModal() {
     `<div class="krow"><label>${DZ_KEY_LABELS[act] || act}</label>` +
     `<input class="dz-keycap" data-act="${act}" value="${(DZ.keymap[act] || "").toUpperCase()}" readonly ` +
     `placeholder="(sin atajo)" title="Clic y apretá la tecla nueva · Supr la borra"></div>`).join("");
-  openModal(`<h2>⚙ Preferencias del estudio</h2>
+  openModal(`<h2> Preferencias del estudio</h2>
     <div class="sub">Clic en un campo y apretá la tecla nueva (una letra, número o símbolo).
     Supr/Retroceso deja la acción sin atajo. Los atajos funcionan cuando no estás escribiendo texto.</div>
     ${rows}
@@ -3488,6 +3821,123 @@ function dzToScreen(x, y) {
   const pt = svg.createSVGPoint(); pt.x = x; pt.y = y;
   const sp = pt.matrixTransform(svg.getScreenCTM());
   return { x: sp.x - cv.left, y: sp.y - cv.top };
+}
+
+/* ══ REGLAS + GUÍAS + CUADRÍCULA (2D) ═══════════════════════════════════════
+   Reglas en los 4 bordes (Ctrl+R) en unidades del lienzo, guías arrastrables
+   desde las reglas (como Photoshop) y cuadrícula de referencia. Todo es ayuda
+   de vista: NO se guarda en el .svg. ══ */
+function dzNiceStep(raw) {
+  const p = Math.pow(10, Math.floor(Math.log10(Math.max(1e-6, raw))));
+  const n = raw / p;
+  return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p;
+}
+function dzRulersToggle() {
+  DZ.rulers = !DZ.rulers;
+  $("#dzRulers").hidden = !DZ.rulers;
+  $("#dzRulersBtn") && $("#dzRulersBtn").classList.toggle("active", DZ.rulers);
+  if (DZ.rulers) dzRulersRender();
+  dzSetStatus(DZ.rulers ? "Reglas activas — arrastrá desde una regla para crear una guía (Ctrl+R oculta)" : "");
+}
+function dzGridToggle() {
+  DZ.grid = !DZ.grid;
+  $("#dzGrid2d").hidden = !DZ.grid;
+  $("#dzGridBtn") && $("#dzGridBtn").classList.toggle("active", DZ.grid);
+  if (DZ.grid) dzRulersRender();
+}
+function dzGuidesToggle() {
+  DZ.guidesOn = DZ.guidesOn === false ? true : (DZ.guidesOn === undefined ? true : !DZ.guidesOn);
+  $("#dzGuides").hidden = !DZ.guidesOn;
+  $("#dzGuidesBtn") && $("#dzGuidesBtn").classList.toggle("active", DZ.guidesOn);
+}
+function dzRulersRender() {
+  const svg = $("#dzCanvas").querySelector("svg");
+  if (!svg) return;
+  const cv = $("#dzCanvas").getBoundingClientRect();
+  const o = dzToScreen(0, 0);
+  const scale = Math.abs(dzToScreen(1, 0).x - o.x) || 1;   // px por unidad (rot=0)
+  const step = dzNiceStep(64 / scale);
+  if (DZ.rulers) {
+    // eje X (arriba y abajo)
+    const uL = dzToUser(cv.left, cv.top).x, uR = dzToUser(cv.right, cv.top).x;
+    let a = Math.min(uL, uR), b = Math.max(uL, uR), hx = "";
+    for (let t = Math.ceil(a / step) * step; t <= b; t += step) {
+      const sx = dzToScreen(t, 0).x;
+      hx += `<span class="dz-tk" style="left:${sx.toFixed(1)}px"><i>${Math.round(t)}</i></span>`;
+      const sxm = dzToScreen(t + step / 2, 0).x;
+      hx += `<span class="dz-tk mn" style="left:${sxm.toFixed(1)}px"></span>`;
+    }
+    $("#dzRlTop").innerHTML = hx; $("#dzRlBottom").innerHTML = hx;
+    // eje Y (izquierda y derecha)
+    const uT = dzToUser(cv.left, cv.top).y, uB = dzToUser(cv.left, cv.bottom).y;
+    let c = Math.min(uT, uB), d = Math.max(uT, uB), hy = "";
+    for (let t = Math.ceil(c / step) * step; t <= d; t += step) {
+      const sy = dzToScreen(0, t).y;
+      hy += `<span class="dz-tk v" style="top:${sy.toFixed(1)}px"><i>${Math.round(t)}</i></span>`;
+      const sym = dzToScreen(0, t + step / 2).y;
+      hy += `<span class="dz-tk v mn" style="top:${sym.toFixed(1)}px"></span>`;
+    }
+    $("#dzRlLeft").innerHTML = hy; $("#dzRlRight").innerHTML = hy;
+  }
+  if (DZ.grid) {
+    const g = $("#dzGrid2d");
+    const cell = step * scale;
+    g.style.backgroundSize = `${cell}px ${cell}px, ${cell}px ${cell}px, ${cell * 5}px ${cell * 5}px, ${cell * 5}px ${cell * 5}px`;
+    g.style.backgroundPosition = `${o.x}px ${o.y}px`;
+  }
+  dzGuidesRender();
+}
+function dzGuidesRender() {
+  const box = $("#dzGuides");
+  if (!box) return;
+  const guides = DZ.guides || [];
+  box.innerHTML = "";
+  guides.forEach((g, i) => {
+    const line = document.createElement("div");
+    if (g.axis === "h") {
+      const y = dzToScreen(0, g.u).y;
+      line.className = "dz-guide h"; line.style.top = y.toFixed(1) + "px";
+    } else {
+      const x = dzToScreen(g.u, 0).x;
+      line.className = "dz-guide v"; line.style.left = x.toFixed(1) + "px";
+    }
+    line.dataset.i = i;
+    line.onpointerdown = (e) => dzGuideDrag(e, i);
+    box.appendChild(line);
+  });
+}
+/* arrastrar una guía existente; soltarla sobre una regla la elimina */
+function dzGuideDrag(e, i) {
+  e.preventDefault(); e.stopPropagation();
+  const g = DZ.guides[i];
+  const move = (ev) => {
+    const p = dzToUser(ev.clientX, ev.clientY);
+    g.u = g.axis === "h" ? p.y : p.x;
+    dzGuidesRender();
+  };
+  const up = (ev) => {
+    document.removeEventListener("pointermove", move);
+    document.removeEventListener("pointerup", up);
+    const cv = $("#dzCanvas").getBoundingClientRect();
+    const rx = ev.clientX - cv.left, ry = ev.clientY - cv.top;
+    if (rx < 20 || ry < 20 || rx > cv.width - 20 || ry > cv.height - 20) {
+      DZ.guides.splice(i, 1);   // soltada sobre una regla  borrar
+    }
+    dzGuidesRender();
+  };
+  document.addEventListener("pointermove", move);
+  document.addEventListener("pointerup", up);
+}
+/* crear una guía arrastrando desde una regla */
+function dzRulerPull(e, axis) {
+  e.preventDefault();
+  if (DZ.guidesOn === false) dzGuidesToggle();
+  DZ.guides = DZ.guides || [];
+  const p0 = dzToUser(e.clientX, e.clientY);
+  DZ.guides.push({ axis, u: axis === "h" ? p0.y : p0.x });
+  const i = DZ.guides.length - 1;
+  dzGuidesRender();
+  dzGuideDrag(e, i);
 }
 /* parsea un atributo d a comandos absolutos: [{c:"M",n:[x,y]},{c:"C",n:[...]}] */
 function dzPathParse(d) {
@@ -3650,7 +4100,7 @@ function dzEraseStart(e) {
   const eraseAt = (x, y) => {
     const el = document.elementFromPoint(x, y);
     if (!el || !el.closest || el.closest("g.dz-onion")) return;
-    if (el.closest("[data-locked]")) return;           // capa bloqueada 🔒
+    if (el.closest("[data-locked]")) return;           // capa bloqueada <i class="fas fa-lock"></i>
     const inSvg = el.closest("#dzCanvas svg");
     if (!inSvg || el === svg) return;
     const t = el.tagName.toLowerCase();
@@ -3691,47 +4141,140 @@ function dzDropperPick(e) {
   if (sw) { DZ.drawW = Math.round(sw); const i = $("#dzDrawW"); if (i) i.value = DZ.drawW; }
   dzSetStatus("💧 Tomé relleno " + (fill || "—") + " · trazo " + (stroke || "—"));
 }
-/* ══ Balde (G): busca el elemento PINTABLE bajo el cursor, bajando por
-   grupos (<g>, <a>) hasta encontrar path/rect/circle/ellipse/polygon/
-   polyline/line/text. Shift+clic pinta el trazo en vez el relleno. ══ */
-const DZ_PAINTABLE = new Set(["path","rect","circle","ellipse","polygon","polyline","line","text"]);
-function dzBucketApply(e) {
-  let el = document.elementFromPoint(e.clientX, e.clientY);
-  if (!el || !el.closest || !el.closest("#dzCanvas svg") || el.closest("g.dz-onion")) return;
-  if (el.closest("[data-locked]")) return;             // capa bloqueada 🔒
-  // bajar por grupos: el balde pinta el primer elemento "pintable"
-  while (el && !DZ_PAINTABLE.has(el.tagName.toLowerCase())) {
-    const g = el.closest("g, a");
-    if (!g) break;
-    // buscar el primer hijo pintable dentro del grupo
-    const child = g.querySelector("path,rect,circle,ellipse,polygon,polyline,line,text");
-    if (child) { el = child; break; }
-    // si no, subir al padre y probar de nuevo
-    el = g.parentElement;
-  }
-  if (!el || el.tagName.toLowerCase() === "svg") return;
+/* ══ Balde (G): RELLENO POR ÁREA (flood fill, estilo Toon Boom). Clic dentro
+   de una zona cerrada por líneas y la pinta con una forma vectorial nueva,
+   detrás de las líneas. Antes recoloreaba el elemento bajo el cursor, pero
+   sobre líneas (fill=none) o zonas cerradas eso "no hacía nada" — por eso ahora
+   trabaja por región. Shift = pinta con el color de trazo. ══ */
+async function dzBucketApply(e) {
+  const svg = $("#dzCanvas").querySelector("svg");
+  if (!svg) return;
+  const vb = dzVB(), W = vb[2] || 1080, H = vb[3] || 1080;
+  const p = dzToUser(e.clientX, e.clientY);
+  dzSetStatus("🪣 Rellenando la zona…");
+  // rasterizar el dibujo (sin overlays de UI ni planos 3D)
+  const clean = svg.cloneNode(true);
+  clean.querySelectorAll(".dz-onion,.dz-penui,[data-dz3d]").forEach(n => n.remove());
+  clean.removeAttribute("style");
+  let durl;
+  try { durl = await dzRasterize(clean.outerHTML, 1000); }
+  catch (err) { return dzSetStatus("🪣 no pude preparar el relleno"); }
+  const img = new Image();
+  try { await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = durl; }); }
+  catch (err) { return dzSetStatus("🪣 no pude cargar el raster"); }
+  const rw = img.width, rh = img.height;
+  const c = document.createElement("canvas"); c.width = rw; c.height = rh;
+  const ctx = c.getContext("2d"); ctx.drawImage(img, 0, 0);
+  let data;
+  try { data = ctx.getImageData(0, 0, rw, rh); }
+  catch (err) { return dzSetStatus("🪣 no pude leer los píxeles"); }
+  const sx = Math.round((p.x - vb[0]) / W * rw), sy = Math.round((p.y - vb[1]) / H * rh);
+  if (sx < 0 || sy < 0 || sx >= rw || sy >= rh) return dzSetStatus("🪣 clic fuera del lienzo");
+  const res = dzFloodMask(data, rw, rh, sx, sy, 64);
+  if (!res) return dzSetStatus("🪣 no hay una zona para rellenar ahí");
+  if (res.count > rw * rh * 0.9) return dzSetStatus("🪣 la zona no está cerrada — cerrá el contorno con líneas");
+  const loops = dzTraceMaskJS(res.mask, rw, rh);
+  if (!loops.length) return dzSetStatus("🪣 no pude trazar la zona");
+  const sxU = W / rw, syU = H / rh;
+  const parts = loops.map(loop => {
+    let pts = loop.slice(0, -1).map(([x, y]) => [vb[0] + x * sxU, vb[1] + y * syU]);
+    pts = dzRDP(pts, 1.3 * sxU);
+    return pts.length >= 3 ? dzSmoothPath(pts) + " Z" : "";
+  }).filter(Boolean);
+  if (!parts.length) return dzSetStatus("🪣 zona muy chica");
   dzSnapshot();
-  if (e.shiftKey) el.setAttribute("stroke", DZ.drawColor || "#1a1a1a");
-  else el.setAttribute("fill", DZ.fillColor || "#F0450E");
+  const path = document.createElementNS(SVGNS, "path");
+  path.setAttribute("d", parts.join(" "));
+  path.setAttribute("fill", e.shiftKey ? (DZ.drawColor || "#1a1a1a") : (DZ.fillColor || "#F0450E"));
+  path.setAttribute("fill-rule", "evenodd");
+  path.setAttribute("data-low", "fill");
+  // detrás de las líneas, pero por encima de un fondo de página que cubra el lienzo
+  let ref = [...svg.children].find(n => !DZ_SKIP_TAGS.includes(n.tagName.toLowerCase()));
+  while (ref && ref.tagName.toLowerCase() === "rect" &&
+         (+ref.getAttribute("width") || 0) * (+ref.getAttribute("height") || 0) >= W * H * 0.9)
+    ref = ref.nextElementSibling;
+  svg.insertBefore(path, ref || null);
   dzMarkDirty(); dzBuildLayers();
+  dzSetStatus("🪣 Zona rellenada");
+}
+/* flood fill 4-conexo sobre el ImageData; frena en píxeles de distinto color
+   (las líneas). Devuelve {mask, count} o null. */
+function dzFloodMask(imgData, w, h, sx, sy, tol) {
+  const d = imgData.data;
+  const seed = (sy * w + sx) * 4;
+  const sr = d[seed], sg = d[seed + 1], sb = d[seed + 2];
+  const mask = new Uint8Array(w * h);
+  const stack = [sy * w + sx];
+  let count = 0;
+  while (stack.length) {
+    const m = stack.pop();
+    if (mask[m]) continue;
+    const i = m * 4;
+    if (Math.abs(d[i] - sr) + Math.abs(d[i + 1] - sg) + Math.abs(d[i + 2] - sb) > tol) continue;
+    mask[m] = 1; count++;
+    const x = m % w, y = (m / w) | 0;
+    if (x + 1 < w) stack.push(m + 1);
+    if (x - 1 >= 0) stack.push(m - 1);
+    if (y + 1 < h) stack.push(m + w);
+    if (y - 1 >= 0) stack.push(m - w);
+  }
+  return count > 4 ? { mask, count } : null;
+}
+/* traza los bordes de la máscara en lazos cerrados (borde exterior + huecos) */
+function dzTraceMaskJS(mask, w, h) {
+  const get = (x, y) => (x >= 0 && y >= 0 && x < w && y < h) ? mask[y * w + x] : 0;
+  const adj = new Map();
+  const add = (a, b) => {
+    let l = adj.get(a); if (!l) { l = []; adj.set(a, l); } l.push(b);
+    let m = adj.get(b); if (!m) { m = []; adj.set(b, m); } m.push(a);
+  };
+  const K = (x, y) => x * (h + 2) + y;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (!mask[y * w + x]) continue;
+    if (!get(x, y - 1)) add(K(x, y), K(x + 1, y));
+    if (!get(x, y + 1)) add(K(x, y + 1), K(x + 1, y + 1));
+    if (!get(x - 1, y)) add(K(x, y), K(x, y + 1));
+    if (!get(x + 1, y)) add(K(x + 1, y), K(x + 1, y + 1));
+  }
+  const px = k => Math.floor(k / (h + 2)), py = k => k % (h + 2);
+  const used = new Set();
+  const ek = (a, b) => a < b ? a + "_" + b : b + "_" + a;
+  const loops = [];
+  for (const start of adj.keys()) {
+    for (const first of adj.get(start)) {
+      if (used.has(ek(start, first))) continue;
+      used.add(ek(start, first));
+      const loop = [start, first]; let prev = start, cur = first, guard = 0;
+      while (cur !== start && guard++ < 200000) {
+        const nbrs = adj.get(cur) || [];
+        let nb = null;
+        for (const cd of nbrs) if (cd !== prev && !used.has(ek(cur, cd))) { nb = cd; break; }
+        if (nb === null) for (const cd of nbrs) if (!used.has(ek(cur, cd))) { nb = cd; break; }
+        if (nb === null) break;
+        used.add(ek(cur, nb)); loop.push(nb); prev = cur; cur = nb;
+      }
+      if (loop.length >= 8) loops.push(loop.map(k => [px(k), py(k)]));
+    }
+  }
+  return loops;
 }
 
 /* ══ Regla / Hilo tensado (R): herramienta de línea recta interactiva.
-   Clic = punto A → banda elástica hasta el cursor.
+   Clic = punto A  banda elástica hasta el cursor.
    Shift = snapping a 15° (múltiplos de 15°).
    Clic en punto B = crea la línea y reinicia desde B (trazado continuo).
    Escape = cancela la línea en curso.
-   Clic derecho = fija un PUNTO DE FUGA (●). Si hay al menos uno, al hacer
+   Clic derecho = fija un PUNTO DE FUGA (). Si hay al menos uno, al hacer
    clic en A la línea se tensa automáticamente hacia el punto de fuga más
    cercano (como el hilo de OpenToonz). Doble clic en punto de fuga lo borra. ══ */
 function dzRulerDown(e) {
   const p = dzToUser(e.clientX, e.clientY);
 
-  // Clic derecho → punto de fuga
+  // Clic derecho  punto de fuga
   if (e.button === 2) {
     e.preventDefault();
     if (!RULER) RULER = { a: null, el: null, vp: [] };
-    // ¿doble clic sobre punto de fuga existente? → borrarlo
+    // ¿doble clic sobre punto de fuga existente?  borrarlo
     const R = 12 / (DZ.zoom || 1); // radio en unidades de usuario
     for (let i = RULER.vp.length - 1; i >= 0; i--) {
       const v = RULER.vp[i];
@@ -3766,7 +4309,7 @@ function dzRulerDown(e) {
     }
     dzRulerUpdateElastic(p);
   } else {
-    // Segundo punto → crear línea definitiva
+    // Segundo punto  crear línea definitiva
     dzSnapshot();
     let bp = p;
     // snapping a punto de fuga si hay
@@ -3895,10 +4438,10 @@ let INFLATOR = null;   // { el, cx, cy, startR, startDist }
 function dzInflatorDown(e) {
   e.preventDefault(); e.stopPropagation();
   const el = DZ.sel || DZ.multi?.[0];
-  if (!el) return dzSetStatus("⚠ Seleccioná una forma primero para inflar/desinflar");
+  if (!el) return dzSetStatus(" Seleccioná una forma primero para inflar/desinflar");
   const tag = el.tagName.toLowerCase();
   if (!["path", "rect", "circle", "ellipse", "polygon", "polyline"].includes(tag))
-    return dzSetStatus("⚠ El inflador funciona sobre formas (path, rect, círculo…)");
+    return dzSetStatus(" El inflador funciona sobre formas (path, rect, círculo…)");
   dzSnapshot();
   const bbox = el.getBBox({ stroke: true });
   INFLATOR = {
@@ -3967,13 +4510,48 @@ function dzInflatorUp(e) {
    el grosor del trazo (stroke-width) en tiempo real. ── */
 let HANDLER = null;   // { el, startW }
 
+/* Elige la LÍNEA (elemento con trazo) más cercana al cursor, no el relleno de
+   fondo. Antes las herramientas de línea usaban elementFromPoint crudo  al no
+   pegarle justo al trazo fino agarraban el rectángulo de fondo (falso positivo).
+   1) si el elemento bajo el cursor tiene trazo, ese; 2) si no, el path/línea
+   con stroke MÁS CERCANO dentro de una tolerancia. */
+function dzStroked(el) {
+  if (!el || !el.getAttribute) return false;
+  const s = el.getAttribute("stroke");
+  const t = el.tagName.toLowerCase();
+  return s && s !== "none" &&
+    ["path", "line", "polyline", "polygon", "circle", "ellipse", "rect"].includes(t);
+}
+function dzPickStroke(clientX, clientY, maxPx) {
+  const svg = $("#dzCanvas").querySelector("svg");
+  if (!svg) return null;
+  const el = document.elementFromPoint(clientX, clientY);
+  if (el && el.closest && el.closest("#dzCanvas svg") && !el.closest("g.dz-onion")) {
+    const s = el.closest("path,line,polyline,polygon,circle,ellipse,rect,text");
+    if (s && s.tagName.toLowerCase() !== "svg" && dzStroked(s) && !s.hasAttribute("data-locked")) return s;
+  }
+  // nadie con trazo justo debajo  el más cercano por distancia (unidades usuario)
+  const p = dzToUser(clientX, clientY);
+  const tol = (maxPx || 16) / (DZ.zoom || 1);
+  let best = null, bestD = tol;
+  svg.querySelectorAll("path,line,polyline,polygon").forEach(c => {
+    if (!dzStroked(c) || c.hasAttribute("data-locked") || (c.closest && c.closest("g.dz-onion"))) return;
+    let L; try { L = c.getTotalLength(); } catch (err) { return; }
+    if (!L) return;
+    const step = Math.max(2, L / 160);
+    for (let d = 0; d <= L; d += step) {
+      const q = c.getPointAtLength(d);
+      const dist = Math.hypot(q.x - p.x, q.y - p.y);
+      if (dist < bestD) { bestD = dist; best = c; }
+    }
+  });
+  return best;
+}
 function dzHandlerDown(e) {
   e.preventDefault(); e.stopPropagation();
-  // buscar elemento de trazo debajo del cursor
-  const el = document.elementFromPoint(e.clientX, e.clientY);
-  if (!el || !el.closest || !el.closest("#dzCanvas svg") || el.closest("g.dz-onion")) return;
-  const strokeEl = el.closest("path,line,rect,circle,ellipse,polygon,polyline,text");
-  if (!strokeEl || strokeEl.tagName.toLowerCase() === "svg") return;
+  // buscar la LÍNEA más cercana (no el fondo)
+  const strokeEl = dzPickStroke(e.clientX, e.clientY);
+  if (!strokeEl) return dzSetStatus("📏 Acercate más a una línea para ajustar su grosor");
   dzSnapshot();
   const sw = parseFloat(strokeEl.getAttribute("stroke-width") || getComputedStyle(strokeEl).strokeWidth || "2");
   HANDLER = { el: strokeEl, startW: isNaN(sw) ? 2 : sw, startY: e.clientY };
@@ -3999,21 +4577,13 @@ function dzHandlerGlobalMove(e) {
 }
 
 /* ── Plancha: pasá sobre un trazo para suavizarlo progresivamente.
-   Cada pasada aplica media móvil → RDP → Catmull-Rom igual que el lápiz. ── */
+   Cada pasada aplica media móvil  RDP  Catmull-Rom igual que el lápiz. ── */
 
 function dzIronDown(e) {
   e.preventDefault(); e.stopPropagation();
-  const el = document.elementFromPoint(e.clientX, e.clientY);
-  if (!el || !el.closest || !el.closest("#dzCanvas svg") || el.closest("g.dz-onion")) return;
-  const pathEl = el.closest("path");
-  if (!pathEl || pathEl.getAttribute("data-low") !== "brush") {
-    // también funciona sobre paths con stroke
-    const anyPath = el.closest("path,line,polyline");
-    if (!anyPath) return;
-    dzIronSmooth(anyPath);
-    return;
-  }
-  dzIronSmooth(pathEl);
+  const el = dzPickStroke(e.clientX, e.clientY);
+  if (!el) return dzSetStatus(" Acercate a un trazo para suavizarlo");
+  dzIronSmooth(el);
 }
 
 function dzIronSmooth(el) {
@@ -4034,7 +4604,7 @@ function dzIronSmooth(el) {
     el.setAttribute("points", refined.map(p => Math.round(p[0] * 10) / 10 + " " + Math.round(p[1] * 10) / 10).join(" "));
   }
   dzMarkDirty(); dzBuildLayers();
-  dzSetStatus("🔥 Planchado — el trazo quedó más suave");
+  dzSetStatus(" Planchado — el trazo quedó más suave");
 }
 
 /* convierte el atributo d de un path a array de puntos [x,y,pr] */
@@ -4054,10 +4624,9 @@ function dzPathToPoints(d) {
 
 function dzPliersDown(e) {
   e.preventDefault(); e.stopPropagation();
-  const el = document.elementFromPoint(e.clientX, e.clientY);
-  if (!el || !el.closest || !el.closest("#dzCanvas svg") || el.closest("g.dz-onion")) return;
-  const pathEl = el.closest("path");
-  if (!pathEl) return dzSetStatus("✂ Hacé clic sobre un trazado (path) para cortarlo");
+  const pathEl = dzPickStroke(e.clientX, e.clientY);
+  if (!pathEl || pathEl.tagName.toLowerCase() !== "path")
+    return dzSetStatus("✂ Acercate al borde de un trazado (path) para cortarlo");
   dzSnapshot();
   const p = dzToUser(e.clientX, e.clientY);
   const cmds = dzPathParse(pathEl.getAttribute("d") || "");
@@ -4251,7 +4820,7 @@ function dzDiscToggle() {
   });
   // evitar que el mousedown en el disco inicie otras herramientas
   disc.addEventListener("pointerdown", (e) => { e.stopPropagation(); });
-  dzSetStatus("💿 Mesa giratoria activa — arrastrá el disco para girar la vista");
+  dzSetStatus(" Mesa giratoria activa — arrastrá el disco para girar la vista");
 }
 
 /* ══ animación: línea de tiempo + papel cebolla (cuadros _f001.svg…) ══ */
@@ -4262,23 +4831,30 @@ async function dzAnimToggle() {
   if (!bar.hidden) {
     dzAnimStop(); bar.hidden = true; DZ.anim = null; dzOnionClear();
     $("#dzOnionPanel").hidden = true;
+    $("#dzTlGrid").hidden = true;   // el grid de capas vive con la timeline
     if (DZ.camMode) { DZ.camMode = false; $("#dzCamBtn").classList.remove("active"); $("#dzCam").hidden = true; $("#tlCamKey").hidden = true; }
     return;
   }
-  if (!DZ.path) return sysMsg("Abrí un diseño primero (✒ o un .svg del árbol).");
+  if (!DZ.path) return sysMsg("Abrí un diseño primero (<i class="fas fa-pen-fancy"></i> o un .svg del árbol).");
   await dzPersist();
   let r = await api.make_frame(DZ.path);
-  if (r && r.error) return sysMsg("❌ " + r.error);
+  if (r && r.error) return sysMsg(" " + r.error);
   if (r.path !== DZ.path) {
     try { S.tree = (await api.refresh_tree()).tree; renderTree(); } catch (e) { /* */ }
     await openDesign(r.path);
   }
   DZ.anim = { frames: [], idx: 0, playing: false, onion: true, cache: {} };
-  $("#dzOnionPanel").hidden = false;   // el panel 🧅 aparece con la timeline
+  $("#dzOnionPanel").hidden = false;   // el panel <i class="fas fa-layer-group"></i> aparece con la timeline
   // cargar la escena (claves de cámara/dibujo, easing) que vive junto a los cuadros
   const sc = await api.scene_get(DZ.path);
   DZ.scene = (sc && sc.scene) || {};
   bar.hidden = false;
+  // capas DENTRO de la timeline (Toon Boom): el grid capa×cuadro se muestra de
+  // una, salvo que el usuario lo haya cerrado a propósito en esta sesión
+  if (DZ.tlGridClosed !== true) {
+    $("#dzTlGrid").hidden = false;
+    const b = $("#tlLayers"); if (b) b.classList.add("active");
+  }
   await dzTimelineRefresh();
   dzOnionUpdate();
   dzCamOverlay();
@@ -4302,6 +4878,7 @@ async function dzTimelineRefresh() {
   dzTimelineBadges();
   dzSbFrame();
   dzXsRender();
+  if (!$("#dzTlGrid").hidden) dzTlGridRender();   // timeline por capas al día
 }
 /* miniatura del cuadro dentro del chip de la timeline (estilo X-sheet) */
 async function dzThumbInto(chip, f, i) {
@@ -4351,7 +4928,7 @@ async function dzFrameInsert(blank) {
     }
   }
   const r = await api.insert_frame(DZ.path, content);
-  if (r && r.error) return sysMsg("❌ " + r.error);
+  if (r && r.error) return sysMsg(" " + r.error);
   DZ.anim.cache = {};                                // los números se corrieron
   try { S.tree = (await api.refresh_tree()).tree; renderTree(); } catch (e) { /* */ }
   await openDesign(r.path);
@@ -4389,6 +4966,38 @@ const DZ_TWEEN_NUM = ["x", "y", "cx", "cy", "r", "rx", "ry", "width", "height",
                       "x1", "y1", "x2", "y2", "font-size", "stroke-width", "opacity"];
 const DZ_TWEEN_COL = ["fill", "stroke"];
 const DZ_TWEEN_STR = ["d", "points", "transform"];
+/* ── INBETWEEN VECTORIAL (morphing de contornos, estilo Toon Boom) ──────────
+   Re-muestrea un path `d` en N puntos equiespaciados por longitud (funciona en
+   paths desconectados del DOM) para poder MORPHEAR dos dibujos DISTINTOS: sin
+   esto, la interpolación solo servía entre trazados de estructura idéntica. */
+function dzSamplePathD(d, N) {
+  const p = document.createElementNS(SVGNS, "path");
+  p.setAttribute("d", d);
+  let L; try { L = p.getTotalLength(); } catch (e) { return null; }
+  if (!L) return null;
+  const out = [];
+  for (let i = 0; i < N; i++) {
+    const pt = p.getPointAtLength(L * i / (N - 1));
+    out.push([pt.x, pt.y]);
+  }
+  return out;
+}
+/* morphea el atributo d de AB en el instante t re-muestreando ambos a N puntos.
+   Corrige el sentido del recorrido (si está invertido, la interpolación cruzaría
+   fea) quedándose con la orientación de menor distancia total. */
+function dzMorphD(da, db, t, N) {
+  N = N || 64;
+  const pa = dzSamplePathD(da, N), pb = dzSamplePathD(db, N);
+  if (!pa || !pb) return null;
+  const dist = (A, B) => { let s = 0; for (let i = 0; i < N; i++) s += Math.hypot(A[i][0] - B[i][0], A[i][1] - B[i][1]); return s; };
+  const pbRev = [...pb].reverse();
+  const B = dist(pa, pb) <= dist(pa, pbRev) ? pb : pbRev;
+  const pts = [];
+  for (let i = 0; i < N; i++)
+    pts.push([Math.round(dzLerp(pa[i][0], B[i][0], t) * 100) / 100,
+              Math.round(dzLerp(pa[i][1], B[i][1], t) * 100) / 100]);
+  return dzSmoothPath(pts);
+}
 function dzTweenEl(a, b, t) {
   const out = a.cloneNode(true);
   DZ_TWEEN_NUM.forEach(k => {
@@ -4403,7 +5012,9 @@ function dzTweenEl(a, b, t) {
   DZ_TWEEN_STR.forEach(k => {
     const va = a.getAttribute(k), vb = b.getAttribute(k);
     if (va && vb && va !== vb) {
-      const v = dzLerpNums(va, vb, t);
+      let v = dzLerpNums(va, vb, t);
+      // estructura distinta + es un path  MORPH real por re-muestreo (inbetween)
+      if (!v && k === "d") v = dzMorphD(va, vb, t);
       if (v) out.setAttribute(k, v);
     }
   });
@@ -4424,9 +5035,20 @@ function dzTweenBuild(svgA, svgB, t) {
   [...svgA.children].forEach(n => {
     if (DZ_SKIP_TAGS.includes(n.tagName.toLowerCase())) mid.appendChild(n.cloneNode(true));
   });
+  // emparejar AB: primero por id (aunque cambie el orden), luego por posición
+  const usedB = new Set();
+  const partner = (a, i) => {
+    if (a.id) {
+      const byId = cb.find((n, j) => !usedB.has(j) && n.id === a.id && n.tagName === a.tagName);
+      if (byId) { usedB.add(cb.indexOf(byId)); return byId; }
+    }
+    if (cb[i] && !usedB.has(i) && cb[i].tagName === a.tagName) { usedB.add(i); return cb[i]; }
+    return null;
+  };
   let matched = 0;
   for (let i = 0; i < ca.length; i++) {
-    if (cb[i] && cb[i].tagName === ca[i].tagName) { mid.appendChild(dzTweenEl(ca[i], cb[i], t)); matched++; }
+    const b = partner(ca[i], i);
+    if (b) { mid.appendChild(dzTweenEl(ca[i], b, t)); matched++; }
     else mid.appendChild(ca[i].cloneNode(true));    // sin par: queda como en A
   }
   mid.classList.remove("dz-sel");
@@ -4437,9 +5059,11 @@ function dzTweenModal() {
   if (!DZ.anim) return;
   if (!DZ.anim.frames[DZ.anim.idx + 1])
     return sysMsg("🪄 No hay cuadro siguiente — el intercalado va ENTRE dos cuadros (pará en el primero de los dos)");
-  openModal(`<h2>🪄 Intercalar</h2>
-    <div class="sub">Genera cuadros intermedios entre ESTE cuadro y el siguiente,
-    interpolando posición, tamaño, color y trazados de los elementos que coinciden.</div>
+  openModal(`<h2>🪄 Intercalar (inbetween)</h2>
+    <div class="sub">Genera los cuadros intermedios entre ESTE dibujo y el siguiente.
+    Interpola posición, tamaño y color, y MORPHEA los contornos aunque sean dibujos
+    distintos (re-muestreo estilo Toon Boom). Emparejá las capas por nombre (mismo
+    id en los dos cuadros) para que morpheen los trazos correctos.</div>
     <div class="dz-style-row">
       <span class="dz-hint">Cantidad</span>
       <input type="number" id="twN" class="dz-win" value="1" min="1" max="8">
@@ -4468,10 +5092,10 @@ async function dzTweenRun(n, ease) {
   const next = DZ.anim.frames[DZ.anim.idx + 1];
   const svgA = $("#dzCanvas").querySelector("svg");
   const rb = await api.image_data(next);
-  if (!svgA || !rb || !rb.svg) return sysMsg("❌ No pude leer los dos cuadros");
+  if (!svgA || !rb || !rb.svg) return sysMsg(" No pude leer los dos cuadros");
   const tmp = document.createElement("div"); tmp.innerHTML = rb.svg;
   const svgB = tmp.querySelector("svg");
-  if (!svgB) return sysMsg("❌ El cuadro siguiente no tiene SVG válido");
+  if (!svgB) return sysMsg(" El cuadro siguiente no tiene SVG válido");
   const fn = DZ_EASES[ease] || DZ_EASES.inout;
   // insertar en orden INVERSO: cada insert va justo después del cuadro actual,
   // así el último insertado (t más chico) queda primero
@@ -4483,7 +5107,7 @@ async function dzTweenRun(n, ease) {
     if (!b) break;
     matched = b.matched;
     const r = await api.insert_frame(DZ.path, b.svg);
-    if (r && r.error) return dzSetStatus("❌ " + r.error);
+    if (r && r.error) return dzSetStatus(" " + r.error);
     made++;
   }
   DZ.anim.cache = {};
@@ -4495,7 +5119,7 @@ async function dzTweenRun(n, ease) {
     " elementos interpolados, curva " + ease + "). El papel cebolla te muestra cómo quedó el arco.");
 }
 
-/* ══ 🎬 exportar la animación: GIF / secuencia PNG / spritesheet ══ */
+/* ══  exportar la animación: GIF / secuencia PNG / spritesheet ══ */
 function dzSvgToPng(svgText, maxPx) {
   return new Promise((resolve) => {
     let s = svgText;
@@ -4528,8 +5152,8 @@ function dzSvgToPng(svgText, maxPx) {
 }
 function dzExportModal() {
   if (!DZ.anim || !DZ.anim.frames.length) return;
-  openModal(`<h2>🎬 Exportar animación</h2>
-    <div class="sub">${DZ.anim.frames.length} cuadros a ${$("#tlFps").value || 12} fps → carpeta export/ del proyecto.</div>
+  openModal(`<h2> Exportar animación</h2>
+    <div class="sub">${DZ.anim.frames.length} cuadros a ${$("#tlFps").value || 12} fps  carpeta export/ del proyecto.</div>
     <div class="m-actions" style="flex-wrap:wrap">
       <button class="primary" data-x="mp4">Video MP4</button>
       <button class="ghost" data-x="gif">GIF animado</button>
@@ -4544,9 +5168,9 @@ async function dzDoExport(kind) {
   await dzPersist();
   const [lo, hi] = dzPlayRange();                // exporta solo el rango In/Out
   const frames = DZ.anim.frames.slice(lo, hi + 1);
-  dzSetStatus("🎬 Rasterizando " + frames.length + " cuadros…");
+  dzSetStatus(" Rasterizando " + frames.length + " cuadros…");
   const pngs = [];
-  const throughCam = dzHasCam();                 // hay claves de cámara → sale POR cámara
+  const throughCam = dzHasCam();                 // hay claves de cámara  sale POR cámara
   for (let i = 0; i < frames.length; i++) {
     let txt = DZ.anim.cache[frames[i]];
     if (!txt) {
@@ -4559,9 +5183,9 @@ async function dzDoExport(kind) {
     if (throughCam) txt = dzCamView(txt, dzCamAt(dzFrameNum(frames[i])));
     const du = await dzSvgToPng(txt, kind === "sheet" ? 512 : 1080);
     if (du) pngs.push(du);
-    dzSetStatus(`🎬 Rasterizando${throughCam ? " por cámara 📹" : ""}… ${i + 1}/${frames.length}`);
+    dzSetStatus(` Rasterizando${throughCam ? " por cámara <i class="fas fa-camera-movie"></i>" : ""}… ${i + 1}/${frames.length}`);
   }
-  if (!pngs.length) return dzSetStatus("❌ No pude rasterizar ningún cuadro");
+  if (!pngs.length) return dzSetStatus(" No pude rasterizar ningún cuadro");
   if (kind === "sheet") {
     // grilla ~cuadrada compuesta acá mismo en un canvas
     const imgs = await Promise.all(pngs.map(du => new Promise(res => {
@@ -4576,16 +5200,16 @@ async function dzDoExport(kind) {
     ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, c.width, c.height);
     ok.forEach((im, i) => ctx.drawImage(im, (i % cols) * fw, Math.floor(i / cols) * fh, fw, fh));
     const r = await api.export_anim(DZ.path, [c.toDataURL("image/png")], 12, "sheet");
-    dzSetStatus(r && r.error ? "❌ " + r.error : "🎬 Spritesheet exportado (" + cols + "×" + rows + ") → " + ((r && r.path) || "export/"));
+    dzSetStatus(r && r.error ? " " + r.error : " Spritesheet exportado (" + cols + "×" + rows + ")  " + ((r && r.path) || "export/"));
   } else {
     const fps = Math.max(1, Math.min(60, +$("#tlFps").value || 12));
-    const label = { mp4: "🎬 Codificando MP4 con ffmpeg…", webm: "🎬 Codificando WebM…",
-                    gif: "🎬 Armando el GIF…" }[kind] || "🎬 Guardando la secuencia…";
+    const label = { mp4: " Codificando MP4 con ffmpeg…", webm: " Codificando WebM…",
+                    gif: " Armando el GIF…" }[kind] || " Guardando la secuencia…";
     dzSetStatus(label);
     const r = await api.export_anim(DZ.path, pngs, fps, kind);
     const done = { mp4: " (MP4 a " + fps + " fps)", webm: " (WebM a " + fps + " fps)",
                    gif: " (GIF a " + fps + " fps)" }[kind] || " (" + pngs.length + " PNGs)";
-    dzSetStatus(r && r.error ? "❌ " + r.error : "🎬 Exportado → " + ((r && r.path) || "export/") + done);
+    dzSetStatus(r && r.error ? " " + r.error : " Exportado  " + ((r && r.path) || "export/") + done);
   }
   try { S.tree = (await api.refresh_tree()).tree; renderTree(); } catch (e) { /* */ }
 }
@@ -4599,8 +5223,8 @@ async function dzPersist() {
     await api.save_file(DZ.path, txt);
     DZ.dirty = false;
     if (DZ.anim) DZ.anim.cache[DZ.path] = txt;   // la cache/miniatura ve lo nuevo
-    setStatus("💾 auto-guardado");
-  } catch (e) { sysMsg("❌ auto-guardado falló: " + (e.message || e)); }
+    setStatus(" auto-guardado");
+  } catch (e) { sysMsg(" auto-guardado falló: " + (e.message || e)); }
 }
 
 async function dzGoFrame(i) {
@@ -4619,7 +5243,7 @@ async function dzFrameAdd() {
   if (!DZ.anim) return;
   await dzPersist();
   const r = await api.dup_frame(DZ.path);
-  if (r && r.error) return sysMsg("❌ " + r.error);
+  if (r && r.error) return sysMsg(" " + r.error);
   try { S.tree = (await api.refresh_tree()).tree; renderTree(); } catch (e) { /* */ }
   await openDesign(r.path);
   $("#dzTimeline").hidden = false;
@@ -4648,7 +5272,7 @@ function dzOnionGhost(svgText, tintId, rgb, opacity) {
   g.setAttribute("class", "dz-onion");
   g.setAttribute("opacity", String(opacity));
   g.setAttribute("pointer-events", "none");
-  // tinte duotono via filtro (vive DENTRO del grupo → se va con él al guardar)
+  // tinte duotono via filtro (vive DENTRO del grupo  se va con él al guardar)
   const f = document.createElementNS(SVGNS, "filter");
   f.setAttribute("id", tintId);
   f.innerHTML = `<feColorMatrix type="matrix" values="0.25 0.25 0.25 0 ${rgb[0]}  0.25 0.25 0.25 0 ${rgb[1]}  0.25 0.25 0.25 0 ${rgb[2]}  0 0 0 1 0"/>`;
@@ -4659,7 +5283,7 @@ function dzOnionGhost(svgText, tintId, rgb, opacity) {
   g.appendChild(inner);
   return g;
 }
-/* configuración del papel cebolla (panel 🧅 flotante): cuadros antes/después,
+/* configuración del papel cebolla (panel <i class="fas fa-layer-group"></i> flotante): cuadros antes/después,
    colores de tinte y opacidad — persistente entre sesiones */
 function dzOnionCfg() {
   if (!DZ.onionCfg) {
@@ -4778,7 +5402,7 @@ function dzCamView(svgText, cam) {
 }
 function dzHasCam() { return !!(DZ.scene && DZ.scene.cam && Object.keys(DZ.scene.cam).length); }
 
-/* ── overlay del encuadre: arrastrar = mover · esquina = zoom · ⟳ = rotar ──
+/* ── overlay del encuadre: arrastrar = mover · esquina = zoom ·  = rotar ──
    AUTO-KEY: cualquier edición deja una clave de cámara en el cuadro actual. */
 function dzCamToggle() {
   DZ.camMode = !DZ.camMode;
@@ -4787,9 +5411,9 @@ function dzCamToggle() {
   if (DZ.camMode && !DZ.anim) { dzAnimToggle(); }   // la cámara vive en la timeline
   dzCamOverlay();
   dzSetStatus(DZ.camMode ?
-    "📹 Cámara: arrastrá el encuadre (mover), la esquina (zoom), ⟳ (rotar) — cada cambio deja CLAVE en este cuadro. El play y el export salen por acá." : "");
+    "<i class="fas fa-camera-movie"></i> Cámara: arrastrá el encuadre (mover), la esquina (zoom),  (rotar) — cada cambio deja CLAVE en este cuadro. El play y el export salen por acá." : "");
 }
-function dzCamCur() { return dzCamAt(dzFrameNum(DZ.path)); }
+function dzCamCur() { return DZ.camDrag || dzCamAt(dzFrameNum(DZ.path)); }
 function dzCamOverlay() {
   const box = $("#dzCam");
   if (!DZ.camMode || !DZ.path || !$("#dzCanvas").querySelector("svg")) { box.hidden = true; return; }
@@ -4804,8 +5428,8 @@ function dzCamOverlay() {
   box.style.left = (c.x - pw / 2) + "px"; box.style.top = (c.y - ph / 2) + "px";
   box.style.transform = `rotate(${cam.rot || 0}deg)`;
   const num = dzFrameNum(DZ.path);
-  $("#dzCamTag").textContent = "📹 cámara · cuadro " + num +
-    (DZ.scene && DZ.scene.cam && DZ.scene.cam[num] ? " 🔑" : " (interpolada)");
+  $("#dzCamTag").textContent = "<i class="fas fa-camera-movie"></i> cámara · cuadro " + num +
+    (DZ.scene && DZ.scene.cam && DZ.scene.cam[num] ? " <i class="fas fa-key"></i>" : " (interpolada)");
   box.hidden = false;
 }
 function dzCamSetKey(cam) {
@@ -4822,53 +5446,72 @@ function dzCamKeyToggle() {
   const num = dzFrameNum(DZ.path);
   if (DZ.scene.cam[num]) {
     delete DZ.scene.cam[num];
-    dzSetStatus("📹 Clave de cámara del cuadro " + num + " borrada");
+    dzSetStatus("<i class="fas fa-camera-movie"></i> Clave de cámara del cuadro " + num + " borrada");
   } else {
     DZ.scene.cam[num] = dzCamCur();
-    dzSetStatus("📹🔑 Clave de cámara en el cuadro " + num);
+    dzSetStatus("<i class="fas fa-camera-movie"></i><i class="fas fa-key"></i> Clave de cámara en el cuadro " + num);
   }
   dzSceneSave(); dzCamOverlay(); dzTimelineBadges();
+}
+/* ── interacción de cámara — v2, predecible ──────────────────────────────
+   Durante el arrastre se muestra un PREVIEW en vivo (DZ.camDrag) SIN tocar la
+   escena; recién al SOLTAR se deja UNA sola clave en el cuadro. Antes cada
+   micro-movimiento clavaba un keyframe (comportamiento impredecible), y un
+   simple clic sin mover dejaba una clave. Ahora un clic no clava nada. */
+function dzCamCommit() {
+  if (DZ.camDrag) { dzCamSetKey(DZ.camDrag); DZ.camDrag = null; }
 }
 function dzCamDrag(e) {
   if (e.target.id === "dzCamSize" || e.target.id === "dzCamRot") return;
   e.preventDefault(); e.stopPropagation();
-  const cam = dzCamCur();
+  const cam0 = dzCamAt(dzFrameNum(DZ.path));
   const start = dzToUser(e.clientX, e.clientY);
   const move = (ev) => {
     const p = dzToUser(ev.clientX, ev.clientY);
-    dzCamSetKey({ ...cam, cx: cam.cx + (p.x - start.x), cy: cam.cy + (p.y - start.y) });
+    let dx = p.x - start.x, dy = p.y - start.y;
+    if (ev.shiftKey) { if (Math.abs(dx) > Math.abs(dy)) dy = 0; else dx = 0; }  // recto
+    DZ.camDrag = { ...cam0, cx: Math.round((cam0.cx + dx) * 10) / 10, cy: Math.round((cam0.cy + dy) * 10) / 10 };
+    dzCamOverlay();
   };
-  const up = () => { document.removeEventListener("mousemove", move); document.removeEventListener("mouseup", up); };
+  const up = () => { document.removeEventListener("mousemove", move); document.removeEventListener("mouseup", up); dzCamCommit(); };
   document.addEventListener("mousemove", move); document.addEventListener("mouseup", up);
 }
 function dzCamResize(e) {
   e.preventDefault(); e.stopPropagation();
-  const cam = dzCamCur();
+  const cam0 = dzCamAt(dzFrameNum(DZ.path));
   const start = dzToUser(e.clientX, e.clientY);
+  // zoom proporcional a la distancia al centro (alejar la esquina = achicar zoom)
+  const d0 = Math.max(1, Math.hypot(start.x - cam0.cx, start.y - cam0.cy));
   const move = (ev) => {
     const p = dzToUser(ev.clientX, ev.clientY);
-    const w = Math.max(40, cam.w + (p.x - start.x) * 2);
-    dzCamSetKey({ ...cam, w });
+    const d = Math.hypot(p.x - cam0.cx, p.y - cam0.cy);
+    const w = Math.max(40, Math.round(cam0.w * (d / d0) * 10) / 10);
+    DZ.camDrag = { ...cam0, w };
+    dzCamOverlay();
+    const vb = dzVB();
+    dzSetStatus("<i class="fas fa-camera-movie"></i> zoom " + Math.round(vb[2] / w * 100) + "% del encuadre");
   };
-  const up = () => { document.removeEventListener("mousemove", move); document.removeEventListener("mouseup", up); };
+  const up = () => { document.removeEventListener("mousemove", move); document.removeEventListener("mouseup", up); dzCamCommit(); dzSetStatus(""); };
   document.addEventListener("mousemove", move); document.addEventListener("mouseup", up);
 }
 function dzCamRotate(e) {
   e.preventDefault(); e.stopPropagation();
-  const cam = dzCamCur();
-  const c = dzToScreen(cam.cx, cam.cy);
+  const cam0 = dzCamAt(dzFrameNum(DZ.path));
+  const c = dzToScreen(cam0.cx, cam0.cy);
   const cv = $("#dzCanvas").getBoundingClientRect();
   const a0 = Math.atan2(e.clientY - cv.top - c.y, e.clientX - cv.left - c.x);
   const move = (ev) => {
-    let deg = cam.rot + (Math.atan2(ev.clientY - cv.top - c.y, ev.clientX - cv.left - c.x) - a0) * 180 / Math.PI;
+    let deg = (cam0.rot || 0) + (Math.atan2(ev.clientY - cv.top - c.y, ev.clientX - cv.left - c.x) - a0) * 180 / Math.PI;
     if (ev.shiftKey) deg = Math.round(deg / 15) * 15;
-    dzCamSetKey({ ...cam, rot: Math.round(deg * 10) / 10 });
+    DZ.camDrag = { ...cam0, rot: Math.round(deg * 10) / 10 };
+    dzCamOverlay();
+    dzSetStatus("<i class="fas fa-camera-movie"></i> rotación " + Math.round(DZ.camDrag.rot) + "°");
   };
-  const up = () => { document.removeEventListener("mousemove", move); document.removeEventListener("mouseup", up); };
+  const up = () => { document.removeEventListener("mousemove", move); document.removeEventListener("mouseup", up); dzCamCommit(); dzSetStatus(""); };
   document.addEventListener("mousemove", move); document.addEventListener("mouseup", up);
 }
 
-/* ── fotogramas clave de dibujo (🔑) + badges del X-sheet ── */
+/* ── fotogramas clave de dibujo (<i class="fas fa-key"></i>) + badges del X-sheet ── */
 function dzKeyToggle() {
   if (!DZ.anim) return;
   DZ.scene = DZ.scene || {};
@@ -4876,7 +5519,7 @@ function dzKeyToggle() {
   const num = dzFrameNum(DZ.path);
   const i = keys.indexOf(num);
   if (i >= 0) { keys.splice(i, 1); dzSetStatus("Cuadro " + num + " ya no es clave"); }
-  else { keys.push(num); keys.sort((a, b) => a - b); dzSetStatus("🔑 Cuadro " + num + " marcado como FOTOGRAMA CLAVE"); }
+  else { keys.push(num); keys.sort((a, b) => a - b); dzSetStatus("<i class="fas fa-key"></i> Cuadro " + num + " marcado como FOTOGRAMA CLAVE"); }
   dzSceneSave(); dzTimelineBadges();
 }
 function dzTimelineBadges() {
@@ -4888,7 +5531,7 @@ function dzTimelineBadges() {
     const num = dzFrameNum(DZ.anim.frames[i]);
     const rig = (DZ.scene && DZ.scene.rig) || {};
     const hasRig = Object.keys(rig).some(id => rig[id] && rig[id][num]);
-    let badge = (keys.includes(num) ? "🔑" : "") + (cams[num] ? "📹" : "") + (hasRig ? "◆" : "");
+    let badge = (keys.includes(num) ? "<i class="fas fa-key"></i>" : "") + (cams[num] ? "<i class="fas fa-camera-movie"></i>" : "") + (hasRig ? "" : "");
     if (badge) {
       const b = document.createElement("span");
       b.className = "tl-key"; b.textContent = badge;
@@ -5016,7 +5659,7 @@ function dzRigPanelSync() {
   Object.keys(trk).map(Number).sort((a, b) => a - b).forEach(n => {
     const c = document.createElement("span");
     c.className = "dz-chip" + (n === num ? " on" : "");
-    c.textContent = "◆ " + n;
+    c.textContent = " " + n;
     c.title = "Ir al cuadro " + n + " · Alt+clic: borrar la clave";
     c.onclick = (e) => {
       if (e.altKey) { dzRigDelKey(el.id, n); return; }
@@ -5031,21 +5674,21 @@ function dzRigReadPanel() {
            r: +$("#rigR").value || 0, s: +$("#rigS").value || 1 };
 }
 function dzRigToggle() {
-  if (!DZ.anim) { sysMsg("◆ Abrí la animación (🎞) primero — el rig anima entre cuadros."); return; }
+  if (!DZ.anim) { sysMsg(" Abrí la animación (🎞) primero — el rig anima entre cuadros."); return; }
   DZ.rigMode = !DZ.rigMode;
   $("#dzRigBtn").classList.toggle("active", DZ.rigMode);
   $("#dzRigPanel").hidden = !DZ.rigMode;
   if (DZ.rigMode) {
     dzRigApplyLive(dzRigCur()); dzRigPanelSync();
-    dzSetStatus("◆ Rig: seleccioná una pieza (flecha blanca D), nombrala, posala (arrastrar/panel) y clavá con K");
+    dzSetStatus(" Rig: seleccioná una pieza (flecha blanca D), nombrala, posala (arrastrar/panel) y clavá con K");
   } else {
     dzRigStrip($("#dzCanvas").querySelector("svg"));
   }
 }
 
 
-/* ══ 🎥 ACTUACIÓN — titiritero digital (Momo/motion-sketch) ═══════════════
-   Marcás el lapso, ⏺, y ACTUÁS el movimiento arrastrando la pieza en vivo
+/* ══ <i class="fas fa-video"></i> ACTUACIÓN — titiritero digital (Momo/motion-sketch) ═══════════════
+   Marcás el lapso, <i class="fas fa-stop-circle"></i>, y ACTUÁS el movimiento arrastrando la pieza en vivo
    (Shift = rotarla desde su pivote, como el bastón del títere). Las pasadas
    anteriores SE REPRODUCEN mientras grabás la nueva — animación por capas,
    una pieza por toma. Al cortar, la actuación se vuelve claves de rig. */
@@ -5054,14 +5697,14 @@ function dzPerfDur() { return Math.max(0.5, Math.min(30, +($("#perfDur") && $("#
 
 function dzPerfRec() {
   if (DZ.perf && DZ.perf.rec) { dzPerfRecEnd(true); return; }   // cortar antes
-  if (!DZ.rigMode) return dzSetStatus("🎥 Activá el modo rig (◆) primero");
+  if (!DZ.rigMode) return dzSetStatus("<i class="fas fa-video"></i> Activá el modo rig () primero");
   if (!DZ.scene) DZ.scene = {};
   let n = 3;
   $("#perfRec").classList.add("rec");
-  dzSetStatus("🎥 " + n + "…");
+  dzSetStatus("<i class="fas fa-video"></i> " + n + "…");
   const cd = setInterval(() => {
     n--;
-    if (n > 0) { dzSetStatus("🎥 " + n + "…"); return; }
+    if (n > 0) { dzSetStatus("<i class="fas fa-video"></i> " + n + "…"); return; }
     clearInterval(cd);
     const dur = dzPerfDur(), fps = dzPerfFps();
     DZ.perf = { rec: { t0: performance.now(), dur, fps, take: {}, active: null } };
@@ -5079,7 +5722,7 @@ function dzPerfRec() {
         const k = el2 && dzRigAt(id, num);
         if (k) dzRigApplyTo(el2, k);
       }
-      dzSetStatus("⏺ " + t.toFixed(1) + " / " + dur + "s — ¡actuá! (arrastrá la pieza · Shift rota)");
+      dzSetStatus("<i class="fas fa-stop-circle"></i> " + t.toFixed(1) + " / " + dur + "s — ¡actuá! (arrastrá la pieza · Shift rota)");
       DZ.perf.rec.raf = requestAnimationFrame(loop);
     };
     DZ.perf.rec.raf = requestAnimationFrame(loop);
@@ -5092,7 +5735,7 @@ function dzPerfRecEnd(early) {
   DZ.perf = null;
   $("#perfRec").classList.remove("rec");
   const ids = Object.keys(rec.take).filter(id => rec.take[id].length > 1);
-  if (!ids.length) { dzSetStatus("🎥 Toma vacía — no moviste ninguna pieza. ⏺ y arrastrá durante la cuenta."); return; }
+  if (!ids.length) { dzSetStatus("<i class="fas fa-video"></i> Toma vacía — no moviste ninguna pieza. <i class="fas fa-stop-circle"></i> y arrastrá durante la cuenta."); return; }
   // remuestrear la actuación a una clave por cuadro del lapso
   const N = Math.max(2, Math.round(rec.dur * rec.fps));
   for (const id of ids) {
@@ -5116,7 +5759,7 @@ function dzPerfRecEnd(early) {
     }
   }
   dzSceneSave(); dzTimelineBadges(); dzRigPanelSync();
-  dzSetStatus("🎥 Toma lista: " + ids.join(", ") + " (" + N + " claves). Otra ⏺ suma la próxima pieza. ▶ para verla.");
+  dzSetStatus("<i class="fas fa-video"></i> Toma lista: " + ids.join(", ") + " (" + N + " claves). Otra <i class="fas fa-stop-circle"></i> suma la próxima pieza.  para verla.");
   dzPerfPlay();
 }
 /* reproducir la actuación completa (reloj virtual, claves fraccionales) */
@@ -5128,13 +5771,13 @@ function dzPerfPlay() {
   const loop = () => {
     if (!DZ.perfPlaying) { dzRigApplyLive(dzRigCur()); return; }
     const t = (performance.now() - t0) / 1000;
-    if (t >= dur) { DZ.perfPlaying = false; dzRigApplyLive(dzRigCur()); dzSetStatus("🎥 fin de la actuación"); return; }
+    if (t >= dur) { DZ.perfPlaying = false; dzRigApplyLive(dzRigCur()); dzSetStatus("<i class="fas fa-video"></i> fin de la actuación"); return; }
     dzRigApplyLive(1 + t * fps);
     requestAnimationFrame(loop);
   };
   requestAnimationFrame(loop);
 }
-/* ✨ suavizado: promedio móvil sobre las claves — saca el temblor del pulso */
+/*  suavizado: promedio móvil sobre las claves — saca el temblor del pulso */
 function dzPerfSmooth() {
   const rig = (DZ.scene || {}).rig || {};
   let done = 0;
@@ -5154,32 +5797,32 @@ function dzPerfSmooth() {
     done++;
   }
   dzSceneSave(); dzRigApplyLive(dzRigCur()); dzRigPanelSync();
-  dzSetStatus(done ? "✨ actuación suavizada (" + done + " pista(s)) — repetí para más suave" : "✨ no hay pistas para suavizar");
+  dzSetStatus(done ? " actuación suavizada (" + done + " pista(s)) — repetí para más suave" : " no hay pistas para suavizar");
 }
-/* 🔥 generar los cuadros del lapso (mismo dibujo; el rig se aplica al exportar) */
+/*  generar los cuadros del lapso (mismo dibujo; el rig se aplica al exportar) */
 async function dzPerfBake() {
-  if (!DZ.anim) return dzSetStatus("🔥 Abrí la animación (🎞) primero");
+  if (!DZ.anim) return dzSetStatus(" Abrí la animación (🎞) primero");
   const N = Math.max(2, Math.round(dzPerfDur() * dzPerfFps()));
-  if (N > 200) return dzSetStatus("🔥 Demasiados cuadros (" + N + ") — bajá duración o fps");
+  if (N > 200) return dzSetStatus(" Demasiados cuadros (" + N + ") — bajá duración o fps");
   await dzPersist();
   let cur = DZ.anim.frames.length;
-  dzSetStatus("🔥 generando cuadros… (" + cur + "/" + N + ")");
+  dzSetStatus(" generando cuadros… (" + cur + "/" + N + ")");
   let last = DZ.anim.frames[DZ.anim.frames.length - 1];
   while (cur < N) {
     const r = await api.dup_frame(last);
-    if (r && r.error) return dzSetStatus("🔥 " + r.error);
+    if (r && r.error) return dzSetStatus(" " + r.error);
     last = r.path; cur++;
-    if (cur % 6 === 0) dzSetStatus("🔥 generando cuadros… (" + cur + "/" + N + ")");
+    if (cur % 6 === 0) dzSetStatus(" generando cuadros… (" + cur + "/" + N + ")");
   }
   try { S.tree = (await api.refresh_tree()).tree; renderTree(); } catch (e) { /* */ }
   await dzTimelineRefresh();
-  dzSetStatus("🔥 " + cur + " cuadros listos — la actuación sale en el export (GIF/video)");
+  dzSetStatus(" " + cur + " cuadros listos — la actuación sale en el export (GIF/video)");
 }
 
 /* ══ animación de ELEMENTOS (pegs de Toon Boom, versión LOW) ═══════════
-   🏃 interpolación de movimiento: fijás inicio, movés el elemento al final
+   <i class="fas fa-running"></i> interpolación de movimiento: fijás inicio, movés el elemento al final
    y LOW genera los cuadros del recorrido con la curva elegida.
-   ⏺ grabación en vivo: arrastrás el elemento y el recorrido REAL de tu mano
+   <i class="fas fa-stop-circle"></i> grabación en vivo: arrastrás el elemento y el recorrido REAL de tu mano
    (con sus tiempos) se convierte en cuadros — actuación en vivo. ══ */
 function dzElPath(el) {
   // ruta de índices desde el svg raíz (las capas de UI van siempre al final,
@@ -5206,35 +5849,47 @@ function dzPosDelta(a, b) {
   return [b.tx - a.tx, b.ty - a.ty];
 }
 async function dzTweenFrames(baseSvgText, elPath, offsets) {
-  // genera un cuadro por offset [dx,dy] (en orden) insertándolos tras el actual
+  // genera un cuadro por offset [dx,dy,rot] (en orden) insertándolos tras el actual
+  // pivote de rotación: bbox del elemento VIVO — los clones no están montados y
+  // getBBox() en un árbol desmontado devuelve 0×0 (giraría sobre el origen)
+  let cx = 540, cy = 540;
+  const live = dzElAt($("#dzCanvas").querySelector("svg"), elPath);
+  if (live && live.getBBox) {
+    try { const b = live.getBBox(); cx = b.x + b.width / 2; cy = b.y + b.height / 2; } catch (e) { /* sin render */ }
+  }
   for (let k = offsets.length - 1; k >= 0; k--) {
     const tmp = document.createElement("div"); tmp.innerHTML = baseSvgText;
     const svg2 = tmp.querySelector("svg");
     const el2 = dzElAt(svg2, elPath);
     if (!el2) return "no encontré el elemento en el cuadro clonado";
     dzWritePos(el2, dzReadPos(el2), offsets[k][0], offsets[k][1]);
+    if (offsets[k][2]) {
+      const tr = el2.getAttribute("transform") || "";
+      el2.setAttribute("transform", (tr ? tr + " " : "")
+        + `rotate(${offsets[k][2]} ${cx + offsets[k][0]} ${cy + offsets[k][1]})`);
+    }
     const r = await api.insert_frame(DZ.path, svg2.outerHTML);
     if (r && r.error) return r.error;
   }
   return null;
 }
 async function dzMoveTween() {
-  if (!DZ.anim) return sysMsg("🏃 Abrí la animación (🎞) primero");
+  if (!DZ.anim) return sysMsg("<i class="fas fa-running"></i> Abrí la animación (🎞) primero");
   if (!DZ.moveT) {
-    if (!DZ.sel) return dzSetStatus("🏃 Seleccioná el elemento a animar y tocá 🏃 para fijar el INICIO");
+    if (!DZ.sel) return dzSetStatus("<i class="fas fa-running"></i> Seleccioná el elemento a animar y tocá <i class="fas fa-running"></i> para fijar el INICIO");
     const path = dzElPath(DZ.sel);
-    if (!path) return dzSetStatus("🏃 Ese elemento no se puede animar (no cuelga del lienzo)");
+    if (!path) return dzSetStatus("<i class="fas fa-running"></i> Ese elemento no se puede animar (no cuelga del lienzo)");
     DZ.moveT = { el: DZ.sel, path, start: dzReadPos(DZ.sel) };
     $("#tlMove").classList.add("rec");
-    dzSetStatus("🏃 INICIO fijado. Arrastrá el elemento a su posición FINAL y tocá 🏃 otra vez.");
+    dzSetStatus("<i class="fas fa-running"></i> INICIO fijado. Arrastrá el elemento a su posición FINAL y tocá <i class="fas fa-running"></i> otra vez.");
     return;
   }
   const t = DZ.moveT; DZ.moveT = null; $("#tlMove").classList.remove("rec");
-  if (!t.el.isConnected) return dzSetStatus("🏃 El elemento ya no está — cancelo");
+  if (!t.el.isConnected) return dzSetStatus("<i class="fas fa-running"></i> El elemento ya no está — cancelo");
   const [dx, dy] = dzPosDelta(t.start, dzReadPos(t.el));
   if (Math.abs(dx) + Math.abs(dy) < 2)
-    return dzSetStatus("🏃 No lo moviste de lugar — cancelo. Fijá inicio, arrastrá y volvé a tocar 🏃.");
-  openModal(`<h2>🏃 Interpolación de movimiento</h2>
+    return dzSetStatus("<i class="fas fa-running"></i> No lo moviste de lugar — cancelo. Fijá inicio, arrastrá y volvé a tocar <i class="fas fa-running"></i>.");
+  openModal(`<h2><i class="fas fa-running"></i> Interpolación de movimiento</h2>
     <div class="sub">Recorrido: ${Math.round(Math.hypot(dx, dy))} unidades. El elemento vuelve al inicio
     y se generan los cuadros del viaje (el último queda en la posición final).</div>
     <div class="dz-style-row">
@@ -5250,7 +5905,7 @@ async function dzMoveTween() {
     </div>
     <div class="m-actions">
       <button class="ghost" id="mCancel">Cancelar</button>
-      <button class="primary" id="mtGo">🏃 Generar</button>
+      <button class="primary" id="mtGo"><i class="fas fa-running"></i> Generar</button>
     </div>`);
   $("#mCancel").onclick = () => { closeModal(); };
   $("#mtGo").onclick = async () => {
@@ -5262,25 +5917,25 @@ async function dzMoveTween() {
     dzMarkDirty();
     await dzPersist();
     const base = dzSerialize($("#dzCanvas").querySelector("svg"));
-    dzSetStatus("🏃 Generando " + n + " cuadros del recorrido…");
+    dzSetStatus("<i class="fas fa-running"></i> Generando " + n + " cuadros del recorrido…");
     const offs = [];
     for (let k = 1; k <= n; k++) offs.push([dx * fn(k / n), dy * fn(k / n)]);
     const err = await dzTweenFrames(base, t.path, offs);
-    if (err) return dzSetStatus("❌ " + err);
+    if (err) return dzSetStatus(" " + err);
     DZ.anim.cache = {};
     try { S.tree = (await api.refresh_tree()).tree; renderTree(); } catch (e) { /* */ }
     await dzTimelineRefresh(); dzOnionUpdate(); dzTimelineBadges();
-    dzSetStatus("🏃 " + n + " cuadros generados — reproducí (▶) para ver el movimiento.");
+    dzSetStatus("<i class="fas fa-running"></i> " + n + " cuadros generados — reproducí () para ver el movimiento.");
   };
 }
-/* ⏺ grabación en vivo: armás la grabación, arrastrás el elemento y el
+/* <i class="fas fa-stop-circle"></i> grabación en vivo: armás la grabación, arrastrás el elemento y el
    recorrido con SUS TIEMPOS reales se muestrea al fps de la timeline */
 function dzRecToggle() {
-  if (!DZ.anim) return sysMsg("⏺ Abrí la animación (🎞) primero");
-  if (DZ.rec) { DZ.rec = null; $("#tlRec").classList.remove("rec"); dzSetStatus("⏺ Grabación desarmada"); return; }
+  if (!DZ.anim) return sysMsg("<i class="fas fa-stop-circle"></i> Abrí la animación (🎞) primero");
+  if (DZ.rec) { DZ.rec = null; $("#tlRec").classList.remove("rec"); dzSetStatus("<i class="fas fa-stop-circle"></i> Grabación desarmada"); return; }
   DZ.rec = { armed: true };
   $("#tlRec").classList.add("rec");
-  dzSetStatus("⏺ Grabación ARMADA: agarrá un elemento y arrastralo actuando el movimiento — al soltar, cada instante se vuelve un cuadro.");
+  dzSetStatus("<i class="fas fa-stop-circle"></i> Grabación ARMADA: agarrá un elemento y arrastralo actuando el movimiento — al soltar, cada instante se vuelve un cuadro.");
 }
 async function dzRecFinish(rec) {
   $("#tlRec").classList.remove("rec");
@@ -5289,7 +5944,7 @@ async function dzRecFinish(rec) {
   const dur = rec.samples.length ? rec.samples[rec.samples.length - 1][2] : 0;
   let nFrames = Math.min(48, Math.max(2, Math.round(dur / 1000 * fps)));
   if (rec.samples.length < 2 || dur < 120)
-    return dzSetStatus("⏺ Muy corto — arrastrá el recorrido completo con el mouse apretado.");
+    return dzSetStatus("<i class="fas fa-stop-circle"></i> Muy corto — arrastrá el recorrido completo con el mouse apretado.");
   // remuestrear el gesto al fps de la timeline (interpolando entre muestras)
   const at = (ms) => {
     let i = rec.samples.findIndex(s => s[2] >= ms);
@@ -5306,16 +5961,16 @@ async function dzRecFinish(rec) {
   dzMarkDirty();
   await dzPersist();
   const base = dzSerialize($("#dzCanvas").querySelector("svg"));
-  dzSetStatus("⏺ Convirtiendo tu actuación en " + nFrames + " cuadros…");
+  dzSetStatus("<i class="fas fa-stop-circle"></i> Convirtiendo tu actuación en " + nFrames + " cuadros…");
   const err = await dzTweenFrames(base, rec.path, offs);
-  if (err) return dzSetStatus("❌ " + err);
+  if (err) return dzSetStatus(" " + err);
   DZ.anim.cache = {};
   try { S.tree = (await api.refresh_tree()).tree; renderTree(); } catch (e) { /* */ }
   await dzTimelineRefresh(); dzOnionUpdate(); dzTimelineBadges();
-  dzSetStatus("⏺ Actuación grabada: " + nFrames + " cuadros a " + fps + " fps — dale ▶.");
+  dzSetStatus("<i class="fas fa-stop-circle"></i> Actuación grabada: " + nFrames + " cuadros a " + fps + " fps — dale .");
 }
 
-/* ══ 🎦 TITIRITERO (marioneta digital) ═══════════════════════════════════
+/* ══ <i class="fas fa-film"></i> TITIRITERO (marioneta digital) ═══════════════════════════════════
    Grabación en vivo de performance: apretás REC, manipulás el muñeco en
    tiempo real (arrastrás/rotás cabeza, brazos, piezas del rig) y LOW captura
    la escena entera cada 1/fps segundos como cuadros — hasta que parás. Es el
@@ -5326,14 +5981,14 @@ function dzPuppetToggle() {
   if (DZ.pup && DZ.pup.recording) { dzPuppetStop(); return; }
   if (DZ.pup && DZ.pup.counting) { return; }        // en cuenta regresiva
   if (!DZ.anim) { dzAnimToggle(); }                 // el titiritero vive en la timeline
-  if (!DZ.path) return sysMsg("🎦 Abrí un diseño primero (✒).");
+  if (!DZ.path) return sysMsg("<i class="fas fa-film"></i> Abrí un diseño primero (<i class="fas fa-pen-fancy"></i>).");
   // cuenta regresiva 3·2·1 para que agarres el muñeco listo
   DZ.pup = { counting: true, recording: false, snaps: [] };
   dzPuppetHUD("preparate…");
   let n = 3;
   const tick = () => {
     if (!DZ.pup || !DZ.pup.counting) return;        // cancelado
-    if (n > 0) { dzPuppetHUD("🎬 " + n); n--; setTimeout(tick, 700); }
+    if (n > 0) { dzPuppetHUD(" " + n); n--; setTimeout(tick, 700); }
     else dzPuppetStart();
   };
   tick();
@@ -5342,33 +5997,33 @@ function dzPuppetStart() {
   const fps = Math.max(1, Math.min(60, +$("#tlFps").value || 12));
   DZ.pup = { recording: true, counting: false, snaps: [], t0: performance.now(), fps };
   $("#tlPuppet").classList.add("rec");
-  dzPuppetHUD("● REC  0.0s · 0 cuadros");
+  dzPuppetHUD(" REC  0.0s · 0 cuadros");
   // capturá la escena entera cada 1/fps mientras manipulás el muñeco
   DZ.pup.timer = setInterval(() => {
     const svg = $("#dzCanvas").querySelector("svg");
     if (!svg) return;
     DZ.pup.snaps.push(dzSerialize(svg));
     const secs = ((performance.now() - DZ.pup.t0) / 1000).toFixed(1);
-    dzPuppetHUD("● REC  " + secs + "s · " + DZ.pup.snaps.length + " cuadros");
+    dzPuppetHUD(" REC  " + secs + "s · " + DZ.pup.snaps.length + " cuadros");
   }, 1000 / fps);
-  dzSetStatus("🎦 GRABANDO — movés el muñeco con la mano; cada instante es un cuadro. Apretá 🎦 (o Esc) para cortar.");
+  dzSetStatus("<i class="fas fa-film"></i> GRABANDO — movés el muñeco con la mano; cada instante es un cuadro. Apretá <i class="fas fa-film"></i> (o Esc) para cortar.");
 }
 async function dzPuppetStop() {
   const pup = DZ.pup; DZ.pup = null;
   if (pup && pup.timer) clearInterval(pup.timer);
   $("#tlPuppet").classList.remove("rec");
   dzPuppetHUD(null);
-  if (!pup || !pup.recording) { dzSetStatus("🎦 Titiritero cancelado"); return; }
+  if (!pup || !pup.recording) { dzSetStatus("<i class="fas fa-film"></i> Titiritero cancelado"); return; }
   const snaps = pup.snaps || [];
-  if (snaps.length < 2) return dzSetStatus("🎦 Toma muy corta — apretá REC y movés el muñeco un rato antes de cortar.");
-  dzSetStatus("🎦 Guardando la actuación (" + snaps.length + " cuadros)…");
+  if (snaps.length < 2) return dzSetStatus("<i class="fas fa-film"></i> Toma muy corta — apretá REC y movés el muñeco un rato antes de cortar.");
+  dzSetStatus("<i class="fas fa-film"></i> Guardando la actuación (" + snaps.length + " cuadros)…");
   const r = await api.record_take(DZ.path, snaps);
-  if (r && r.error) return dzSetStatus("❌ " + r.error);
+  if (r && r.error) return dzSetStatus(" " + r.error);
   DZ.anim.cache = {};
   try { S.tree = (await api.refresh_tree()).tree; renderTree(); } catch (e) { /* */ }
   await dzTimelineRefresh(); dzTimelineBadges();
   if (r && r.path) { await dzGoFrame(DZ.anim.frames.indexOf(r.path)); }
-  dzSetStatus("🎦 ¡Actuación grabada! " + (r.n || snaps.length) + " cuadros a " + pup.fps + " fps — dale ▶ para verla.");
+  dzSetStatus("<i class="fas fa-film"></i> ¡Actuación grabada! " + (r.n || snaps.length) + " cuadros a " + pup.fps + " fps — dale  para verla.");
 }
 /* HUD grande de grabación sobre el lienzo (texto o null para ocultar) */
 function dzPuppetHUD(txt) {
@@ -5382,7 +6037,67 @@ function dzPuppetHUD(txt) {
   h.textContent = txt;
 }
 
-/* ══ 🎭 DIORAMA: compositing sin nodos ═══════════════════════════════════
+/* ══ 🚶 CICLO DE CAMINATA automático (estilo Toon Boom / OpenToonz) ══ */
+function dzWalkCycleModal() {
+  if (!DZ.anim) { dzAnimToggle(); if (!DZ.anim) return; }
+  if (!DZ.sel) return sysMsg("🚶 Seleccioná un elemento para animar el ciclo de caminata");
+  openModal(`<h2>🚶 Ciclo de caminata</h2>
+    <div class="sub">Genera un ciclo automático de pasos: el elemento sube/baja y se inclina
+    rítmicamente. Ideal para personajes enteros, siluetas o props que "caminan".</div>
+    <div class="dz-style-row">
+      <span class="dz-hint">Pasos (ciclo completo)</span>
+      <input type="number" id="wcSteps" class="dz-win" value="2" min="1" max="8">
+      <span class="dz-hint">Cuadros por paso</span>
+      <input type="number" id="wcFrames" class="dz-win" value="8" min="4" max="24">
+    </div>
+    <div class="dz-style-row">
+      <span class="dz-hint">Altura del paso (px)</span>
+      <input type="number" id="wcBounce" class="dz-win" value="20" min="1" max="120">
+      <span class="dz-hint">Balanceo (°)</span>
+      <input type="number" id="wcSway" class="dz-win" value="8" min="0" max="45">
+    </div>
+    <div class="m-actions">
+      <button class="ghost" id="mCancel">Cancelar</button>
+      <button class="primary" id="wcGo">🚶 Generar ciclo</button>
+    </div>`);
+  $("#mCancel").onclick = closeModal;
+  $("#wcGo").onclick = () => {
+    const steps = Math.max(1, Math.min(8, +$("#wcSteps").value || 2));
+    const fpb = Math.max(4, Math.min(24, +$("#wcFrames").value || 8));
+    const bounce = Math.max(1, Math.min(120, +$("#wcBounce").value || 20));
+    const sway = Math.max(0, Math.min(45, +$("#wcSway").value || 8));
+    closeModal();
+    dzWalkCycleRun(steps, fpb, bounce, sway);
+  };
+}
+async function dzWalkCycleRun(steps, fpb, bounce, sway) {
+  const el = DZ.sel;
+  if (!el) return;
+  const elPath = dzElPath(el);
+  if (!elPath) return dzSetStatus("🚶 Ese elemento no se puede animar (no cuelga del lienzo)");
+  const totalFrames = steps * fpb;
+  dzSnapshot();
+  await dzPersist();
+  const base = dzSerialize($("#dzCanvas").querySelector("svg"));
+  dzSetStatus("🚶 Generando " + totalFrames + " cuadros de caminata…");
+  const offs = [];
+  for (let k = 1; k <= totalFrames; k++) {
+    const phase = (k - 1) / fpb;                // 0..steps
+    // parábola para el bounce: sube en el medio del paso
+    const b = Math.sin(phase * Math.PI) * bounce;
+    // sway sinusoidal
+    const s = Math.sin(phase * Math.PI * 2) * sway;
+    offs.push([0, -Math.abs(b), s]);            // [dx, dy, rotation]
+  }
+  const err = await dzTweenFrames(base, elPath, offs);
+  if (err) return dzSetStatus(" " + err);
+  DZ.anim.cache = {};
+  try { S.tree = (await api.refresh_tree()).tree; renderTree(); } catch (e) { /* */ }
+  await dzTimelineRefresh(); dzOnionUpdate(); dzTimelineBadges();
+  dzSetStatus("🚶 ¡Ciclo de caminata listo! " + totalFrames + " cuadros — dale  para verlo. Probá distintos bounce/sway para ajustar.");
+}
+
+/* ══ <i class="fas fa-masks-theater"></i> DIORAMA: compositing sin nodos ═══════════════════════════════════
    En vez del mapa de nodos de Harmony/OpenToonz, una vista LATERAL física
    del multiplano (el diorama de la cámara multiplano de Disney): la cámara
    a la izquierda, el plano de acción en el medio, el fondo a la derecha, y
@@ -5391,7 +6106,7 @@ function dzPuppetHUD(txt) {
    esto solo lo hace tangible. ══ */
 const DZ_Z_MIN = -60, DZ_Z_MAX = 400;
 function dzZToX(z, W) {
-  // -60 (pegado a cámara) … 0 (acción) … 400 (fondo) → posición en el riel
+  // -60 (pegado a cámara) … 0 (acción) … 400 (fondo)  posición en el riel
   return ((z - DZ_Z_MIN) / (DZ_Z_MAX - DZ_Z_MIN)) * (W - 46) + 6;
 }
 function dzXToZ(x, W) {
@@ -5438,8 +6153,8 @@ function dzZPanelRender() {
         document.removeEventListener("mouseup", up);
         dzMarkDirty();
         if (DZ.sel === el) dzBuildInspector(el);        // sincronizar el campo Z
-        dzSetStatus("🎭 «" + name.slice(0, 20) + "» a z=" + (el.getAttribute("data-z") || 0) +
-                    " — mové la cámara (📹) y mirá el parallax en ▶");
+        dzSetStatus("<i class="fas fa-masks-theater"></i> «" + name.slice(0, 20) + "» a z=" + (el.getAttribute("data-z") || 0) +
+                    " — mové la cámara (<i class="fas fa-camera-movie"></i>) y mirá el parallax en ");
       };
       document.addEventListener("mousemove", move);
       document.addEventListener("mouseup", up);
@@ -5552,7 +6267,7 @@ function dzToolOptsRender() {
       <label>Grosor <input type="number" id="toW" min="1" max="120" value="${DZ.drawW || 6}" class="dz-win"></label>` +
       (t !== "pen" ? `<label>Suavizado <input type="range" id="toSmooth" min="0" max="100" value="${sm}"><span id="toSmoothLbl">${sm}</span></label>` : "") +
       (t === "brush" ? `<span class="dz-hint">el grosor sigue la presión de la tableta</span>` : "") +
-      (DZ.mirror ? `<span class="dz-hint">🪞 espejo activo</span>` : "");
+      (DZ.mirror ? `<span class="dz-hint"><i class="fas fa-sync-alt"></i> espejo activo</span>` : "");
   } else if (t === "bucket") {
     html += `<label>Relleno <input type="color" id="toFill" value="${dzHex(DZ.fillColor) || "#F0450E"}"></label>
       <span class="dz-hint">clic pinta el relleno · Shift+clic pinta el trazo</span>`;
@@ -5625,32 +6340,213 @@ function dzXsToggle() {
     dzXsRender();
   }
 }
+/* X-sheet (planilla de exposición): una fila por cuadro con MINIATURA, número,
+   marcas (<i class="fas fa-key"></i> clave · <i class="fas fa-camera-movie"></i> cámara) y NOTAS editables. Las notas se guardan en la
+   escena (<base>_escena.json) junto a las claves y la cámara. */
 function dzXsRender() {
   const box = $("#dzXsRows");
   if (!box || $("#dzXsheet").hidden || !DZ.anim) return;
   const keys = (DZ.scene && DZ.scene.keys) || [];
   const cams = (DZ.scene && DZ.scene.cam) || {};
-  box.innerHTML = "";
+  const notes = (DZ.scene && DZ.scene.notes) || {};
+  box.innerHTML =
+    '<div class="dz-xs-head"><span>#</span><span>cuadro</span><span></span><span>nota</span></div>';
   DZ.anim.frames.forEach((f, i) => {
     const num = dzFrameNum(f);
     const row = document.createElement("div");
-    row.className = "dz-xs-row" + (i === DZ.anim.idx ? " cur" : "");
-    row.innerHTML = `<span class="dz-xs-n">${i + 1}</span>` +
-      `<span class="dz-xs-name">${f.split(/[\\/]/).pop().replace(".svg", "")}</span>` +
-      `<span class="dz-xs-b">${keys.includes(num) ? "🔑" : ""}${cams[num] ? "📹" : ""}</span>`;
-    row.onclick = () => { dzAnimStopIf(); dzGoFrame(i); };
+    row.className = "dz-xs-row" + (i === DZ.anim.idx ? " cur" : "") +
+      (keys.includes(num) ? " key" : "");
+    // número (clic = ir al cuadro)
+    const n = document.createElement("span");
+    n.className = "dz-xs-n"; n.textContent = i + 1;
+    n.title = "Ir al cuadro " + (i + 1);
+    n.onclick = () => { dzAnimStopIf(); dzGoFrame(i); };
+    // miniatura (clic = ir al cuadro)
+    const thumb = document.createElement("div");
+    thumb.className = "dz-xs-thumb";
+    thumb.onclick = () => { dzAnimStopIf(); dzGoFrame(i); };
+    dzXsThumbInto(thumb, f, i);
+    // marcas
+    const badge = document.createElement("span");
+    badge.className = "dz-xs-b";
+    badge.textContent = (keys.includes(num) ? "<i class="fas fa-key"></i>" : "") + (cams[num] ? "<i class="fas fa-camera-movie"></i>" : "");
+    // nota editable
+    const note = document.createElement("input");
+    note.className = "dz-xs-note"; note.type = "text";
+    note.placeholder = "…"; note.value = notes[num] || "";
+    note.title = "Nota de este cuadro (timing, acción, referencia…)";
+    note.onchange = () => {
+      DZ.scene = DZ.scene || {}; DZ.scene.notes = DZ.scene.notes || {};
+      const v = note.value.trim();
+      if (v) DZ.scene.notes[num] = v; else delete DZ.scene.notes[num];
+      dzSceneSave();
+    };
+    row.append(n, thumb, badge, note);
     box.appendChild(row);
   });
 }
+/* miniatura del cuadro dentro de una celda del X-sheet */
+async function dzXsThumbInto(cell, f, i) {
+  let txt = DZ.anim && DZ.anim.cache[f];
+  if (!txt) {
+    if (i === DZ.anim.idx) {
+      const svg = $("#dzCanvas").querySelector("svg");
+      if (svg) txt = dzSerialize(svg);
+    } else {
+      const r = await api.image_data(f);
+      txt = r && r.svg;
+    }
+    if (DZ.anim && txt) DZ.anim.cache[f] = txt;
+  }
+  if (!txt || !cell.isConnected) return;
+  const tmp = document.createElement("div"); tmp.innerHTML = txt;
+  const svg = tmp.querySelector("svg");
+  if (!svg) return;
+  svg.removeAttribute("width"); svg.removeAttribute("height");
+  svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+  cell.innerHTML = ""; cell.appendChild(svg);
+}
 
-/* ══ 🪞 modo espejo: lápiz/pincel/pluma dibujan también reflejados sobre el
+/* ══ TIMELINE POR CAPAS × cuadros (estilo Toon Boom) ═══════════════════════
+   Filas = capas (por id, unidas entre cuadros); columnas = cuadros. La celda
+   se marca si esa capa existe en ese cuadro. La profundidad Z de cada capa es
+   la MISMA data-z que usa el diorama/multiplano (coherente). ══ */
+function dzTlGridToggle() {
+  const g = $("#dzTlGrid");
+  g.hidden = !g.hidden;
+  DZ.tlGridClosed = g.hidden;          // recordar la preferencia en la sesión
+  const b = $("#tlLayers"); if (b) b.classList.toggle("active", !g.hidden);
+  if (!g.hidden) { if (!DZ.anim) dzAnimToggle(); dzTlGridRender(); }
+}
+async function dzTlFrameSvgs() {
+  const out = [];
+  for (let i = 0; i < DZ.anim.frames.length; i++) {
+    const f = DZ.anim.frames[i];
+    let txt = DZ.anim.cache[f];
+    if (!txt) {
+      if (i === DZ.anim.idx) { const s = $("#dzCanvas").querySelector("svg"); txt = s ? dzSerialize(s) : ""; }
+      else { const r = await api.image_data(f); txt = (r && r.svg) || ""; }
+      if (txt) DZ.anim.cache[f] = txt;
+    }
+    out.push(txt);
+  }
+  return out;
+}
+function dzTlKeysOf(svgText) {
+  const set = new Set();
+  const doc = new DOMParser().parseFromString(svgText || "<svg/>", "image/svg+xml");
+  const s = doc.querySelector("svg");
+  if (s) [...s.children].forEach(n => {
+    const t = n.tagName.toLowerCase();
+    if (DZ_SKIP_TAGS.includes(t)) return;
+    const cls = (n.getAttribute && n.getAttribute("class")) || "";
+    if (/dz-onion|dz-penui/.test(cls)) return;
+    set.add(n.id ? "#" + n.id : "(sin nombre)");
+  });
+  return set;
+}
+async function dzTlGridRender() {
+  const g = $("#dzTlGrid");
+  if (!g || g.hidden || !DZ.anim) return;
+  const svgs = await dzTlFrameSvgs();
+  const perFrame = svgs.map(dzTlKeysOf);
+  const order = [];
+  perFrame.forEach(set => set.forEach(k => { if (!order.includes(k)) order.push(k); }));
+  order.reverse();   // al frente arriba (como Illustrator/PS)
+  const cur = DZ.anim.idx;
+  const keys = (DZ.scene && DZ.scene.keys) || [];   // fotogramas clave de dibujo
+  const cams = (DZ.scene && DZ.scene.cam) || {};    // claves de cámara
+  const fnum = i => dzFrameNum(DZ.anim.frames[i]);
+  // ── encabezado: números de cuadro (cada 5 resaltado) + marcas <i class="fas fa-key"></i>/<i class="fas fa-camera-movie"></i> + playhead ──
+  $("#dzTlgCols").innerHTML = DZ.anim.frames.map((f, i) => {
+    const n = i + 1, mj = (n % 5 === 0), num = fnum(i);
+    const mark = (keys.includes(num) ? "<i class='k'></i>" : "") + (cams[num] ? "<i class='c'></i>" : "");
+    return `<span class="dz-tlg-col${i === cur ? " cur" : ""}${mj ? " mj" : ""}" data-i="${i}">` +
+           `${mj || i === cur ? n : ""}${mark}</span>`;
+  }).join("");
+  const liveSvg = $("#dzCanvas").querySelector("svg");
+  const rows = $("#dzTlgRows");
+  rows.innerHTML = "";
+  order.forEach(key => {
+    const row = document.createElement("div");
+    row.className = "dz-tlg-row";
+    const id = key.startsWith("#") ? key.slice(1) : null;
+    const liveEl = id && liveSvg ? liveSvg.querySelector("#" + CSS.escape(id)) : null;
+    const z = liveEl ? (parseFloat(liveEl.getAttribute("data-z")) || 0) : 0;
+    const hidden = liveEl && liveEl.getAttribute("display") === "none";
+    const locked = liveEl && liveEl.hasAttribute("data-locked");
+    // panel izquierdo de la capa (columna, como OpenToonz):  · <i class="fas fa-lock"></i> · nombre · Z
+    const head = document.createElement("div");
+    head.className = "dz-tlg-lhead";
+    head.innerHTML =
+      `<span class="dz-eye eye" title="${hidden ? "Mostrar" : "Ocultar"}">${hidden ? "◌" : ""}</span>` +
+      `<span class="dz-eye lock" title="${locked ? "Desbloquear" : "Bloquear"}" style="opacity:${locked ? 1 : .4}">${locked ? "<i class="fas fa-lock"></i>" : "🔓"}</span>` +
+      `<span class="dz-tlg-name" title="${key}">${key}</span>` +
+      `<input class="dz-tlg-z" type="number" step="10" value="${z}" title="Profundidad Z (multiplano) — la misma del diorama"${liveEl ? "" : " disabled"}>`;
+    head.querySelector(".eye").onclick = () => {
+      if (!liveEl) return; dzSnapshot();
+      hidden ? liveEl.removeAttribute("display") : liveEl.setAttribute("display", "none");
+      dzMarkDirty(); dzBuildLayers(); dzTlGridRender();
+    };
+    head.querySelector(".lock").onclick = () => {
+      if (!liveEl) return; dzSnapshot();
+      locked ? liveEl.removeAttribute("data-locked") : liveEl.setAttribute("data-locked", "1");
+      dzMarkDirty(); dzBuildLayers(); dzTlGridRender();
+    };
+    head.querySelector(".dz-tlg-z").onchange = (e) => {
+      if (!liveEl) return; dzSnapshot();
+      const v = Math.max(-60, Math.min(400, Math.round(+e.target.value || 0)));
+      if (v === 0) liveEl.removeAttribute("data-z"); else liveEl.setAttribute("data-z", v);
+      dzMarkDirty(); dzBuildLayers();
+      if (DZ.d3) dz3dBuild();
+      dzZPanelRender();
+    };
+    row.appendChild(head);
+    // celdas: EXPOSICIÓN estilo OpenToonz — inicio de toma sólido, sostenidos
+    // con línea de continuación; clic navega al cuadro
+    const cells = document.createElement("div");
+    cells.className = "dz-tlg-cells";
+    perFrame.forEach((set, i) => {
+      const on = set.has(key), prevOn = i > 0 && perFrame[i - 1].has(key);
+      const c = document.createElement("span");
+      c.className = "dz-tlg-cell" +
+        (on ? (prevOn ? " held" : " start") : "") + (i === cur ? " cur" : "");
+      c.dataset.i = i;
+      c.onclick = () => { dzAnimStopIf(); dzGoFrame(i); };
+      cells.appendChild(c);
+    });
+    row.appendChild(cells);
+    rows.appendChild(row);
+  });
+  // ── fila de CÁMARA (track propio, como OpenToonz) ──
+  const camRow = document.createElement("div");
+  camRow.className = "dz-tlg-row cam";
+  camRow.innerHTML = `<div class="dz-tlg-lhead"><span class="dz-eye"><i class="fas fa-camera-movie"></i></span>` +
+    `<span class="dz-tlg-name">Cámara</span></div>`;
+  const camCells = document.createElement("div");
+  camCells.className = "dz-tlg-cells";
+  DZ.anim.frames.forEach((f, i) => {
+    const has = !!cams[fnum(i)];
+    const c = document.createElement("span");
+    c.className = "dz-tlg-cell cam" + (has ? " key" : "") + (i === cur ? " cur" : "");
+    c.dataset.i = i;
+    c.onclick = () => { dzAnimStopIf(); dzGoFrame(i); };
+    camCells.appendChild(c);
+  });
+  camRow.appendChild(camCells);
+  rows.appendChild(camRow);
+  $("#dzTlgCols").querySelectorAll(".dz-tlg-col").forEach(c =>
+    c.onclick = () => { dzAnimStopIf(); dzGoFrame(+c.dataset.i); });
+}
+
+/* ══ <i class="fas fa-sync-alt"></i> modo espejo: lápiz/pincel/pluma dibujan también reflejados sobre el
    eje vertical del lienzo — para personajes y diseños simétricos ══ */
 function dzMirrorToggle() {
   DZ.mirror = !DZ.mirror;
   const b = $("#dzMirror"); if (b) b.classList.toggle("active", DZ.mirror);
   dzSetStatus(DZ.mirror ?
-    "🪞 Modo espejo ACTIVADO: cada trazo se duplica reflejado (eje vertical del lienzo)" :
-    "🪞 Modo espejo desactivado");
+    "<i class="fas fa-sync-alt"></i> Modo espejo ACTIVADO: cada trazo se duplica reflejado (eje vertical del lienzo)" :
+    "<i class="fas fa-sync-alt"></i> Modo espejo desactivado");
 }
 function dzMirrorClone(el) {
   if (!DZ.mirror || !el || !el.parentNode) return null;
@@ -5663,17 +6559,17 @@ function dzMirrorClone(el) {
   return c;
 }
 
-/* ── ✨ fotograma clave con IA: describís el movimiento, el modelo dibuja la pose ── */
+/* ──  fotograma clave con IA: describís el movimiento, el modelo dibuja la pose ── */
 function dzAIKeyModal() {
   if (!DZ.anim) return;
-  openModal(`<h2>✨ Fotograma clave con IA</h2>
+  openModal(`<h2> Fotograma clave con IA</h2>
     <div class="sub">El modelo mira el cuadro actual y dibuja la PRÓXIMA pose según tu indicación.
-    Se inserta después de este cuadro y queda marcada como clave (🔑). Después podés intercalar (🪄).</div>
+    Se inserta después de este cuadro y queda marcada como clave (<i class="fas fa-key"></i>). Después podés intercalar (🪄).</div>
     <textarea id="aiKeyTxt" class="cmp-field" rows="3" spellcheck="false"
       placeholder="ej: «el personaje levanta el brazo derecho y mira hacia arriba», «la pelota toca el piso y se aplasta»"></textarea>
     <div class="m-actions">
       <button class="ghost" id="mCancel">Cancelar</button>
-      <button class="primary" id="aiKeyGo">✨ Dibujar la pose</button>
+      <button class="primary" id="aiKeyGo"> Dibujar la pose</button>
     </div>`);
   $("#mCancel").onclick = closeModal;
   $("#aiKeyGo").onclick = async () => {
@@ -5681,9 +6577,9 @@ function dzAIKeyModal() {
     closeModal();
     if (!txt) return;
     await dzPersist();
-    dzSetStatus("✨ El modelo está dibujando el próximo fotograma clave…");
+    dzSetStatus(" El modelo está dibujando el próximo fotograma clave…");
     const r = await api.ai_keyframe(DZ.path, txt);
-    if (r && r.error) return dzSetStatus("❌ " + r.error);
+    if (r && r.error) return dzSetStatus(" " + r.error);
     DZ.anim.cache = {};
     // la pose nueva nace marcada como clave
     DZ.scene = DZ.scene || {}; DZ.scene.keys = DZ.scene.keys || [];
@@ -5695,7 +6591,7 @@ function dzAIKeyModal() {
     $("#dzTimeline").hidden = false;
     await dzTimelineRefresh();
     dzOnionUpdate();
-    dzSetStatus("✨ Pose nueva en el cuadro " + num + " (🔑). Revisala, retocá lo que haga falta y usá 🪄 para intercalar.");
+    dzSetStatus(" Pose nueva en el cuadro " + num + " (<i class="fas fa-key"></i>). Revisala, retocá lo que haga falta y usá 🪄 para intercalar.");
   };
 }
 
@@ -5719,7 +6615,7 @@ async function dzAnimPlay() {
   const loop = DZ.anim.loop !== false;
   let i = (DZ.anim.idx >= lo && DZ.anim.idx <= hi) ? DZ.anim.idx : lo;
   const fps = Math.max(1, Math.min(60, +($("#tlFps") && $("#tlFps").value) || 12));
-  const throughCam = dzHasCam();                 // hay claves de cámara → play POR cámara
+  const throughCam = dzHasCam();                 // hay claves de cámara  play POR cámara
   DZ.anim.timer = setInterval(() => {
     if (i >= hi) {                               // llegó al final del rango
       if (!loop) { dzAnimStop(); return; }
@@ -5754,11 +6650,629 @@ function dzAnimStop() {
   if (!DZ.anim || !DZ.anim.playing) return;
   clearInterval(DZ.anim.timer);
   DZ.anim.playing = false;
-  $("#tlPlay").textContent = "▶";
+  $("#tlPlay").textContent = "";
   dzGoFrame(DZ.anim.idx);   // volver al cuadro editable real
 }
 
 /* ── panel de capas: lista de elementos, reordenar (z), mostrar/ocultar ── */
+/* ══ ESPACIO 3D: visor tipo Blender para el multiplano ══════════════════════
+   Cada capa (elemento de primer nivel del svg) es un PLANO flotando en
+   profundidad — el mismo data-z del diorama y del export con parallax, ahora
+   navegable: orbitás la escena, activás un plano y dibujás 2D sobre él
+   (grease pencil de Blender). El truco que lo hace posible sin librerías:
+   el browser proyecta solo los pointer events sobre elementos con CSS 3D,
+   así que offsetX/offsetY llegan en coordenadas LOCALES del plano rotado. */
+const DZ3D_DEPTH = 1.2;               // px de translateZ por unidad de data-z
+const DZ3D_VIEWS = { persp: [-18, 28], front: [0, 0], top: [-89.9, 0], side: [0, 89.9] };
+
+function dz3dToggle() {
+  if (DZ.d3) return dz3dExit();
+  const svg = $("#dzCanvas").querySelector("svg");
+  if (!svg) return sysMsg("Abrí un diseño primero");
+  DZ.d3 = { rx: -18, ry: 28, zoom: 0.65, panX: 0, panY: 30, act: -1, els: [] };
+  $("#dz3DBtn").classList.add("active");
+  dz3dBuild();
+  dzSetStatus("Espacio 3D — arrastrá: orbitar · Shift: panear · rueda: zoom · " +
+    "clic en un plano lo activa · lápiz/pincel dibujan sobre el plano · mover imanta a las guías (Alt: libre) · " +
+    "Z: manejador al costado del plano o slider");
+}
+
+function dz3dKids(svg) {
+  return [...svg.children].filter(n => !DZ_SKIP_TAGS.includes(n.tagName.toLowerCase())
+    && !(n.classList && (n.classList.contains("dz-onion") || n.classList.contains("dz-penui"))));
+}
+
+// aplica clase al stage según la herramienta (solo en dibujo bloquea otros planos)
+function dz3dApplyToolClass() {
+  const stage = $("#dz3dStage");
+  if (!stage) return;
+  const drawing = DZ.tool === "pencil" || DZ.tool === "brush" || DZ.tool === "pen";
+  stage.classList.toggle("tool-draw", drawing);
+}
+
+function dz3dBuild() {
+  const cv = $("#dzCanvas");
+  const svg = cv.querySelector("svg");
+  if (!svg || !DZ.d3) return;
+  const old = $("#dz3dStage"); if (old) old.remove();
+  svg.style.visibility = "hidden";
+  $("#dzHandle").hidden = true; $("#dzRotate").hidden = true;
+
+  // lienzo vacío: crear un plano base para que se pueda dibujar ya
+  if (!dz3dKids(svg).length) {
+    const g = document.createElementNS(SVGNS, "g");
+    g.setAttribute("data-low", "plano");
+    svg.appendChild(g);
+  }
+  const vb = (svg.getAttribute("viewBox") || "0 0 1080 1080").split(/\s+/).map(Number);
+  const W = vb[2] || 1080, H = vb[3] || 1080;
+  const G = Math.max(W, H) * 1.6;                       // tamaño del piso/ejes
+
+  DZ.d3.vb = vb;                                        // para reglas y manejador Z
+  const stage = document.createElement("div");
+  stage.id = "dz3dStage";
+  stage.classList.add("show-mesh", "show-rulers");
+  stage.innerHTML = `
+    <div class="dz3d-world" id="dz3dWorld">
+      <div class="dz3d-grid" style="width:${G}px;height:${G}px;margin-left:${-G / 2}px;margin-top:${-G / 2}px;transform:translateY(${H / 2}px) rotateX(90deg)"></div>
+      <div class="dz3d-axis ax-x" style="width:${G}px;margin-left:${-G / 2}px;transform:translateY(${H / 2}px)"></div>
+      <div class="dz3d-axis ax-y" style="height:${G}px;margin-top:${-G / 2}px"></div>
+      <div class="dz3d-axis ax-z" style="width:${G}px;margin-left:${-G / 2}px;transform:translateY(${H / 2}px) rotateY(90deg)"></div>
+      <div class="dz3d-zhandle" id="dz3dZH" hidden
+        title="Manejador del eje Z: arrastrá para acercar/alejar el plano activo en profundidad">
+        <span class="zh-a">▲</span><span class="zh-z">Z</span><span class="zh-a">▼</span>
+      </div>
+      <div class="dz3d-rothandle" id="dz3dRotH" hidden
+        title="Rotar el plano activo: arrastrá horizontal (eje Y) o vertical (eje X) · doble clic lo endereza"></div>
+    </div>
+    <div class="dz3d-gizmo">
+      <span class="dz3d-axlbl x" title="Eje X (ancho del lienzo)">X</span>
+      <span class="dz3d-axlbl y" title="Eje Y (alto del lienzo)">Y</span>
+      <span class="dz3d-axlbl z" title="Eje Z (profundidad · data-z)">Z</span>
+      <button data-v="persp" class="active" title="Vista en perspectiva">Persp</button>
+      <button data-v="front" title="De frente (como el lienzo plano)">Frente</button>
+      <button data-v="top" title="Desde arriba: se ve la separación en Z">Arriba</button>
+      <button data-v="side" title="De costado: los planos de perfil">Lado</button>
+      <span class="vsep"></span>
+      <button class="dz3d-add" title="Agregar un plano nuevo frente a la cámara para dibujar"> Plano</button>
+      <span class="vsep"></span>
+      <button data-t="mesh" class="active" title="Malla de edición: grilla sobre el plano activo">Malla</button>
+      <button data-t="rulers" class="active" title="Reglas X·Y en unidades del lienzo sobre el plano activo">Reglas</button>
+      <button class="dz3d-x" title="Salir del espacio 3D">${icoUse("i-x")}</button>
+    </div>
+    <div class="dz3d-zbar" id="dz3dZbar" hidden>
+      <span class="dz3d-zname" id="dz3dZname"></span>
+      <span class="dz3d-orbadge" id="dz3dOrBadge" title="Eje/orientación del plano activo"></span>
+      <span class="dz3d-axlbl z">Z</span>
+      <input type="range" id="dz3dZr" min="-60" max="400" step="1" value="0"
+        title="Profundidad del plano activo: negativo = más cerca de la cámara, 0 = plano de acción, positivo = fondo">
+      <input type="number" id="dz3dZn" min="-60" max="400" step="1" value="0" class="dz-win">
+      <span class="vsep"></span>
+      <span class="dz-hint">orientar</span>
+      <button class="dz3d-or" data-or="front" title="Frente (mira al frente, como el lienzo plano)">Frente</button>
+      <button class="dz3d-or" data-or="floor" title="Piso (acostado, horizontal)">Piso</button>
+      <button class="dz3d-or" data-or="left" title="Pared izquierda">◀</button>
+      <button class="dz3d-or" data-or="right" title="Pared derecha"></button>
+      <button class="dz3d-or" data-or="face" title="Girar el plano para que mire de frente a la cámara actual (billboard)">↺ cámara</button>
+    </div>`;
+  cv.appendChild(stage);
+  dz3dApplyToolClass();
+
+  // ── planos: un svg por capa, con los defs (gradientes/filtros) clonados ──
+  const world = $("#dz3dWorld");
+  const defs = [...svg.children].filter(n => DZ_SKIP_TAGS.includes(n.tagName.toLowerCase()));
+  const kids = dz3dKids(svg);
+  DZ.d3.els = kids;
+  kids.forEach((el, i) => {
+    const card = document.createElement("div");
+    card.className = "dz3d-card";
+    card.dataset.i = i;
+    card.style.cssText = `width:${W}px;height:${H}px;margin-left:${-W / 2}px;margin-top:${-H / 2}px;`;
+    const cs = document.createElementNS(SVGNS, "svg");
+    cs.setAttribute("viewBox", vb.join(" "));
+    cs.setAttribute("width", W); cs.setAttribute("height", H);
+    defs.forEach(d => cs.appendChild(d.cloneNode(true)));
+    const clone = el.cloneNode(true);
+    clone.setAttribute("data-dz3d", "content");
+    dz3dPlaneUI(cs, vb, clone);        // malla + contenido + reglas X·Y + guías
+    card.appendChild(cs);
+    const tag = document.createElement("span");
+    tag.className = "dz3d-tag";
+    card.appendChild(tag);
+    world.appendChild(card);
+    dz3dCardZ(card, el);
+    dz3dWireCard(card, cs, el, i);
+  });
+
+  // ── controles de vista ──
+  stage.querySelectorAll(".dz3d-gizmo [data-v]").forEach(b => b.onclick = () => {
+    const [rx, ry] = DZ3D_VIEWS[b.dataset.v];
+    DZ.d3.rx = rx; DZ.d3.ry = ry;
+    stage.querySelectorAll(".dz3d-gizmo [data-v]").forEach(x => x.classList.toggle("active", x === b));
+    dz3dApply();
+  });
+  stage.querySelector(".dz3d-x").onclick = () => dz3dExit();
+
+  // ── órbita / paneo / zoom sobre el fondo ──
+  stage.addEventListener("pointerdown", e => {
+    if (e.target.closest(".dz3d-card") || e.target.closest(".dz3d-gizmo") ||
+        e.target.closest(".dz3d-zbar")) return;
+    // Órbita SOLO con click derecho; paneo con Shift+click o botón medio.
+    // Click izquierdo en el fondo no hace nada — deja que el plano activo reciba el trazo.
+    const orbit = e.button === 2;
+    const pan = e.shiftKey || e.button === 1;
+    if (!orbit && !pan) return;
+    const d3 = DZ.d3, sx = e.clientX, sy = e.clientY;
+    const base = { rx: d3.rx, ry: d3.ry, px: d3.panX, py: d3.panY };
+    stage.setPointerCapture(e.pointerId);
+    const move = ev => {
+      if (pan) { d3.panX = base.px + (ev.clientX - sx); d3.panY = base.py + (ev.clientY - sy); }
+      else {
+        d3.ry = base.ry + (ev.clientX - sx) * 0.4;
+        d3.rx = Math.max(-90, Math.min(90, base.rx - (ev.clientY - sy) * 0.4));
+      }
+      dz3dApply();
+    };
+    const up = () => { stage.removeEventListener("pointermove", move); stage.removeEventListener("pointerup", up); };
+    stage.addEventListener("pointermove", move);
+    stage.addEventListener("pointerup", up);
+    e.preventDefault();
+  });
+  stage.addEventListener("contextmenu", e => e.preventDefault());
+  stage.addEventListener("wheel", e => {
+    e.preventDefault();
+    DZ.d3.zoom = Math.max(0.12, Math.min(3, DZ.d3.zoom * (e.deltaY < 0 ? 1.1 : 0.9)));
+    dz3dApply();
+  }, { passive: false });
+
+  // ── toggles de malla y reglas ──
+  stage.querySelectorAll(".dz3d-gizmo [data-t]").forEach(b => b.onclick = () => {
+    const on = stage.classList.toggle("show-" + b.dataset.t);
+    b.classList.toggle("active", on);
+  });
+  // ── nuevo plano + presets de orientación (dibujar 2D en 3D tipo Feather) ──
+  stage.querySelector(".dz3d-add").onclick = dz3dAddPlane;
+  stage.querySelectorAll(".dz3d-or").forEach(b => b.onclick = () => {
+    // "face" (billboard) rota el plano ACTIVO para que mire a cámara
+    if (b.dataset.or === "face") {
+      const i = DZ.d3.act; if (i < 0) return;
+      dz3dSetRot(i, -DZ.d3.rx, -DZ.d3.ry, true);
+      dz3dAxisBadge();
+      dzSetStatus("Plano orientado a la cámara — dibujá de frente");
+      return;
+    }
+    // Los demás presets (Piso/Pared/Frente) CREAN un nuevo plano con esa orientación
+    dz3dAddOrientedPlane(b.dataset.or);
+  });
+
+  // ── barra Z (slider) + manejador Z arrastrable ──
+  $("#dz3dZr").addEventListener("input", e => dz3dSetZ(DZ.d3.act, e.target.value, false));
+  $("#dz3dZr").addEventListener("change", e => dz3dSetZ(DZ.d3.act, e.target.value, true));
+  $("#dz3dZn").addEventListener("change", e => dz3dSetZ(DZ.d3.act, e.target.value, true));
+  const zh = $("#dz3dZH");
+  zh.addEventListener("pointerdown", e => {
+    e.stopPropagation(); e.preventDefault();
+    const i = DZ.d3.act; if (i < 0) return;
+    const z0 = parseFloat(DZ.d3.els[i].getAttribute("data-z")) || 0;
+    const dir = dz3dZDir();                       // eje Z del mundo, en px de pantalla
+    const L2 = dir.x * dir.x + dir.y * dir.y;
+    const sx = e.clientX, sy = e.clientY;
+    zh.setPointerCapture(e.pointerId);
+    zh.classList.add("drag");
+    const move = ev => {
+      // proyecta el arrastre sobre la dirección del eje Z en pantalla;
+      // de frente (el eje apunta a cámara) cae al arrastre vertical
+      const dz = L2 < 0.01 ? (sy - ev.clientY) * 0.8
+        : ((ev.clientX - sx) * dir.x + (ev.clientY - sy) * dir.y) / L2;
+      dz3dSetZ(i, z0 + dz, false);
+    };
+    const up = () => {
+      zh.removeEventListener("pointermove", move); zh.removeEventListener("pointerup", up);
+      zh.classList.remove("drag");
+      dz3dSetZ(i, +$("#dz3dZr").value, true);
+    };
+    zh.addEventListener("pointermove", move);
+    zh.addEventListener("pointerup", up);
+  });
+  // ── manejador de ROTACIÓN del plano activo (): horizontal=Y, vertical=X ──
+  const rh = $("#dz3dRotH");
+  rh.addEventListener("pointerdown", e => {
+    e.stopPropagation(); e.preventDefault();
+    const i = DZ.d3.act; if (i < 0) return;
+    const [rx0, ry0] = dz3dRot(DZ.d3.els[i]);
+    const sx = e.clientX, sy = e.clientY;
+    rh.setPointerCapture(e.pointerId);
+    rh.classList.add("drag");
+    const move = ev => {
+      let ry = ry0 + (ev.clientX - sx) * 0.5;
+      let rx = rx0 - (ev.clientY - sy) * 0.5;
+      if (ev.shiftKey) { ry = Math.round(ry / 15) * 15; rx = Math.round(rx / 15) * 15; }
+      rx = Math.max(-90, Math.min(90, rx)); ry = Math.max(-180, Math.min(180, ry));
+      dz3dSetRot(i, rx, ry, false);
+    };
+    const up = () => {
+      rh.removeEventListener("pointermove", move); rh.removeEventListener("pointerup", up);
+      rh.classList.remove("drag");
+      const [rx, ry] = dz3dRot(DZ.d3.els[i]);
+      dz3dSetRot(i, rx, ry, true);
+    };
+    rh.addEventListener("pointermove", move);
+    rh.addEventListener("pointerup", up);
+  });
+  rh.addEventListener("dblclick", e => {
+    e.stopPropagation();
+    if (DZ.d3.act >= 0) dz3dSetRot(DZ.d3.act, 0, 0, true);   // enderezar
+  });
+
+  dz3dApply();
+  // activar SIEMPRE un plano al entrar (el del frente) para que la barra Z y su
+  // manejador estén activos de una — antes, con varias capas no se activaba
+  // ninguno y el 'selector del eje Z' parecía no hacer nada
+  if (DZ.d3.act >= 0 && DZ.d3.act < kids.length) dz3dActivate(DZ.d3.act);
+  else if (kids.length) dz3dActivate(kids.length - 1);
+}
+
+/* orientación 3D del plano (data-rot3d="rx,ry") — lo que hace que se pueda
+   dibujar 2D sobre planos inclinados como Feather, no solo apilados en Z */
+function dz3dRot(el) {
+  const r = (el.getAttribute("data-rot3d") || "0,0").split(",").map(Number);
+  return [r[0] || 0, r[1] || 0];
+}
+/* nombre legible de la orientación del plano (para el indicador de eje) */
+function dz3dOrientName(el) {
+  const [rx, ry] = dz3dRot(el);
+  const near = (a, b) => Math.abs(((a - b) % 360 + 540) % 360 - 180) < 20;
+  if (near(rx, 0) && near(ry, 0)) return "Frente (Z)";
+  if (near(rx, 90) || near(rx, -90)) return "Piso (Y)";
+  if (near(ry, 90) || near(ry, -90)) return "Pared (X)";
+  return `libre ${Math.round(rx)}°/${Math.round(ry)}°`;
+}
+/* actualiza el indicador de eje/orientación del plano activo en la barra Z */
+function dz3dAxisBadge() {
+  const b = $("#dz3dOrBadge");
+  if (!b || !DZ.d3 || DZ.d3.act < 0) { if (b) b.textContent = ""; return; }
+  b.textContent = dz3dOrientName(DZ.d3.els[DZ.d3.act]);
+}
+function dz3dCardZ(card, el) {
+  const z = parseFloat(el.getAttribute("data-z")) || 0;
+  const [rx, ry] = dz3dRot(el);
+  // el plano se traslada en Z y se orienta libremente; se dibuja igual porque
+  // los pointer events se proyectan a coordenadas locales del plano rotado
+  card.style.transform = `translateZ(${(-z * DZ3D_DEPTH).toFixed(1)}px) ` +
+    `rotateX(${rx}deg) rotateY(${ry}deg)`;
+  const tag = card.querySelector(".dz3d-tag");
+  if (tag) tag.textContent = dzLayerLabel(el) + " · z=" + z +
+    (rx || ry ? ` · ${Math.round(rx)}°/${Math.round(ry)}°` : "");
+}
+/* fija la orientación del plano i (presets y arrastre comparten esto) */
+function dz3dSetRot(i, rx, ry, commit) {
+  const d3 = DZ.d3; if (!d3 || i < 0) return;
+  const el = d3.els[i];
+  rx = Math.round(rx); ry = Math.round(ry);
+  if (!rx && !ry) el.removeAttribute("data-rot3d");
+  else el.setAttribute("data-rot3d", rx + "," + ry);
+  const card = document.querySelector(`#dz3dWorld .dz3d-card[data-i="${i}"]`);
+  if (card) dz3dCardZ(card, el);
+  if (i === d3.act) dz3dZHandlePlace();
+  if (commit) { DZ.dirty = true; dzPersist(); }
+}
+/* agrega un plano nuevo para dibujar, orientado frente a la cámara (billboard) */
+function dz3dAddPlane() {
+  const svg = $("#dzCanvas").querySelector("svg");
+  if (!svg || !DZ.d3) return;
+  dzSnapshot();
+  const g = document.createElementNS(SVGNS, "g");
+  g.setAttribute("data-low", "plano");
+  // frente a la cámara actual: contrarrestar la órbita del mundo
+  const rx = Math.round(-DZ.d3.rx), ry = Math.round(-DZ.d3.ry);
+  if (rx || ry) g.setAttribute("data-rot3d", rx + "," + ry);
+  svg.appendChild(g);
+  DZ.dirty = true;
+  dz3dBuild();
+  dz3dActivate(DZ.d3.els.length - 1);
+  dzSetTool("pencil");
+  dzSetStatus("Plano nuevo frente a la cámara — dibujá con lápiz/pincel. Orientalo con los presets o el manejador .");
+}
+/* Crea un NUEVO plano con orientación predefinida (front/floor/left/right)
+   y orbita la cámara para verlo de frente y dibujar cómodo. */
+function dz3dAddOrientedPlane(or) {
+  const svg = $("#dzCanvas").querySelector("svg");
+  if (!svg || !DZ.d3) return;
+  const OR = { front: [0, 0], floor: [90, 0], left: [0, 90], right: [0, -90] };
+  const VIEW = { front: [0, 0], floor: [-89.9, 0], left: [0, -90], right: [0, 90] };
+  const NAMES = { front: "Frente (Z)", floor: "Piso (Y)", left: "Pared izquierda (X)", right: "Pared derecha (X)" };
+  const [rx, ry] = OR[or] || [0, 0];
+  dzSnapshot();
+  const g = document.createElementNS(SVGNS, "g");
+  g.setAttribute("data-low", "plano");
+  if (rx || ry) g.setAttribute("data-rot3d", rx + "," + ry);
+  svg.appendChild(g);
+  DZ.dirty = true;
+  dz3dBuild();
+  dz3dActivate(DZ.d3.els.length - 1);
+  // orbitar para verlo de frente (dibujar cómodo)
+  const [vrx, vry] = VIEW[or] || [0, 0];
+  DZ.d3.rx = vrx; DZ.d3.ry = vry; dz3dApply();
+  const stage = $("#dz3dStage");
+  if (stage) stage.querySelectorAll(".dz3d-gizmo [data-v]").forEach(x => x.classList.remove("active"));
+  dzSetTool("pencil");
+  dzSetStatus("Plano nuevo: «" + (NAMES[or] || or) + "» — dibujá con lápiz. Orbitá con arrastre para ver la escena 3D.");
+}
+
+function dz3dApply() {
+  const d3 = DZ.d3, w = $("#dz3dWorld");
+  if (!d3 || !w) return;
+  w.style.transform = `translate(${d3.panX}px, ${d3.panY}px) scale(${d3.zoom}) ` +
+                      `rotateX(${d3.rx}deg) rotateY(${d3.ry}deg)`;
+  const sb = $("#sbZoom");
+  if (sb) sb.textContent = Math.round(d3.zoom * 100) + "% · 3D " +
+    Math.round(d3.rx) + "°/" + Math.round(d3.ry) + "°";
+}
+
+function dz3dActivate(i) {
+  const d3 = DZ.d3; if (!d3) return;
+  d3.act = i;
+  document.querySelectorAll("#dz3dWorld .dz3d-card").forEach(c =>
+    c.classList.toggle("act", +c.dataset.i === i));
+  const el = d3.els[i];
+  DZ.sel = el;                                   // props/rig/walk usan la selección
+  const zb = $("#dz3dZbar");
+  zb.hidden = false;
+  $("#dz3dZname").textContent = dzLayerLabel(el);
+  const z = parseFloat(el.getAttribute("data-z")) || 0;
+  $("#dz3dZr").value = z; $("#dz3dZn").value = z;
+  const zh = $("#dz3dZH"), rh = $("#dz3dRotH");
+  if (zh) zh.hidden = false;
+  if (rh) rh.hidden = false;
+  dz3dZHandlePlace();
+  dz3dAxisBadge();
+  dz3dApplyToolClass();         // <i class="fas fa-lock"></i> refresca pointer-events según tool y plano activo
+}
+
+/* mueve el plano activo en el eje Z (slider, manejador y teclado comparten esto) */
+function dz3dSetZ(i, z, commit) {
+  const d3 = DZ.d3; if (!d3 || i < 0) return;
+  const el = d3.els[i];
+  z = Math.max(-60, Math.min(400, Math.round(+z || 0)));
+  if (z === 0) el.removeAttribute("data-z"); else el.setAttribute("data-z", z);
+  $("#dz3dZr").value = z; $("#dz3dZn").value = z;
+  const card = document.querySelector(`#dz3dWorld .dz3d-card[data-i="${i}"]`);
+  if (card) dz3dCardZ(card, el);
+  if (i === d3.act) dz3dZHandlePlace();
+  if (commit) { DZ.dirty = true; dzPersist(); dzZPanelRender(); }
+}
+
+/* dirección del eje Z del mundo en PANTALLA (px por unidad de data-z) */
+function dz3dZDir() {
+  const w = $("#dz3dWorld");
+  const m = new DOMMatrix(getComputedStyle(w).transform);
+  const o = m.transformPoint(new DOMPoint(0, 0, 0));
+  const p = m.transformPoint(new DOMPoint(0, 0, -DZ3D_DEPTH));
+  return { x: p.x - o.x, y: p.y - o.y };
+}
+
+/* pega los manejadores Z (derecha) y rotación (arriba-izq) al plano activo,
+   compartiendo su profundidad y orientación para que floten sobre el plano */
+function dz3dZHandlePlace() {
+  const d3 = DZ.d3, zh = $("#dz3dZH"), rh = $("#dz3dRotH");
+  if (!d3 || d3.act < 0) return;
+  const el = d3.els[d3.act];
+  const z = parseFloat(el.getAttribute("data-z")) || 0;
+  const [rx, ry] = dz3dRot(el);
+  const W = (d3.vb && d3.vb[2]) || 1080, H = (d3.vb && d3.vb[3]) || 1080;
+  const base = `translateZ(${(-z * DZ3D_DEPTH).toFixed(1)}px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+  if (zh) zh.style.transform = base + ` translate(${W / 2 + 30}px, 0)`;
+  if (rh) rh.style.transform = base + ` translate(${-W / 2 - 30}px, ${-H / 2}px)`;
+}
+
+/* malla de edición + reglas X·Y + capa de guías del plano — UI del visor:
+   vive SOLO en el svg del plano, jamás se guarda al archivo */
+function dz3dPlaneUI(cs, vb, contentNode) {
+  const [x0, y0, W, H] = [vb[0], vb[1], vb[2] || 1080, vb[3] || 1080];
+  const mk = (tag, at) => {
+    const n = document.createElementNS(SVGNS, tag);
+    for (const k in at) n.setAttribute(k, at[k]);
+    return n;
+  };
+  const step = W > 1600 ? 100 : 50, major = step * 2;
+  // malla (detrás del dibujo)
+  const mesh = mk("g", { "data-dz3d": "mesh", class: "dz3d-mesh" });
+  for (let x = x0; x <= x0 + W + 0.1; x += step)
+    mesh.appendChild(mk("line", { x1: x, y1: y0, x2: x, y2: y0 + H,
+      class: (x - x0) % major === 0 ? "mj" : "mn" }));
+  for (let y = y0; y <= y0 + H + 0.1; y += step)
+    mesh.appendChild(mk("line", { x1: x0, y1: y, x2: x0 + W, y2: y,
+      class: (y - y0) % major === 0 ? "mj" : "mn" }));
+  cs.appendChild(mesh);
+  cs.appendChild(contentNode);
+  // reglas: X arriba (rojo) · Y a la izquierda (verde), en unidades del lienzo
+  const rul = mk("g", { "data-dz3d": "rulers", class: "dz3d-rulers" });
+  rul.appendChild(mk("rect", { x: x0, y: y0, width: W, height: 17, class: "rbg" }));
+  rul.appendChild(mk("rect", { x: x0, y: y0, width: 17, height: H, class: "rbg" }));
+  for (let x = x0; x <= x0 + W + 0.1; x += step) {
+    const mj = (x - x0) % major === 0;
+    rul.appendChild(mk("line", { x1: x, y1: y0, x2: x, y2: y0 + (mj ? 13 : 7), class: "rx" }));
+    if (mj && x > x0) {
+      const t = mk("text", { x: x + 3, y: y0 + 13, class: "rt" });
+      t.textContent = x; rul.appendChild(t);
+    }
+  }
+  for (let y = y0; y <= y0 + H + 0.1; y += step) {
+    const mj = (y - y0) % major === 0;
+    rul.appendChild(mk("line", { x1: x0, y1: y, x2: x0 + (mj ? 13 : 7), y2: y, class: "ry" }));
+    if (mj && y > y0) {
+      const t = mk("text", { x: x0 + 3, y: y - 4, class: "rt" });
+      t.textContent = y; rul.appendChild(t);
+    }
+  }
+  cs.appendChild(rul);
+  cs.appendChild(mk("g", { "data-dz3d": "guides" }));
+  // superficie de dibujo: rect transparente que cubre TODO el plano y queda
+  // arriba de todo  es siempre el target del puntero, así offsetX/offsetY caen
+  // en coordenadas del plano (aunque esté rotado en 3D). fill=transparent recibe
+  // eventos (a diferencia de fill=none). Es UI: no se guarda al archivo.
+  cs.appendChild(mk("rect", { "data-dz3d": "surf", x: x0, y: y0, width: W, height: H,
+                              fill: "transparent" }));
+}
+
+/* refresca el contenido del plano i desde el svg real (tras dibujar/mover) */
+function dz3dSyncCard(i) {
+  const d3 = DZ.d3; if (!d3) return;
+  const card = document.querySelector(`#dz3dWorld .dz3d-card[data-i="${i}"]`);
+  const el = d3.els[i];
+  if (!card || !el) return;
+  const cs = card.querySelector("svg");
+  const clone = el.cloneNode(true);
+  clone.setAttribute("data-dz3d", "content");
+  cs.replaceChild(clone, cs.querySelector('[data-dz3d="content"]'));
+  dz3dCardZ(card, el);
+}
+
+function dz3dWireCard(card, cs, el, i) {
+  const surf = cs.querySelector('[data-dz3d="surf"]') || cs;
+  surf.addEventListener("pointerdown", e => {
+    e.stopPropagation();
+    const d3 = DZ.d3;
+    const tool = DZ.tool || "select";
+    const drawing = (tool === "pencil" || tool === "brush" || tool === "pen");
+    // dibujar dibuja YA (activa + traza en el mismo gesto); mover/seleccionar
+    // en un plano nuevo solo activa con el primer clic
+    if (d3.act !== i) {
+      dz3dActivate(i);
+      if (!drawing) return;
+    }
+
+    // ── dibujo 2D sobre el plano activo (lápiz / pincel), en cualquier ángulo ──
+    if (drawing) {
+      const pts = [[e.offsetX, e.offsetY, e.pressure || 0.5]];
+      const drawColor = DZ.drawColor || (tool === "pencil" ? "#F0450E" : tool === "pen" ? "#F0450E" : "#E93D82");
+      const drawW = DZ.drawW || (tool === "pen" ? 2 : 6);
+      const live = document.createElementNS(SVGNS, "path");
+      live.setAttribute("fill", "none");
+      live.setAttribute("stroke", drawColor);
+      live.setAttribute("stroke-width", drawW);
+      live.setAttribute("stroke-linecap", "round");
+      live.setAttribute("opacity", "0.8");
+      cs.appendChild(live);
+      surf.setPointerCapture(e.pointerId);
+      const move = ev => {
+        pts.push([ev.offsetX, ev.offsetY, ev.pressure || 0.5]);
+        live.setAttribute("d", "M " + pts.map(p => p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" L "));
+      };
+      const up = () => {
+        surf.removeEventListener("pointermove", move); surf.removeEventListener("pointerup", up);
+        live.remove();
+        if (pts.length < 3) return;
+        dzSnapshot();
+        const refined = dzRefineStroke(pts);
+        let stroke;
+        if (tool === "brush") stroke = dzBrushRibbon(refined, drawW, drawColor);
+        else {
+          stroke = document.createElementNS(SVGNS, "path");
+          stroke.setAttribute("d", dzSmoothPath(refined));
+          stroke.setAttribute("fill", "none");
+          stroke.setAttribute("stroke", drawColor);
+          stroke.setAttribute("stroke-width", drawW);
+          stroke.setAttribute("stroke-linecap", "round");
+          stroke.setAttribute("stroke-linejoin", "round");
+          stroke.setAttribute("data-low", "pencil");
+        }
+        if (!stroke) return;
+        // al grupo activo si es <g>; si no, al lienzo con el mismo data-z
+        if (el.tagName.toLowerCase() === "g") el.appendChild(stroke);
+        else {
+          const z = el.getAttribute("data-z");
+          if (z) stroke.setAttribute("data-z", z);
+          el.parentNode.insertBefore(stroke, el.nextSibling);
+          DZ.dirty = true; dzPersist(); dz3dBuild();   // capa nueva  replanificar planos
+          return;
+        }
+        DZ.dirty = true; dzPersist();
+        dz3dSyncCard(i);
+        dzBuildLayers();
+      };
+      surf.addEventListener("pointermove", move);
+      surf.addEventListener("pointerup", up);
+      e.preventDefault();
+      return;
+    }
+
+    // ── mover la capa DENTRO de su plano (ejes X·Y locales) con guías ──
+    if (tool === "select" || tool === "direct") {
+      const sx = e.offsetX, sy = e.offsetY;
+      const clone = cs.querySelector('[data-dz3d="content"]');
+      const start = dzReadPos(clone);
+      const guides = cs.querySelector('[data-dz3d="guides"]');
+      const vb = (cs.getAttribute("viewBox") || "0 0 1080 1080").split(/\s+/).map(Number);
+      const [x0, y0, W, H] = [vb[0], vb[1], vb[2] || 1080, vb[3] || 1080];
+      // guías inteligentes: centro y bordes del lienzo + centros de las otras capas
+      let b0 = null;
+      try { b0 = clone.getBBox(); } catch (err) { /* sin render */ }
+      const tX = [x0 + W / 2], tY = [y0 + H / 2];
+      document.querySelectorAll("#dz3dWorld .dz3d-card").forEach(c => {
+        if (+c.dataset.i === i) return;
+        try {
+          const b = c.querySelector('[data-dz3d="content"]').getBBox();
+          if (b.width || b.height) { tX.push(b.x + b.width / 2); tY.push(b.y + b.height / 2); }
+        } catch (err) { /* vacía */ }
+      });
+      const SNAP = 8;
+      let dx = 0, dy = 0;
+      surf.setPointerCapture(e.pointerId);
+      const move = ev => {
+        dx = ev.offsetX - sx; dy = ev.offsetY - sy;
+        guides.innerHTML = "";
+        if (b0 && !ev.altKey) {                       // Alt = mover libre, sin imán
+          const cx = b0.x + b0.width / 2 + dx, cy = b0.y + b0.height / 2 + dy;
+          let gx = null, gy = null;
+          for (const t of tX) if (Math.abs(cx - t) < SNAP) { dx += t - cx; gx = t; break; }
+          for (const t of tY) if (Math.abs(cy - t) < SNAP) { dy += t - cy; gy = t; break; }
+          if (gx === null && Math.abs(b0.x + dx - x0) < SNAP) { dx = x0 - b0.x; gx = x0; }
+          if (gx === null && Math.abs(b0.x + b0.width + dx - (x0 + W)) < SNAP) { dx = x0 + W - b0.x - b0.width; gx = x0 + W; }
+          if (gy === null && Math.abs(b0.y + dy - y0) < SNAP) { dy = y0 - b0.y; gy = y0; }
+          if (gy === null && Math.abs(b0.y + b0.height + dy - (y0 + H)) < SNAP) { dy = y0 + H - b0.y - b0.height; gy = y0 + H; }
+          const gl = (x1, y1, x2, y2) => {
+            const l = document.createElementNS(SVGNS, "line");
+            l.setAttribute("x1", x1); l.setAttribute("y1", y1);
+            l.setAttribute("x2", x2); l.setAttribute("y2", y2);
+            l.setAttribute("class", "dz3d-gl");
+            guides.appendChild(l);
+          };
+          if (gx !== null) gl(gx, y0, gx, y0 + H);
+          if (gy !== null) gl(x0, gy, x0 + W, gy);
+        }
+        dzWritePos(clone, start, dx, dy);
+      };
+      const up = () => {
+        surf.removeEventListener("pointermove", move); surf.removeEventListener("pointerup", up);
+        guides.innerHTML = "";
+        if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+        dzSnapshot();
+        dzWritePos(el, dzReadPos(el), dx, dy);
+        DZ.dirty = true; dzPersist();
+        dz3dSyncCard(i);
+      };
+      surf.addEventListener("pointermove", move);
+      surf.addEventListener("pointerup", up);
+      e.preventDefault();
+    }
+  });
+}
+
+function dz3dExit(silent) {
+  const stage = $("#dz3dStage"); if (stage) stage.remove();
+  const svg = $("#dzCanvas").querySelector("svg");
+  if (svg) svg.style.visibility = "";
+  $("#dz3DBtn").classList.remove("active");
+  DZ.d3 = null;
+  if (!silent) {
+    dzPersist();
+    dzBuildLayers();
+    dzApplyZoom();
+    dzSetStatus("Lienzo plano — la profundidad Z de cada capa quedó guardada (diorama/parallax)");
+  }
+}
+
 const DZ_SKIP_TAGS = ["defs", "title", "desc", "style", "metadata", "lineargradient",
                       "radialgradient", "filter", "clippath", "mask", "symbol"];
 function dzLayerLabel(el) {
@@ -5768,6 +7282,9 @@ function dzLayerLabel(el) {
   const f = el.getAttribute("fill");
   return t + (f && f !== "none" ? " · " + f : "");
 }
+/* Panel de capas por COLUMNAS estilo Toon Boom: visibilidad · candado ·
+   color · nombre (con jerarquía padre/hijo) · opacidad · profundidad Z.
+   La profundidad Z es la superposición del multiplano (parallax/diorama). */
 function dzBuildLayers() {
   const box = $("#dzLayers");
   if (!box) return;
@@ -5776,61 +7293,102 @@ function dzBuildLayers() {
   const kids = [...svg.children].filter(n => !DZ_SKIP_TAGS.includes(n.tagName.toLowerCase())
     && !(n.classList && (n.classList.contains("dz-onion") || n.classList.contains("dz-penui"))));
   if (!kids.length) { box.innerHTML = ""; return; }
-  box.innerHTML = '<div class="dz-layers-h">CAPAS <span class="dz-hint">arrastrá: reordena · Alt+soltar: emparenta (rig) · doble clic: renombra</span></div>';
-  // en DOM el último dibuja arriba → mostramos al frente primero, como en Illustrator
+  box.innerHTML =
+    '<div class="dz-layers-h">CAPAS <span class="dz-hint">arrastrá: reordena · Alt+soltar: emparenta · doble clic: renombra</span></div>' +
+    '<div class="dz-lay-head"><span title="Visible"></span><span title="Bloquear"><i class="fas fa-lock"></i></span>' +
+    '<span></span><span class="dz-lh-name">Nombre</span>' +
+    '<span class="dz-lh-op" title="Opacidad %">OP</span>' +
+    '<span class="dz-lh-z" title="Profundidad Z (superposición/multiplano)">Z</span></div>';
+  // en DOM el último dibuja arriba  mostramos al frente primero (como Illustrator)
   [...kids].reverse().forEach(el => {
-    const row = document.createElement("div");
-    row.className = "dz-layer" + (el === DZ.sel ? " sel" : "");
-    row.draggable = true;
-    // ojo 👁 mostrar/ocultar
-    const eye = document.createElement("span");
-    const hidden = el.getAttribute("display") === "none";
-    eye.className = "dz-eye"; eye.textContent = hidden ? "◌" : "👁"; eye.title = hidden ? "Mostrar" : "Ocultar";
-    eye.onclick = (e) => { e.stopPropagation(); dzSnapshot();
-      hidden ? el.removeAttribute("display") : el.setAttribute("display", "none");
-      dzMarkDirty(); dzBuildLayers(); };
-    // candado 🔒: bloquea selección/borrador/balde (no se toca sin querer)
-    const locked = el.hasAttribute("data-locked");
-    const lock = document.createElement("span");
-    lock.className = "dz-eye"; lock.textContent = locked ? "🔒" : "🔓";
-    lock.title = locked ? "Desbloquear" : "Bloquear (no se puede seleccionar ni borrar)";
-    lock.style.opacity = locked ? "1" : "0.45";
-    lock.onclick = (e) => { e.stopPropagation(); dzSnapshot();
-      if (locked) el.removeAttribute("data-locked"); else el.setAttribute("data-locked", "1");
-      if (locked === false && el === DZ.sel) dzDeselect();
-      dzMarkDirty(); dzBuildLayers(); };
-    // chip del color principal
-    const chip = document.createElement("span");
+    box.appendChild(dzLayerRow(el, 0));
+    // jerarquía: un grupo muestra sus hijos directos indentados (rig/superposición)
+    if (el.tagName.toLowerCase() === "g" && !el.hasAttribute("data-collapsed")) {
+      const sub = [...el.children].filter(n => !DZ_SKIP_TAGS.includes(n.tagName.toLowerCase()));
+      [...sub].reverse().forEach(ch => box.appendChild(dzLayerRow(ch, 1)));
+    }
+  });
+  dzZPanelRender();   // el diorama refleja los cambios de capas al instante
+}
+
+function dzLayerRow(el, depth) {
+  const isGroup = el.tagName.toLowerCase() === "g" && depth === 0
+    && [...el.children].some(n => !DZ_SKIP_TAGS.includes(n.tagName.toLowerCase()));
+  const row = document.createElement("div");
+  row.className = "dz-lay-row" + (el === DZ.sel ? " sel" : "") + (depth ? " child" : "");
+  if (!depth) row.draggable = true;
+  //  visibilidad
+  const hidden = el.getAttribute("display") === "none";
+  const eye = document.createElement("span");
+  eye.className = "dz-eye"; eye.textContent = hidden ? "◌" : "";
+  eye.title = hidden ? "Mostrar" : "Ocultar";
+  if (hidden) eye.style.opacity = ".4";
+  eye.onclick = (e) => { e.stopPropagation(); dzSnapshot();
+    hidden ? el.removeAttribute("display") : el.setAttribute("display", "none");
+    dzMarkDirty(); dzBuildLayers(); };
+  // <i class="fas fa-lock"></i> candado
+  const locked = el.hasAttribute("data-locked");
+  const lock = document.createElement("span");
+  lock.className = "dz-eye"; lock.textContent = locked ? "<i class="fas fa-lock"></i>" : "🔓";
+  lock.title = locked ? "Desbloquear" : "Bloquear";
+  lock.style.opacity = locked ? "1" : "0.4";
+  lock.onclick = (e) => { e.stopPropagation(); dzSnapshot();
+    if (locked) el.removeAttribute("data-locked"); else el.setAttribute("data-locked", "1");
+    if (!locked && el === DZ.sel) dzDeselect();
+    dzMarkDirty(); dzBuildLayers(); };
+  // <i class="fas fa-th"></i> color / disclosure de grupo
+  const chip = document.createElement("span");
+  if (isGroup) {
+    chip.className = "dz-lay-disc";
+    chip.textContent = el.hasAttribute("data-collapsed") ? "" : "";
+    chip.title = "Plegar / desplegar el grupo";
+    chip.onclick = (e) => { e.stopPropagation();
+      if (el.hasAttribute("data-collapsed")) el.removeAttribute("data-collapsed");
+      else el.setAttribute("data-collapsed", "1");
+      dzBuildLayers(); };
+  } else {
     chip.className = "dz-chipcolor";
     const f = el.getAttribute("fill"), st = el.getAttribute("stroke");
     chip.style.background = (f && f !== "none" ? f : st && st !== "none" ? st : "transparent");
-    // nombre (id si tiene) — doble clic renombra
-    const lbl = document.createElement("span");
-    lbl.className = "dz-layer-t";
-    lbl.textContent = el.id ? el.id : dzLayerLabel(el);
-    lbl.ondblclick = (e) => {
-      e.stopPropagation();
-      const name = prompt("Nombre de la capa (para vos y para el rig):", el.id || "");
-      if (name === null) return;
-      dzSnapshot();
-      const clean = name.trim().replace(/[^\w\-áéíóúñÁÉÍÓÚÑ]/g, "_");
-      if (clean) el.id = clean; else el.removeAttribute("id");
-      dzMarkDirty(); dzBuildLayers();
-    };
-    const up = document.createElement("span");
-    up.className = "dz-ord"; up.textContent = "▲"; up.title = "Traer al frente";
-    up.onclick = (e) => { e.stopPropagation(); dzSnapshot();
-      if (el.nextElementSibling) el.parentNode.insertBefore(el, el.nextElementSibling.nextElementSibling);
-      dzMarkDirty(); dzBuildLayers(); dzPositionHandle(); };
-    const dn = document.createElement("span");
-    dn.className = "dz-ord"; dn.textContent = "▼"; dn.title = "Enviar atrás";
-    dn.onclick = (e) => { e.stopPropagation(); dzSnapshot();
-      if (el.previousElementSibling) el.parentNode.insertBefore(el, el.previousElementSibling);
-      dzMarkDirty(); dzBuildLayers(); dzPositionHandle(); };
-    row.appendChild(eye); row.appendChild(lock); row.appendChild(chip);
-    row.appendChild(lbl); row.appendChild(up); row.appendChild(dn);
-    row.onclick = () => { if (!el.hasAttribute("data-locked")) dzSelect(el); };
-    // drag & drop para reordenar (arriba en la lista = al frente en el dibujo)
+  }
+  // nombre (indentado si es hijo)
+  const lbl = document.createElement("span");
+  lbl.className = "dz-layer-t";
+  lbl.style.paddingLeft = (depth * 12) + "px";
+  lbl.textContent = el.id ? el.id : dzLayerLabel(el);
+  lbl.ondblclick = (e) => {
+    e.stopPropagation();
+    const name = prompt("Nombre de la capa (para vos y para el rig):", el.id || "");
+    if (name === null) return;
+    dzSnapshot();
+    const clean = name.trim().replace(/[^\w\-áéíóúñÁÉÍÓÚÑ]/g, "_");
+    if (clean) el.id = clean; else el.removeAttribute("id");
+    dzMarkDirty(); dzBuildLayers();
+  };
+  // opacidad (columna Toon Boom)
+  const op = document.createElement("input");
+  op.className = "dz-lay-op"; op.type = "number"; op.min = 0; op.max = 100;
+  const curOp = el.getAttribute("opacity");
+  op.value = curOp == null ? 100 : Math.round(parseFloat(curOp) * 100);
+  op.title = "Opacidad %";
+  op.onclick = (e) => e.stopPropagation();
+  op.onchange = (e) => { dzSnapshot();
+    const v = Math.max(0, Math.min(100, +e.target.value || 0));
+    if (v >= 100) el.removeAttribute("opacity"); else el.setAttribute("opacity", (v / 100).toFixed(2));
+    dzMarkDirty(); };
+  // profundidad Z (superposición / multiplano)
+  const z = document.createElement("input");
+  z.className = "dz-lay-z"; z.type = "number"; z.step = 10;
+  z.value = parseFloat(el.getAttribute("data-z")) || 0;
+  z.title = "Profundidad Z: negativo = cerca de cámara, 0 = plano de acción, positivo = fondo";
+  z.onclick = (e) => e.stopPropagation();
+  z.onchange = (e) => { dzSnapshot();
+    const v = Math.max(-60, Math.min(400, Math.round(+e.target.value || 0)));
+    if (v === 0) el.removeAttribute("data-z"); else el.setAttribute("data-z", v);
+    dzMarkDirty(); dzBuildLayers(); };
+  row.append(eye, lock, chip, lbl, op, z);
+  row.onclick = () => { if (!el.hasAttribute("data-locked")) dzSelect(el); };
+  if (!depth) {
     row.ondragstart = (e) => { DZ.dragLayer = el; e.dataTransfer.effectAllowed = "move"; };
     row.ondragover = (e) => { e.preventDefault(); row.classList.add("dz-dropover"); };
     row.ondragleave = () => row.classList.remove("dz-dropover");
@@ -5840,26 +7398,100 @@ function dzBuildLayers() {
       if (!src || src === el || el.contains(src) || src.contains(el)) return;
       dzSnapshot();
       if (e.altKey) {
-        // Alt+soltar = EMPARENTAR (rig cutout): src pasa a ser hijo de el.
-        // Si el destino no es un grupo, se envuelven los dos en uno nuevo.
         if (el.tagName.toLowerCase() === "g") {
           el.appendChild(src);
-          dzSetStatus("⧉ «" + (src.id || src.tagName) + "» ahora es parte de «" + (el.id || "grupo") + "» — rota y se mueve con él");
+          dzSetStatus(" «" + (src.id || src.tagName) + "» ahora es parte de «" + (el.id || "grupo") + "» — rota y se mueve con él");
         } else {
           const g = document.createElementNS(SVGNS, "g");
           el.parentNode.insertBefore(g, el);
           g.appendChild(el); g.appendChild(src);
-          dzSetStatus("⧉ Grupo nuevo con ambos — nombralo con doble clic (Ctrl+Shift+G desagrupa)");
+          dzSetStatus(" Grupo nuevo con ambos — nombralo con doble clic (Ctrl+Shift+G desagrupa)");
         }
       } else {
-        // soltar SOBRE una fila = quedar justo AL FRENTE de ese elemento
         el.parentNode.insertBefore(src, el.nextSibling);
       }
       dzMarkDirty(); dzBuildLayers(); dzPositionHandle();
     };
-    box.appendChild(row);
-  });
-  dzZPanelRender();   // el diorama refleja los cambios de capas al instante
+  }
+  return row;
+}
+
+/* ── acciones del panel de capas (estilo Photoshop) ── */
+function dzLayerNew() {
+  const svg = $("#dzCanvas").querySelector("svg");
+  if (!svg) return;
+  dzSnapshot();
+  const g = document.createElementNS(SVGNS, "g");
+  g.id = dzUniqueId("capa");
+  svg.appendChild(g);                                   // arriba de todo (al frente)
+  dzMarkDirty(); dzBuildLayers(); dzSelect(g);
+  dzSetStatus("Capa nueva «" + g.id + "» al frente — dibujá o pegá adentro");
+}
+function dzUniqueId(base) {
+  const svg = $("#dzCanvas").querySelector("svg");
+  let i = 1, id;
+  do { id = base + i++; } while (svg && svg.querySelector("#" + CSS.escape(id)));
+  return id;
+}
+/* combinar la capa activa con la de ABAJO (menor z-order) en un solo grupo */
+function dzLayerMergeDown() {
+  const el = DZ.sel; if (!el) return;
+  const below = el.previousElementSibling;
+  if (!below || DZ_SKIP_TAGS.includes(below.tagName.toLowerCase()))
+    return dzSetStatus("No hay capa debajo para combinar");
+  dzSnapshot();
+  const g = document.createElementNS(SVGNS, "g");
+  g.id = dzUniqueId("combinada");
+  below.parentNode.insertBefore(g, below);
+  g.appendChild(below); g.appendChild(el);             // debajo primero, activa encima
+  dzMarkDirty(); dzBuildLayers(); dzSelect(g);
+  dzSetStatus("Capas combinadas en «" + g.id + "»");
+}
+/* subir (+1, al frente) o bajar (-1, atrás) la capa activa en el orden de dibujo */
+function dzLayerMove(dir) {
+  const el = DZ.sel; if (!el) return;
+  dzSnapshot();
+  if (dir > 0 && el.nextElementSibling)
+    el.parentNode.insertBefore(el, el.nextElementSibling.nextElementSibling);
+  else if (dir < 0 && el.previousElementSibling)
+    el.parentNode.insertBefore(el, el.previousElementSibling);
+  dzMarkDirty(); dzBuildLayers(); dzPositionHandle();
+}
+/* modo de fusión (mix-blend-mode) de la capa activa — la superposición de PS */
+function dzLayerBlend(mode) {
+  const el = DZ.sel; if (!el) return;
+  dzSnapshot();
+  const st = (el.getAttribute("style") || "").replace(/mix-blend-mode:[^;]+;?/g, "").trim();
+  el.setAttribute("style", (st ? st + ";" : "") + (mode && mode !== "normal" ? "mix-blend-mode:" + mode : ""));
+  if (!el.getAttribute("style")) el.removeAttribute("style");
+  dzMarkDirty();
+}
+function dzLayerOpacity(v, commit) {
+  const el = DZ.sel; if (!el) return;
+  if (commit) dzSnapshot();
+  const o = Math.max(0, Math.min(100, +v || 0));
+  if (o >= 100) el.removeAttribute("opacity"); else el.setAttribute("opacity", (o / 100).toFixed(2));
+  $("#dzLayOpacityLbl").textContent = o + "%";
+  if (commit) { dzMarkDirty(); dzBuildLayers(); }
+}
+/* refleja fusión y opacidad de la capa activa en el panel */
+function dzLayerToolsSync(el) {
+  const bl = $("#dzBlend"), op = $("#dzLayOpacity"), lbl = $("#dzLayOpacityLbl");
+  if (!bl || !el) return;
+  const m = /mix-blend-mode:\s*([a-z-]+)/.exec(el.getAttribute("style") || "");
+  bl.value = m ? m[1] : "normal";
+  const o = el.getAttribute("opacity");
+  const pct = o == null ? 100 : Math.round(parseFloat(o) * 100);
+  op.value = pct; if (lbl) lbl.textContent = pct + "%";
+}
+
+/* F7: mostrar/ocultar el panel de capas y superposiciones (el inspector) */
+function dzLayersToggle() {
+  const insp = $("#dzInspector");
+  if (!insp) return;
+  const hidden = insp.style.display === "none";
+  insp.style.display = hidden ? "" : "none";
+  dzSetStatus(hidden ? "" : "Panel de capas oculto (F7 para mostrarlo)");
 }
 
 /* ── alinear el elemento seleccionado respecto del lienzo (viewBox) ── */
@@ -5909,7 +7541,7 @@ function dzAlignSel(mode) {
     if (dx || dy) dzWritePos(b.el, dzReadPos(b.el), dx, dy);
   }
   dzPositionHandle(); dzMarkDirty();
-  dzSetStatus("⧉ " + els.length + " alineados");
+  dzSetStatus(" " + els.length + " alineados");
 }
 function dzDistribute(axis) {
   const els = (DZ.multi || []).length > 2 ? DZ.multi : null;
@@ -5925,7 +7557,7 @@ function dzDistribute(axis) {
     const d = target - (axis === "h" ? b.cx : b.cy);
     dzWritePos(b.el, dzReadPos(b.el), axis === "h" ? d : 0, axis === "h" ? 0 : d);
   });
-  dzMarkDirty(); dzSetStatus("⧉ distribuidos con espaciado parejo");
+  dzMarkDirty(); dzSetStatus(" distribuidos con espaciado parejo");
 }
 /* voltear horizontal/vertical (uno o varios), anclado al centro local */
 function dzFlip(axis) {
@@ -5943,21 +7575,21 @@ function dzFlip(axis) {
   dzPositionHandle(); dzMarkDirty();
 }
 
-/* ── 🧬 Variaciones: el agente evoluciona el diseño y elegís con un clic.
+/* ── <i class="fas fa-dna"></i> Variaciones: el agente evoluciona el diseño y elegís con un clic.
    Cría selectiva de diseños — elegí una y volvé a evolucionar desde ella. ── */
 async function dzVariations() {
   if (!DZ.path || DZ.busy) return;
   DZ.busy = true;
-  dzSetStatus("🧬 Generando variaciones del diseño (4 direcciones en paralelo)…");
+  dzSetStatus("<i class="fas fa-dna"></i> Generando variaciones del diseño (4 direcciones en paralelo)…");
   try {
     // mandar el estado ACTUAL del lienzo (con tus últimos toques, aún sin guardar)
     const svg = $("#dzCanvas").querySelector("svg");
     const r = await api.design_variations(DZ.path, svg ? dzSerialize(svg) : "");
     const vs = (r && r.variants) || [];
-    if (r && r.error) { dzSetStatus("❌ " + r.error); return; }
-    if (!vs.length) { dzSetStatus("⚠ No salieron variaciones válidas — probá de nuevo (o cambiá de modelo)."); return; }
-    openModal(`<h2>🧬 Variaciones</h2>
-      <div class="sub">Clic en una para reemplazar el diseño — después podés volver a 🧬 y evolucionar desde ella. (Nada se guarda hasta que toques 💾.)</div>
+    if (r && r.error) { dzSetStatus(" " + r.error); return; }
+    if (!vs.length) { dzSetStatus(" No salieron variaciones válidas — probá de nuevo (o cambiá de modelo)."); return; }
+    openModal(`<h2><i class="fas fa-dna"></i> Variaciones</h2>
+      <div class="sub">Clic en una para reemplazar el diseño — después podés volver a <i class="fas fa-dna"></i> y evolucionar desde ella. (Nada se guarda hasta que toques .)</div>
       <div class="var-grid">` +
       vs.map((v, i) => `<div class="var-cell" data-i="${i}"><div class="var-tag">${v.dir}</div>${v.svg}</div>`).join("") +
       `</div><div class="m-actions"><button class="ghost" id="mCancel">Cerrar</button></div>`);
@@ -5966,12 +7598,12 @@ async function dzVariations() {
       $("#dzCodeArea").value = v.svg;
       dzApplyCode();
       closeModal();
-      dzSetStatus("🧬 Aplicada la variación «" + v.dir + "» — 💾 para guardarla, o 🧬 para seguir evolucionando.");
+      dzSetStatus("<i class="fas fa-dna"></i> Aplicada la variación «" + v.dir + "» —  para guardarla, o <i class="fas fa-dna"></i> para seguir evolucionando.");
     });
     $("#mCancel").onclick = closeModal;
     dzSetStatus("");
   } catch (e) {
-    dzSetStatus("❌ " + (e.message || e));
+    dzSetStatus(" " + (e.message || e));
   } finally {
     DZ.busy = false;
   }
@@ -5995,7 +7627,7 @@ function dzApplySvgText(txt) {
   const old = cv.querySelector("svg");
   const tmp = document.createElement("div"); tmp.innerHTML = txt;
   const nsvg = tmp.querySelector("svg");
-  if (!nsvg) { sysMsg("❌ El código no tiene un <svg> válido."); return false; }
+  if (!nsvg) { sysMsg(" El código no tiene un <svg> válido."); return false; }
   if (old) old.remove();
   cv.insertBefore(nsvg, handle);
   if (!nsvg.getAttribute("width")) nsvg.style.width = "min(80vw, 900px)";
@@ -6066,7 +7698,7 @@ async function designPrompt() {
   DZ.busy = true;
   const tag = DZ.sel ? DZ.sel.tagName.toLowerCase() : null;
   dzSetStatus(tag ? `✍ LOW edita el <${tag}>…` : "✍ LOW está ajustando el diseño…");
-  userMsg("🎨 " + (tag ? `[${tag}] ` : "") + text); persist("user", "(diseño) " + text);
+  userMsg(" " + (tag ? `[${tag}] ` : "") + text); persist("user", "(diseño) " + text);
   try {
     let msg;
     if (DZ.sel) {
@@ -6089,7 +7721,7 @@ async function designPrompt() {
     const reply = (r && (r.full || r.text)) || "";
     dzSetStatus(reply ? reply.slice(0, 300) : (r && r.status) || "Listo.");
   } catch (e) {
-    dzSetStatus("❌ " + (e.message || e));
+    dzSetStatus(" " + (e.message || e));
   } finally {
     DZ.busy = false;
   }
@@ -6131,7 +7763,7 @@ function dzBuildInspector(el) {
     `<span class="dz-al" data-flip="v" title="Voltear vertical">⇵</span>` +
     `</div></div>`;
   if ((DZ.multi || []).length > 1) {
-    html += `<div class="dz-field"><label>⧉ Entre los ${DZ.multi.length} seleccionados</label><div class="dz-alignrow">` +
+    html += `<div class="dz-field"><label> Entre los ${DZ.multi.length} seleccionados</label><div class="dz-alignrow">` +
       `<span class="dz-al" data-alsel="l" title="Izquierdas juntas">⇤</span>` +
       `<span class="dz-al" data-alsel="ch" title="Centros verticales">↔</span>` +
       `<span class="dz-al" data-alsel="r" title="Derechas juntas">⇥</span>` +
@@ -6156,7 +7788,7 @@ function dzBuildInspector(el) {
   // multiplano: profundidad respecto de la cámara (0 = plano de acción,
   // positivo = fondo lejano se mueve menos, negativo = primer plano más rápido)
   html += `<div class="dz-row">` +
-    dzField("Profundidad Z 📹", "dzZ", el.getAttribute("data-z") || "", "number") +
+    dzField("Profundidad Z <i class="fas fa-camera-movie"></i>", "dzZ", el.getAttribute("data-z") || "", "number") +
     `<div class="dz-field"><label>&nbsp;</label><div class="dz-hint">0=acción · +lejos · −cerca</div></div></div>`;
   if (isText) {
     html += `<div class="dz-field"><label>Texto</label><input id="dzText" type="text" value="${(el.textContent || "").replace(/"/g, "&quot;")}"></div>`;
@@ -6264,7 +7896,7 @@ async function dzSave() {
   const svg = $("#dzCanvas").querySelector("svg");
   if (!svg || !DZ.path) return;
   const r = await api.save_file(DZ.path, dzSerialize(svg));
-  if (r) { DZ.dirty = false; setStatus("💾 " + (r.name || "diseño guardado")); sysMsg("💾 Diseño guardado: " + (r.name || DZ.path)); }
+  if (r) { DZ.dirty = false; setStatus(" " + (r.name || "diseño guardado")); sysMsg(" Diseño guardado: " + (r.name || DZ.path)); }
 }
 
 /* ── Herramientas del agente (qué puede hacer solo) ── */
@@ -6290,24 +7922,24 @@ const TEMPLATES = [
   ["Juego en HTML", "Hacé un juego simple jugable en un solo archivo HTML (canvas + JS), sin dependencias."],
 ];
 /* ── Rutinas: órdenes reutilizables (predefinidas + guardadas por el usuario) ──
-   Clic ▶ ejecuta al instante · clic en el nombre la carga en el input para editar */
+   Clic  ejecuta al instante · clic en el nombre la carga en el input para editar */
 function modalRoutines() {
   const user = (S.routines || []).map((r, i) =>
     `<div class="listrow"><span class="lr-name rt-fill" data-p="${esc(r.prompt)}">${esc(r.name)}</span>` +
     `<span class="lr-desc">${esc(r.prompt).slice(0, 70)}…</span>` +
-    `<div class="rt-actions"><span class="rt-run" data-p="${esc(r.prompt)}">▶ ejecutar</span>` +
+    `<div class="rt-actions"><span class="rt-run" data-p="${esc(r.prompt)}"> ejecutar</span>` +
     `<span class="rt-del" data-n="${esc(r.name)}">✕</span></div></div>`).join("");
   const built = TEMPLATES.map(t =>
     `<div class="listrow"><span class="lr-name rt-fill" data-p="${esc(t[1])}">${esc(t[0])}</span>` +
     `<span class="lr-desc">${esc(t[1]).slice(0, 70)}…</span>` +
-    `<div class="rt-actions"><span class="rt-run" data-p="${esc(t[1])}">▶ ejecutar</span></div></div>`).join("");
+    `<div class="rt-actions"><span class="rt-run" data-p="${esc(t[1])}"> ejecutar</span></div></div>`).join("");
   openModal(`<h2>Rutinas</h2>
-    <div class="sub">Órdenes reutilizables. <b>▶ ejecutar</b> la manda ya; el nombre la carga en el input.</div>
+    <div class="sub">Órdenes reutilizables. <b> ejecutar</b> la manda ya; el nombre la carga en el input.</div>
     ${user ? '<div class="rt-group">Tuyas</div>' + user : ''}
     <div class="rt-group">Predefinidas</div>${built}
     <div class="rt-save">
       <input id="rtName" class="cmp-field" placeholder="Nombre de la rutina" spellcheck="false">
-      <button class="ghost" id="rtSaveBtn">＋ Guardar la orden que está en el input</button>
+      <button class="ghost" id="rtSaveBtn"> Guardar la orden que está en el input</button>
     </div>
     <div class="m-actions"><button class="primary" id="mCancel">Cerrar</button></div>`);
   const fill = p => { $("#inp").value = p; closeModal(); $("#inp").focus(); };
@@ -6337,7 +7969,7 @@ function modalServers() {
     (ssh_exec / scp_upload) o con <b>/ssh &lt;alias&gt; &lt;comando&gt;</b>.
     «clave» = ruta a tu clave privada (opcional si usás el agente SSH).</div>
     <div id="srvList"></div>
-    <button class="ghost" id="srvAdd" style="margin-top:8px">＋ Agregar servidor</button>
+    <button class="ghost" id="srvAdd" style="margin-top:8px"> Agregar servidor</button>
     <div class="m-actions">
       <button class="ghost" id="mCancel">Cancelar</button>
       <button class="primary" id="mSave">Guardar</button>
@@ -6371,11 +8003,11 @@ function modalServers() {
       hosts.filter(h => (h.name || "").trim() && (h.host || "").trim()));
     S.sshHosts = r.ssh_hosts;
     closeModal();
-    sysMsg(`✅ ${S.sshHosts.length} servidor(es) SSH guardado(s). Usalos por alias con ssh_exec o /ssh.`);
+    sysMsg(` ${S.sshHosts.length} servidor(es) SSH guardado(s). Usalos por alias con ssh_exec o /ssh.`);
   };
 }
 
-/* ── Historial de conversaciones (clickeable → restaurar) ── */
+/* ── Historial de conversaciones (clickeable  restaurar) ── */
 async function modalHistory() {
   const files = await api.history();
   const rows = files.length ? files.map(f =>

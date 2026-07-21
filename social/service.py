@@ -1,14 +1,14 @@
 """Servicio de redes sociales: orquestador del módulo social.
 
 Expone:
-- state() → plataformas disponibles, cuentas conectadas, brand
-- connect(platform, client_id, client_secret) → OAuth loopback
-- disconnect(platform) → borra tokens
-- save_brand(profile_json) → guarda BrandProfile
-- set_brand_guide(text) → guarda guía extensa (RAG)
-- sync_templates() → sincroniza templates de Canva
-- process_item(qid, llm_fn, notify_fn) → valida → render → publica
-- start_scheduler(llm_fn, notify_fn) → thread que procesa cola cada 60s
+- state()  plataformas disponibles, cuentas conectadas, brand
+- connect(platform, client_id, client_secret)  OAuth loopback
+- disconnect(platform)  borra tokens
+- save_brand(profile_json)  guarda BrandProfile
+- set_brand_guide(text)  guarda guía extensa (RAG)
+- sync_templates()  sincroniza templates de Canva
+- process_item(qid, llm_fn, notify_fn)  valida  render  publica
+- start_scheduler(llm_fn, notify_fn)  thread que procesa cola cada 60s
 """
 import json, time, threading, requests
 from datetime import datetime, timezone
@@ -43,9 +43,22 @@ def _adapter_for(row):
 
 class SocialService:
     def __init__(self):
-        self.conn = db.connect()
-        db.migrate(self.conn)
-        self.brand_mgr = BrandManager(self.conn)
+        self._local = threading.local()
+        db.migrate(self.conn)              # crea la conexión de este thread
+        self.brand_mgr = BrandManager(self)
+        # serializa las secciones de varias sentencias (SELECT+INSERT/UPDATE)
+        # entre los threads de pywebview y el scheduler
+        self._lock = threading.RLock()
+
+    @property
+    def conn(self):
+        """Conexión SQLite del thread actual (pywebview usa un thread por
+        llamada js_api; compartir una conexión entre threads rompe)."""
+        c = getattr(self._local, "conn", None)
+        if c is None:
+            c = db.connect()
+            self._local.conn = c
+        return c
 
     def state(self) -> dict:
         platforms = []
@@ -60,12 +73,39 @@ class SocialService:
                 "has_app": cfg["has_app"],
                 "connected": row is not None,
                 "handle": row["handle"] if row else "",
-                "client_id_saved": bool(row and row.get("client_id")),
+                "client_id_saved": bool(row and row["client_id"]),
+            })
+        templates = [
+            {"id": r["id"], "canva_template_id": r["canva_template_id"],
+             "name": r["name"] or "", "format": r["format"] or ""}
+            for r in self.conn.execute(
+                "SELECT * FROM canva_templates ORDER BY name")]
+        queue = []
+        for r in self.conn.execute(
+                "SELECT q.*, a.platform AS network FROM content_queue q "
+                "LEFT JOIN social_accounts a ON a.id = q.account_id "
+                "ORDER BY q.id DESC LIMIT 50"):
+            try:
+                data = json.loads(r["copy_json"] or "{}")
+                caption = data.get("caption") or data.get("copy") or ""
+            except Exception:
+                caption = ""
+            queue.append({
+                "id": r["id"],
+                "network": r["network"] or "?",
+                "status": r["status"],
+                "caption": caption[:140],
+                "scheduled_at": r["scheduled_at"] or "",
+                "published_at": r["published_at"] or "",
+                "error": (r["error"] or "")[:200],
+                "attempts": r["attempts"],
             })
         return {
             "platforms": platforms,
             "redirect_uri": REDIRECT_URI,
             "brand": self.brand_mgr.get_profile(),
+            "templates": templates,
+            "queue": queue,
         }
 
     def connect(self, platform: str, client_id: str, client_secret: str) -> dict:
@@ -77,19 +117,20 @@ class SocialService:
             # Canva usa API key, no OAuth
             if not client_id:
                 return {"error": "Client ID = Canva API Key (obligatorio)"}
-            cur = self.conn.execute(
-                "SELECT id FROM social_accounts WHERE platform='canva' AND status='active'")
-            existing = cur.fetchone()
-            if existing:
-                self.conn.execute(
-                    "UPDATE social_accounts SET auth_blob=?, client_id=? WHERE id=?",
-                    (encrypt(json.dumps({"api_key": client_id})), client_id, existing["id"]))
-            else:
-                self.conn.execute(
-                    "INSERT INTO social_accounts (brand_id,platform,auth_blob,client_id) VALUES (?,?,?,?)",
-                    (self.brand_mgr.brand_id, "canva",
-                     encrypt(json.dumps({"api_key": client_id})), client_id))
-            self.conn.commit()
+            with self._lock:
+                cur = self.conn.execute(
+                    "SELECT id FROM social_accounts WHERE platform='canva' AND status='active'")
+                existing = cur.fetchone()
+                if existing:
+                    self.conn.execute(
+                        "UPDATE social_accounts SET auth_blob=?, client_id=? WHERE id=?",
+                        (encrypt(json.dumps({"api_key": client_id})), client_id, existing["id"]))
+                else:
+                    self.conn.execute(
+                        "INSERT INTO social_accounts (brand_id,platform,auth_blob,client_id) VALUES (?,?,?,?)",
+                        (self.brand_mgr.brand_id, "canva",
+                         encrypt(json.dumps({"api_key": client_id})), client_id))
+                self.conn.commit()
             return {"ok": True, "handle": "Canva API conectada"}
 
         # OAuth2 loopback para el resto
@@ -105,23 +146,24 @@ class SocialService:
         enc = encrypt(json.dumps(auth_blob))
         sec_enc = encrypt(client_secret) if client_secret else b""
 
-        cur = self.conn.execute(
-            "SELECT id FROM social_accounts WHERE platform=? AND status='active'", (platform,))
-        existing = cur.fetchone()
-        if existing:
-            self.conn.execute(
-                "UPDATE social_accounts SET auth_blob=?, client_id=?, client_secret=?, "
-                "token_expires_at=? WHERE id=?",
-                (enc, client_id, sec_enc,
-                 time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(auth_blob["expires_at"])),
-                 existing["id"]))
-        else:
-            self.conn.execute(
-                "INSERT INTO social_accounts (brand_id,platform,auth_blob,client_id,"
-                "client_secret,token_expires_at) VALUES (?,?,?,?,?,?)",
-                (self.brand_mgr.brand_id, platform, enc, client_id, sec_enc,
-                 time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(auth_blob["expires_at"]))))
-        self.conn.commit()
+        with self._lock:
+            cur = self.conn.execute(
+                "SELECT id FROM social_accounts WHERE platform=? AND status='active'", (platform,))
+            existing = cur.fetchone()
+            if existing:
+                self.conn.execute(
+                    "UPDATE social_accounts SET auth_blob=?, client_id=?, client_secret=?, "
+                    "token_expires_at=? WHERE id=?",
+                    (enc, client_id, sec_enc,
+                     time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(auth_blob["expires_at"])),
+                     existing["id"]))
+            else:
+                self.conn.execute(
+                    "INSERT INTO social_accounts (brand_id,platform,auth_blob,client_id,"
+                    "client_secret,token_expires_at) VALUES (?,?,?,?,?,?)",
+                    (self.brand_mgr.brand_id, platform, enc, client_id, sec_enc,
+                     time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(auth_blob["expires_at"]))))
+            self.conn.commit()
         return {"ok": True, "handle": f"@{platform}"}
 
     def disconnect(self, platform: str):
@@ -141,7 +183,7 @@ class SocialService:
             "SELECT auth_blob FROM social_accounts WHERE platform='canva' AND status='active'")
         row = cur.fetchone()
         if not row:
-            return [{"error": "Canva no conectado — configuralo en ⚙"}]
+            return [{"error": "Canva no conectado — configuralo en "}]
 
         tokens = json.loads(decrypt(row["auth_blob"]))
         from .canva_client import CanvaClient
@@ -149,26 +191,81 @@ class SocialService:
 
         templates = cc.list_templates()
         brand_id = self.brand_mgr.brand_id
-        for t in templates:
-            placeholders = t.get("placeholders", {})
-            cur2 = self.conn.execute(
-                "SELECT id FROM canva_templates WHERE canva_template_id=?",
-                (t["id"],))
-            if cur2.fetchone():
-                self.conn.execute(
-                    "UPDATE canva_templates SET name=?, placeholders_json=? "
-                    "WHERE canva_template_id=?",
-                    (t["name"], json.dumps(placeholders), t["id"]))
-            else:
-                self.conn.execute(
-                    "INSERT INTO canva_templates (brand_id,canva_template_id,name,"
-                    "placeholders_json) VALUES (?,?,?,?)",
-                    (brand_id, t["id"], t["name"], json.dumps(placeholders)))
-        self.conn.commit()
+        with self._lock:
+            for t in templates:
+                placeholders = t.get("placeholders", {})
+                cur2 = self.conn.execute(
+                    "SELECT id FROM canva_templates WHERE canva_template_id=?",
+                    (t["id"],))
+                if cur2.fetchone():
+                    self.conn.execute(
+                        "UPDATE canva_templates SET name=?, placeholders_json=? "
+                        "WHERE canva_template_id=?",
+                        (t["name"], json.dumps(placeholders), t["id"]))
+                else:
+                    self.conn.execute(
+                        "INSERT INTO canva_templates (brand_id,canva_template_id,name,"
+                        "placeholders_json) VALUES (?,?,?,?)",
+                        (brand_id, t["id"], t["name"], json.dumps(placeholders)))
+            self.conn.commit()
         return templates
 
+    def enqueue(self, network: str, content: str, template_id="",
+                asset_path="", scheduled_at="") -> int:
+        """Encola un post. Devuelve el id en content_queue.
+
+        network: instagram/facebook/linkedin/x/tiktok (cuenta conectada).
+        template_id: id numérico local o canva_template_id (opcional).
+        scheduled_at: ISO 8601; vacío = listo para procesar ya.
+        """
+        network = (network or "").strip().lower()
+        publishable = [p for p in PLATFORMS if p != "canva"]
+        if network not in publishable:
+            raise ValueError(f"Red desconocida: {network!r} — usá una de: "
+                             + ", ".join(publishable))
+        if not (content or "").strip():
+            raise ValueError("Falta el contenido del post")
+        acct = self.conn.execute(
+            "SELECT id FROM social_accounts WHERE platform=? AND status='active'",
+            (network,)).fetchone()
+        if not acct:
+            raise ValueError(f"{network} no está conectada — conectala en "
+                             "  Redes Sociales")
+
+        tpl_row_id = None
+        if template_id:
+            trow = self.conn.execute(
+                "SELECT id FROM canva_templates WHERE id=? OR canva_template_id=?",
+                (str(template_id), str(template_id))).fetchone()
+            if not trow:
+                raise ValueError(f"Template no encontrado: {template_id} — "
+                                 "sincronizá los templates de Canva")
+            tpl_row_id = trow["id"]
+
+        when = (scheduled_at or "").strip() or datetime.now(timezone.utc).isoformat()
+        with self._lock:
+            cur = self.conn.execute(
+                "INSERT INTO content_queue (brand_id,account_id,template_id,copy_json,"
+                "asset_url,status,scheduled_at) VALUES (?,?,?,?,?,'draft',?)",
+                (self.brand_mgr.brand_id, acct["id"], tpl_row_id,
+                 json.dumps({"copy": content}, ensure_ascii=False),
+                 asset_path or None, when))
+            self.conn.commit()
+            return cur.lastrowid
+
+    def queue_delete(self, qid: int):
+        with self._lock:
+            row = self.conn.execute(
+                "SELECT status FROM content_queue WHERE id=?", (qid,)).fetchone()
+            if not row:
+                raise ValueError(f"Item #{qid} no existe")
+            if row["status"] == "publishing":
+                raise ValueError(f"Item #{qid} se está publicando — esperá a que termine")
+            self.conn.execute("DELETE FROM content_queue WHERE id=?", (qid,))
+            self.conn.commit()
+
     def process_item(self, qid: int, llm_fn, notify_fn) -> dict:
-        """Procesa un item de la cola: valida → renderiza → publica."""
+        """Procesa un item de la cola: valida  renderiza  publica."""
         cur = self.conn.execute("SELECT * FROM content_queue WHERE id=?", (qid,))
         item = cur.fetchone()
         if not item:
@@ -205,7 +302,7 @@ class SocialService:
                     "UPDATE content_queue SET status='failed', error=? WHERE id=?",
                     (json.dumps(result.get("violations", [])), qid))
                 self.conn.commit()
-                notify_fn(f"❌ Contenido #{qid} rechazado: "
+                notify_fn(f" Contenido #{qid} rechazado: "
                           + json.dumps(result.get("violations", [])))
                 return {"ok": False, "violations": result["violations"]}
 
@@ -239,7 +336,7 @@ class SocialService:
                         (asset_url, qid))
                     self.conn.commit()
                 else:
-                    notify_fn("⚠ Canva no conectado — se publica sin imagen")
+                    notify_fn(" Canva no conectado — se publica sin imagen")
 
             self.conn.execute(
                 "UPDATE content_queue SET status=COALESCE(status,'ready') WHERE id=?", (qid,))
@@ -257,7 +354,7 @@ class SocialService:
                 "UPDATE content_queue SET status='failed', error=? WHERE id=?",
                 (str(e)[:500], qid))
             self.conn.commit()
-            notify_fn(f"❌ Error procesando #{qid}: {e}")
+            notify_fn(f" Error procesando #{qid}: {e}")
             return {"error": str(e)[:300]}
 
     def _publish(self, qid: int, notify_fn) -> dict:
@@ -301,7 +398,7 @@ class SocialService:
                 "published_at=? WHERE id=?",
                 (str(post_id), datetime.now(timezone.utc).isoformat(), qid))
             self.conn.commit()
-            notify_fn(f"✅ Publicado en {acct['platform']}: {post_id}")
+            notify_fn(f" Publicado en {acct['platform']}: {post_id}")
             return {"ok": True, "post_id": str(post_id)}
         except requests.HTTPError as e:
             status_code = e.response.status_code if e.response else 0
@@ -319,17 +416,23 @@ class SocialService:
             return {"error": err}
 
     def tick(self, llm_fn, notify_fn):
-        """Procesa items vencidos en la cola."""
+        """Procesa items vencidos en la cola (borradores incluidos: el flujo
+        completo draft  validar  render  publicar corre acá)."""
         now = datetime.now(timezone.utc).isoformat()
         cur = self.conn.execute(
-            "SELECT id FROM content_queue WHERE status IN ('ready','validated') "
-            "AND scheduled_at <= ? ORDER BY scheduled_at LIMIT 5",
+            "SELECT id, status FROM content_queue "
+            "WHERE status IN ('draft','ready','validated') "
+            "AND scheduled_at IS NOT NULL AND scheduled_at <= ? "
+            "ORDER BY scheduled_at LIMIT 5",
             (now,))
         for row in cur.fetchall():
             try:
-                self._publish(row["id"], notify_fn)
+                if row["status"] == "draft":
+                    self.process_item(row["id"], llm_fn, notify_fn)
+                else:
+                    self._publish(row["id"], notify_fn)
             except Exception as e:
-                notify_fn(f"❌ tick #{row['id']}: {e}")
+                notify_fn(f" tick #{row['id']}: {e}")
 
 
 # singleton thread-safe
@@ -358,3 +461,41 @@ def start_scheduler(llm_fn, notify_fn, interval=60):
 
     t = threading.Thread(target=_loop, daemon=True, name="soc-sched")
     t.start()
+
+
+# ── API a nivel módulo: main.py llama social.service.<fn>() directamente ──
+def state():
+    return get_service().state()
+
+
+def connect(platform, client_id="", client_secret=""):
+    return get_service().connect(platform, client_id, client_secret)
+
+
+def disconnect(platform):
+    return get_service().disconnect(platform)
+
+
+def save_brand(profile_json):
+    return get_service().save_brand(profile_json)
+
+
+def set_brand_guide(text):
+    return get_service().set_brand_guide(text)
+
+
+def sync_templates():
+    return get_service().sync_templates()
+
+
+def enqueue(network, content, template_id="", asset_path="", scheduled_at=""):
+    return get_service().enqueue(network, content, template_id=template_id,
+                                 asset_path=asset_path, scheduled_at=scheduled_at)
+
+
+def process_item(qid, llm_fn, notify_fn):
+    return get_service().process_item(int(qid), llm_fn, notify_fn)
+
+
+def queue_delete(qid):
+    return get_service().queue_delete(int(qid))

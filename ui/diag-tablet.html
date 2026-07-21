@@ -29,15 +29,15 @@ canvas { position:absolute; top:0; left:0; }
 </head>
 <body>
 <div id="log">
-  <h2>🩺 LOW Tablet Diagnostic</h2>
+  <h2> LOW Tablet Diagnostic</h2>
   <div class="bar">
-    <button id="btnSave" onclick="saveLog()">💾 Guardar log YA</button>
-    <span class="saved" id="savedMsg">✅ Guardado</span>
+    <button id="btnSave" onclick="saveLog()"> Guardar log YA</button>
+    <span class="saved" id="savedMsg"> Guardado</span>
   </div>
   <div class="stats">
     <span>Eventos: <b class="val" id="cnt">0</b></span>
-    <span>↓ down: <b class="val" id="cntD">0</b> | → move: <b class="val" id="cntM">0</b> | ↑ up: <b class="val" id="cntU">0</b></span>
-    <span>⚡ raw: <b class="val" id="cntR">0</b> | 🖱 hover: <b class="val" id="cntH">0</b></span>
+    <span>↓ down: <b class="val" id="cntD">0</b> |  move: <b class="val" id="cntM">0</b> | ↑ up: <b class="val" id="cntU">0</b></span>
+    <span> raw: <b class="val" id="cntR">0</b> | 🖱 hover: <b class="val" id="cntH">0</b></span>
     <span>Última presión: <b class="val" id="lastPr">-</b></span>
     <span>Último buttons: <b class="val" id="lastBtns">-</b></span>
     <span>Último tipo: <b class="val" id="lastType">-</b></span>
@@ -177,12 +177,12 @@ window.addEventListener('beforeunload', () => saveLog(true));
 ['pointerdown','pointerup','pointercancel','lostpointercapture'].forEach(t => {
   window.addEventListener(t, (e) => {
     if (e.target !== cvs) {
-      const line = `${ts()} ⚠ ${t} EN WINDOW (NO canvas) target:${e.target?.tagName||'?'} ptrType:${e.pointerType}`;
+      const line = `${ts()}  ${t} EN WINDOW (NO canvas) target:${e.target?.tagName||'?'} ptrType:${e.pointerType}`;
       allEvents.push(line);
       const div = document.createElement('div');
       div.className = 'entry';
       div.style.color = '#ff6b6b';
-      div.innerHTML = `⚠ <b>${t}</b> EN WINDOW (NO canvas) target:${e.target?.tagName||'?'} ptrType:${e.pointerType}`;
+      div.innerHTML = ` <b>${t}</b> EN WINDOW (NO canvas) target:${e.target?.tagName||'?'} ptrType:${e.pointerType}`;
       log.insertBefore(div, log.firstChild);
     }
   }, true);
@@ -209,7 +209,7 @@ console.log('[LOW Diag] Listo. Dibujá en el canvas para diagnosticar tu tableta
 console.log('[LOW Diag] pointerType esperado: "pen" (no "mouse" ni "touch")');
 console.log('[LOW Diag] Si no ves eventos, el navegador no reconoce tu tableta.');
 console.log('[LOW Diag] El log se guarda automáticamente cada 50 eventos y al terminar cada trazo.');
-console.log('[LOW Diag] También podés guardar con Ctrl+S o el botón 💾.');
+console.log('[LOW Diag] También podés guardar con Ctrl+S o el botón .');
 console.log('[LOW Diag] Archivo: diag-log.txt en el directorio de datos de LOW.');
 </script>
 </body>

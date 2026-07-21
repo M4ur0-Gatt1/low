@@ -28,7 +28,8 @@ datas=[('providers', 'providers'), ('code_runner', 'code_runner'), ('config.py',
     runtime_hooks=['pyi_rth_pythonnet.py'],
     excludes=[
         # Modulos pesados que LOW no usa -> build mas rapido
-        'matplotlib', 'numpy', 'scipy', 'pandas',
+        # numpy NO se excluye: el motor de animacion (tools/animation) lo necesita
+        'matplotlib', 'scipy', 'pandas',
         'unittest', 'test', 'pydoc',
         # distutils NO se excluye — PyInstaller 6.x + Python 3.13 lo necesita
         'setuptools',

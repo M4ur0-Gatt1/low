@@ -33,11 +33,11 @@ DEFAULT_CONFIG = {
     "font_size": 12,
     # Orden de failover: si el provider activo falla, LOW va probando estos en orden.
     # Solo se usan los que tienen API key cargada. Si no se configura, usa el orden
-    # por defecto (deepseek → siliconflow → nvidia → groq → openai → ... → custom).
+    # por defecto (deepseek  siliconflow  nvidia  groq  openai  ...  custom).
     "failover_order": ["deepseek", "siliconflow", "nvidia", "groq", "openai",
                        "anthropic", "qwen", "glm", "xai", "digitalocean", "agnes",
                        "aimlapi", "custom"],
-    # límites del agente — ajustables desde ⚙. La idea de LOW es NO ponerle
+    # límites del agente — ajustables desde . La idea de LOW es NO ponerle
     # techos al trabajo salvo los que impone la API/costo. Subilos si querés
     # que insista más en tareas grandes; el único freno duro es que deje de
     # avanzar (repetir sin progreso) para no quemar tokens en un bucle.
@@ -72,21 +72,21 @@ DEFAULT_CONFIG = {
         "xai": {"api_key": "", "model": "grok-2", "base_url": ""},
         # Agnes AI — OpenAI-compatible (https://platform.agnes-ai.com)
         # Key: https://platform.agnes-ai.com/settings/apiKeys
-        "agnes": {"api_key": "", "model": "gpt-4o", "base_url": "https://platform.agnes-ai.com/v1"},
+        "agnes": {"api_key": "", "model": "gpt-4o", "base_url": "https://api.agnes-ai.com/api/v1"},
         # DigitalOcean GenAI Platform — Serverless Inference (compatible OpenAI).
-        # Endpoint: https://inference.do-ai.run/v1  → da acceso a TODOS los modelos
+        # Endpoint: https://inference.do-ai.run/v1   da acceso a TODOS los modelos
         # con los que tengas acceso (Llama, DeepSeek, Mistral, OpenAI, Anthropic).
         # Key: token personal de DO o model access key
         #      (https://cloud.digitalocean.com/gen-ai/model-access-keys)
         "digitalocean": {"api_key": "", "model": "deepseek-v4-pro", "base_url": "https://inference.do-ai.run/v1"},
-        # LTX (Lightricks) — SOLO video (text→video / imagen→video con audio).
+        # LTX (Lightricks) — SOLO video (textvideo / imagenvideo con audio).
         # No es un modelo de chat: no entra en la cadena de failover del agente.
         # Key: https://console.ltx.video/api-keys
         "ltx": {"api_key": "", "model": "ltx-2-3-fast", "base_url": ""},
         # fal.ai — GATEWAY universal de imagen/video: una key para 1000+ modelos
         # (Seedance, Flux, Kling, Wan, Veo, Seedream...). SOLO media (no chatea).
         # Key: https://fal.ai/dashboard/keys. Cambiar de modelo = cambiar el model id
-        # (ver fal.ai/models). model = video texto→video; i2v_model = imagen→video;
+        # (ver fal.ai/models). model = video textovideo; i2v_model = imagenvideo;
         # image_model = generación de imagen.
         "fal": {"api_key": "",
                 "model": "bytedance/seedance-2.0/text-to-video",
@@ -129,6 +129,10 @@ class Config:
                           "https://gateway.digitalocean.ai/v1",
                           "https://api.paperspace.io", ""},
                          "https://inference.do-ai.run/v1"),
+        "agnes": ({"https://platform.agnes-ai.com/v1",
+                   "https://platform.agnes-ai.com/api/v1",
+                   "https://api.agnes-ai.com/v1", ""},
+                  "https://api.agnes-ai.com/api/v1"),
     }
     # IDs de modelo que pusimos como default y NO andan en el tier base de DO
     # (formato viejo con puntos, o propietarios que dan 403 por tier). Se
