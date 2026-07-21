@@ -29,6 +29,9 @@ jobs:
           python-version: "3.12"
       - name: Dependencias
         run: pip install -r requirements.txt pyinstaller
+      - name: Versionar desde el tag
+        shell: bash
+        run: bash .github/set_version.sh
       - name: Compilar exe
         run: pyinstaller LOW.spec --noconfirm
       - name: Instalador (Inno Setup)
@@ -53,6 +56,8 @@ jobs:
           python-version: "3.12"
       - name: Dependencias
         run: pip install -r requirements.txt pyinstaller
+      - name: Versionar desde el tag
+        run: bash .github/set_version.sh
       - name: Compilar
         run: pyinstaller LOW.spec --noconfirm
       - name: Empaquetar
@@ -74,6 +79,8 @@ jobs:
         run: |
           pip install -r requirements.txt pyinstaller
           pip install "pywebview[qt]"
+      - name: Versionar desde el tag
+        run: bash .github/set_version.sh
       - name: Compilar
         run: pyinstaller LOW.spec --noconfirm
       - name: Subir al release
