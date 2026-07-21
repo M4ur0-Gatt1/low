@@ -430,6 +430,7 @@ function bind() {
   };
   $("#btnModelSearch").onclick = modalModelSearch;
   $("#abDesign").onclick = designEntry;
+  $("#abL3d").onclick = () => l3dToggle();   // Lienzo 3D (WebGL, lienzo3d.js)
   $("#btnKeys").onclick = modalKeys;
   $("#btnCmp").onclick = modalCompare;
   $("#btnWs").onclick = pickWs;

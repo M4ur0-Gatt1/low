@@ -140,6 +140,7 @@
       <button class="abtn star" id="abAgent" title="Agente"><svg class="ico ico-fill"><use href="#i-star"/></svg></button>
       <div class="act-sep"></div>
       <button class="abtn" id="abDesign" title="Diseño (estudio de diseño y animación)"><svg class="ico"><use href="#i-pen"/></svg></button>
+      <button class="abtn" id="abL3d" title="Lienzo 3D (dibujo con mallas reales: tubos, luces, export GLB)"><svg class="ico"><use href="#i-cube"/></svg></button>
       <button class="abtn" id="abSocial" title="Redes sociales (publicar, programar y cola de contenido)"><svg class="ico"><use href="#i-share"/></svg></button>
       <button class="abtn" id="abArtifacts" title="Artefactos (vista previa en vivo)"><svg class="ico"><use href="#i-artifact"/></svg></button>
       <button class="abtn" id="abRoutines" title="Rutinas (órdenes guardadas)"><svg class="ico"><use href="#i-routine"/></svg></button>
@@ -206,6 +207,20 @@
         </div>
       </div>
     </aside>
+  </div>
+
+  <!-- ══ Lienzo 3D (WebGL): dibujo con mallas reales ══ -->
+  <div id="l3dView" hidden>
+    <div class="l3d-host" id="l3dCanvasHost"></div>
+    <div class="l3d-tools" id="l3dTools">
+      <span class="l3d-title"><svg class="ico"><use href="#i-cube"/></svg> Lienzo 3D</span>
+      <button data-l3dtool="brush" class="active" title="Pincel 3D: tubos con presión (Fase 2)">Pincel</button>
+      <button data-l3dtool="move" title="Mover/rotar/escalar trazos (Fase 3)">Mover</button>
+      <button data-l3dtool="erase" title="Borrador (Fase 2)">Borrar</button>
+      <span class="vsep"></span>
+      <button id="l3dExit" title="Salir (Esc)"><svg class="ico"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="l3d-hint"><b>arrastrar</b> orbitar · <b>rueda</b> zoom · <b>Shift·medio</b> panear · <b>Esc</b> salir</div>
   </div>
 
   <!-- ══ Barra de estado ══ -->
@@ -631,7 +646,10 @@
 <script src="vendor/mode-htmlmixed.min.js"></script>
 <script src="vendor/addon-closebrackets.min.js"></script>
 <script src="vendor/addon-activeline.min.js"></script>
+<script src="vendor/three.min.js"></script><!-- Three.js r147 UMD (offline) — Lienzo 3D -->
+<script src="vendor/three-orbit.js"></script>
 <script src="mock-api.js"></script><!-- inerte salvo ?mock=1: arnés de pruebas en navegador -->
 <script src="app.js"></script>
+<script src="lienzo3d.js"></script>
 </body>
 </html>

@@ -1612,3 +1612,45 @@ footer #ver {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation-duration: .01s !important; }
 }
+
+/* ══ Lienzo 3D (WebGL / Three.js) — dibujo con mallas reales ══ */
+#l3dView { position: fixed; inset: 0; z-index: 62; background: #D9D9D6; }
+#l3dView[hidden] { display: none; }
+.l3d-host { position: absolute; inset: 0; }
+.l3d-host canvas { display: block; }
+/* toolbar flotante minimalista (mismo lenguaje que el gizmo del Espacio 3D) */
+.l3d-tools {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 2;
+  display: flex; align-items: center; gap: 6px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: 6px 8px; box-shadow: 0 8px 26px -12px rgba(0,0,0,.45);
+  backdrop-filter: blur(8px);
+}
+.l3d-title {
+  display: inline-flex; align-items: center; gap: 6px; padding: 0 6px;
+  font: 700 11.5px 'Figtree', sans-serif; color: var(--txt);
+}
+.l3d-title .ico { width: 14px; height: 14px; color: var(--cyan); }
+.l3d-tools button {
+  background: transparent; border: 1px solid var(--line); border-radius: 7px;
+  padding: 4px 11px; color: var(--mut); font: 500 11px 'Figtree', sans-serif;
+  display: inline-flex; align-items: center; gap: 5px;
+  transition: color .12s ease, border-color .12s ease, background-color .12s ease, transform .1s ease;
+}
+.l3d-tools button:hover { color: var(--txt); border-color: var(--mut); }
+.l3d-tools button:active { transform: scale(.94); }
+.l3d-tools button.active { color: var(--red); border-color: var(--red); background: var(--redsoft); }
+.l3d-tools #l3dExit { padding: 4px 7px; }
+.l3d-tools #l3dExit .ico { width: 12px; height: 12px; }
+/* hint de gestos (abajo a la izquierda, como el HUD del Espacio 3D) */
+.l3d-hint {
+  position: absolute; left: 12px; bottom: 12px; z-index: 2;
+  padding: 7px 12px; border-radius: 10px;
+  background: rgba(11,11,12,.55); border: 1px solid rgba(255,255,255,.10);
+  backdrop-filter: blur(8px);
+  font: 400 10.5px 'Figtree', sans-serif; color: rgba(244,244,242,.75);
+  pointer-events: none;
+}
+.l3d-hint b {
+  font: 600 10px 'JetBrains Mono', monospace; color: #33B5E8; margin-right: 4px;
+}
