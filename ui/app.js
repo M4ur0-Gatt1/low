@@ -6739,6 +6739,19 @@ function dz3dKids(svg) {
     && !(n.classList && (n.classList.contains("dz-onion") || n.classList.contains("dz-penui"))));
 }
 
+/* ¿la capa es el FONDO del lienzo? (rect con relleno que cubre todo el viewBox).
+   En 3D no es un "plano": se muestra fantasma para que no tape la escena ni
+   se coma los trazos — en el archivo y en 2D queda intacto. */
+function dz3dIsBackdrop(el, vb) {
+  if (!el || el.tagName.toLowerCase() !== "rect") return false;
+  const f = el.getAttribute("fill");
+  if (!f || f === "none") return false;
+  const [x0, y0, W, H] = vb || DZ.d3.vb || [0, 0, 1080, 1080];
+  const x = +el.getAttribute("x") || 0, y = +el.getAttribute("y") || 0;
+  const w = +el.getAttribute("width") || 0, h = +el.getAttribute("height") || 0;
+  return w >= W * 0.95 && h >= H * 0.95 && x <= x0 + W * 0.05 && y <= y0 + H * 0.05;
+}
+
 // aplica clase al stage según la herramienta (solo en dibujo bloquea otros planos)
 function dz3dApplyToolClass() {
   const stage = $("#dz3dStage");
@@ -6974,11 +6987,20 @@ function dz3dBuild() {
   });
 
   dz3dApply();
-  // activar SIEMPRE un plano al entrar (el del frente) para que la barra Z y su
-  // manejador estén activos de una — antes, con varias capas no se activaba
-  // ninguno y el 'selector del eje Z' parecía no hacer nada
-  if (DZ.d3.act >= 0 && DZ.d3.act < kids.length) dz3dActivate(DZ.d3.act);
-  else if (kids.length) dz3dActivate(kids.length - 1);
+  // activar SIEMPRE un plano al entrar para que la barra Z esté viva — pero
+  // uno DIBUJABLE: preferir el <g> de más adelante y jamás el fondo del
+  // lienzo (el rect blanco se auto-activaba y "no dibujaba nada")
+  if (DZ.d3.act >= 0 && DZ.d3.act < kids.length && !dz3dIsBackdrop(kids[DZ.d3.act], vb)) {
+    dz3dActivate(DZ.d3.act);
+  } else if (kids.length) {
+    let pick = -1;
+    for (let i = kids.length - 1; i >= 0; i--) {
+      if (dz3dIsBackdrop(kids[i], vb)) continue;
+      if (pick < 0) pick = i;
+      if (kids[i].tagName.toLowerCase() === "g") { pick = i; break; }
+    }
+    dz3dActivate(pick >= 0 ? pick : kids.length - 1);
+  }
 }
 
 /* orientación 3D del plano (data-rot3d="rx,ry") — lo que hace que se pueda
@@ -7357,6 +7379,7 @@ function dz3dMakeCard(el, i) {
   const tag = document.createElement("span");
   tag.className = "dz3d-tag";
   card.appendChild(tag);
+  if (dz3dIsBackdrop(el, vb)) card.classList.add("dz3d-bg");   // fondo: fantasma
   dz3dCardZ(card, el);
   dz3dWireCard(card, cs);
   return card;

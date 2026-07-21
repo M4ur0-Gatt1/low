@@ -16,6 +16,7 @@
   // (el <path> superior) para poder probar el flujo "capa suelta" del 3D
   const SAMPLE_SVG =
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">' +
+    '<rect width="1080" height="1080" fill="#ffffff"/>' +                          // fondo real, como los diseños de LOW
     '<g data-low="plano"><circle cx="540" cy="620" r="150" fill="#F0450E"/>' +
     '<rect x="300" y="760" width="480" height="40" fill="#171716"/></g>' +
     '<g data-low="plano" data-z="140"><rect x="330" y="330" width="420" height="260" fill="#33B5E8" opacity="0.85"/></g>' +
