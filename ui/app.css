@@ -741,6 +741,35 @@ body.light .dz3d-rulers .rbg { fill: rgba(245,244,241,.78); }
   font-size: 15px;
 }
 .dz3d-rothandle.drag { cursor: grabbing; background: rgba(233,61,130,.34); }
+/* orbitando: cursor de agarre en todo el stage */
+#dz3dStage { cursor: grab; }
+#dz3dStage.orbiting { cursor: grabbing; }
+#dz3dStage.orbiting .dz3d-card { pointer-events: none; }   /* órbita fluida: nada la interrumpe */
+/* HUD de ayuda del espacio 3D (abajo a la izquierda, no molesta) */
+.dz3d-hud {
+  position: absolute; left: 12px; bottom: 12px; z-index: 6;
+  display: flex; flex-wrap: wrap; gap: 4px 12px; max-width: 46%;
+  padding: 7px 12px; border-radius: 10px;
+  background: rgba(11,11,12,.55); border: 1px solid rgba(255,255,255,.10);
+  backdrop-filter: blur(8px);
+  font: 400 10.5px 'Figtree', sans-serif; color: rgba(244,244,242,.75);
+  pointer-events: none;
+}
+.dz3d-hud b {
+  font: 600 10px 'JetBrains Mono', monospace; color: #33B5E8;
+  margin-right: 4px;
+}
+/* plano activo: halo suave además del marco (se distingue de un vistazo) */
+.dz3d-card.act { box-shadow: 0 0 0 6px rgba(240,69,14,.10), 0 18px 50px -18px rgba(0,0,0,.35); }
+/* gizmo y barra Z: sombra flotante + microinteracciones */
+.dz3d-gizmo, .dz3d-zbar {
+  box-shadow: 0 8px 26px -12px rgba(0,0,0,.45);
+  backdrop-filter: blur(8px);
+}
+.dz3d-gizmo button, .dz3d-add, .dz3d-or {
+  transition: color .12s ease, border-color .12s ease, background-color .12s ease, transform .1s ease;
+}
+.dz3d-gizmo button:active, .dz3d-add:active, .dz3d-or:active { transform: scale(.94); }
 
 /* visor de artefactos (render en vivo dentro de Fidel) */
 #artView {
@@ -1478,4 +1507,66 @@ body.light .dz3d-rulers .rbg { fill: rgba(245,244,241,.78); }
 }
 .dz-disc-peg div {
   width: 7px; height: 12px; background: var(--faint); border-radius: 2px 2px 0 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   CAPA DE PULIDO (v3.22.11) — el software se siente ÁGIL y MODERNO.
+   Solo microinteracciones y profundidad: nada cambia de lugar ni de tamaño.
+   Va al final a propósito: gana la cascada sin subir especificidad.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* movimiento con propósito: todo botón responde al tacto */
+.ibtn, .abtn, .send, .run, .chip, .ghost, .primary,
+.dz3d-gizmo button, .dz3d-add, .dz3d-or, .dz-zen-exit, .gbtn {
+  transition: color .12s ease, background-color .12s ease, border-color .12s ease,
+              transform .09s ease, box-shadow .15s ease;
+}
+.ibtn:active, .abtn:active, .send:active, .run:active, .chip:active,
+.ghost:active, .primary:active { transform: scale(.95); }
+.send:hover, .run:hover { box-shadow: 0 4px 14px -4px rgba(240,69,14,.55); }
+
+/* el menú lateral marca la sección activa con el acento, no solo con gris */
+.abtn { position: relative; }
+.abtn.active::before {
+  content: ""; position: absolute; left: -8px; top: 50%; height: 18px; width: 3px;
+  border-radius: 99px; background: var(--red); transform: translateY(-50%);
+}
+.abtn:hover { background: var(--panel2); }
+
+/* profundidad real: paneles flotantes con sombra suave y blur */
+.modal { box-shadow: 0 24px 70px -24px rgba(0,0,0,.6); }
+.overlay { backdrop-filter: blur(3px); }
+.ctx-menu { backdrop-filter: blur(8px); }
+
+/* modales que entran, no que aparecen */
+@keyframes lowPopIn { from { opacity: 0; transform: translateY(8px) scale(.985); }
+                      to   { opacity: 1; transform: none; } }
+.modal { animation: lowPopIn .16s ease; }
+.ctx-menu { animation: lowPopIn .12s ease; }
+
+/* teclado como ciudadano de primera: foco visible sin robar el diseño */
+:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; border-radius: 6px; }
+.inbox textarea:focus-visible, .krow input:focus-visible { outline: none; }
+.inbox:focus-within { border-color: var(--cyan); box-shadow: 0 0 0 3px var(--cyansoft); }
+
+/* scrollbars discretas que aparecen al pasar */
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-thumb {
+  background: var(--line); border-radius: 99px;
+  border: 2px solid transparent; background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--mut); background-clip: padding-box; }
+
+/* arranque ágil: el splash se va apenas la UI está lista */
+#lowSplash { animation-delay: .9s; animation-duration: .35s; }
+
+/* la versión en el footer, legible de un vistazo */
+footer #ver {
+  font: 600 10.5px 'JetBrains Mono', monospace; color: var(--cyan);
+  border: 1px solid var(--line); border-radius: 99px; padding: 1px 9px;
+}
+
+/* respeto por reduced-motion: quien lo pide, no ve animaciones */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation-duration: .01s !important; }
 }
