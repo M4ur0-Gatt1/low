@@ -3187,8 +3187,12 @@ let RULER = null;  // regla/hilo: {a:{x,y}, el:SVGLineElement|null, vp:[{x,y}]} 
 
 // select/direct  "" para que gane el CSS (flecha negra / flecha blanca);
 // nodes usa la flecha blanca también (edita puntos de vector)
+// lápiz/pincel/pluma = cursor de PUNTO (la mano queda solo para navegar:
+// espacio mantenido, botón medio y clic derecho)
+const DZ_DOT_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 18 18'%3E%3Ccircle cx='9' cy='9' r='5.5' fill='none' stroke='%23111' stroke-width='1.4'/%3E%3Ccircle cx='9' cy='9' r='1.6' fill='%23111'/%3E%3C/svg%3E\") 9 9, crosshair";
 const DZ_CURSORS = { select: "", direct: "", nodes: "", eraser: "cell",
                      dropper: "copy", bucket: "pointer", hand: "grab",
+                     pencil: DZ_DOT_CURSOR, brush: DZ_DOT_CURSOR, pen: DZ_DOT_CURSOR,
                      pivot: "crosshair", ruler: "crosshair",
                      inflator: "cell", handler: "ew-resize", iron: "default",
                      pliers: "crosshair", magnet: "cell" };
@@ -6861,6 +6865,7 @@ function dz3dBuild() {
     </div>
     <div class="dz3d-hud" id="dz3dHud">
       <span><b>lápiz</b> dibuja en el aire</span><span><b>⌖</b> apuntá a un trazo: ancla ahí</span>
+      <span><b>Ctrl+rueda</b> profundidad del lápiz</span>
       <span><b>arrastrar</b> orbitar</span><span><b>rueda</b> zoom</span>
       <span><b>Shift·medio</b> panear</span><span><b>2·clic</b> centrar</span>
       <span><b>1 3 7 5</b> vistas</span><span><b>Shift+A</b> plano</span><span><b>Esc</b> salir</span>
@@ -6915,20 +6920,25 @@ function dz3dBuild() {
     const a = dz3dPickAnchor(e.clientX, e.clientY);
     let world = a && a.world;
     if (!world) {
-      // sin ancla: el punto caería en el plano billboard por el origen
+      // sin ancla: el punto caería en el plano billboard, corrido según la
+      // profundidad del lápiz (Ctrl+rueda) sobre el eje de visión
       const P = new DOMMatrix(); P.m34 = -1 / (parseFloat(getComputedStyle(stage).perspective) || 1400);
       const B = new DOMMatrix().rotateAxisAngle(1, 0, 0, Math.round(-d3.rx)).rotateAxisAngle(0, 1, 0, Math.round(-d3.ry));
+      const n = B.transformPoint(new DOMPoint(0, 0, 1, 0));
+      const t = -(d3.airDepth || 0) * DZ3D_DEPTH;
+      const T = new DOMMatrix().translate(n.x * t, n.y * t, n.z * t).multiply(B);
       const M = P.translate(d3.panX, d3.panY).scale(d3.zoom)
-        .rotateAxisAngle(1, 0, 0, d3.rx).rotateAxisAngle(0, 1, 0, d3.ry).multiply(B);
+        .rotateAxisAngle(1, 0, 0, d3.rx).rotateAxisAngle(0, 1, 0, d3.ry).multiply(T);
       const p = dz3dScreenToPlaneM(M, e.clientX, e.clientY);
-      if (p) world = B.transformPoint(new DOMPoint(p.x, p.y, 0, 1));
+      if (p) world = T.transformPoint(new DOMPoint(p.x, p.y, 0, 1));
     }
     if (!world) { coo.hidden = true; cross.hidden = true; return; }
     // coords en unidades del lienzo (x/y como las reglas, z como el slider)
     const X = Math.round(world.x + W / 2 + (vb[0] || 0));
     const Y = Math.round(world.y + H / 2 + (vb[1] || 0));
     const Zu = Math.round(-world.z / DZ3D_DEPTH);
-    coo.textContent = `x ${X} · y ${Y} · z ${Zu}` + (a ? "  ⌖ anclado" : "");
+    coo.textContent = `x ${X} · y ${Y} · z ${Zu}` + (a ? "  ⌖ anclado" :
+      (d3.airDepth ? "  ⤓ prof. lápiz" : ""));
     coo.classList.toggle("anch", !!a);
     coo.hidden = false;
     const sr2 = stage.getBoundingClientRect();
@@ -6944,6 +6954,18 @@ function dz3dBuild() {
   });
   stage.addEventListener("contextmenu", e => e.preventDefault());
   stage.addEventListener("wheel", e => {
+    // ── Ctrl+rueda = PROFUNDIDAD DEL LÁPIZ (el "cursor 3D" de Blender):
+    //    mueve el plano de dibujo sobre el eje de visión de la cámara.
+    //    La rueda sola sigue siendo zoom (dolly) — viajar y dibujar en
+    //    profundidad son dos controles distintos, como en Feather. ──
+    if (e.ctrlKey) {
+      e.preventDefault();
+      const d3 = DZ.d3;
+      d3.airDepth = Math.max(-2000, Math.min(2000,
+        (d3.airDepth || 0) + (e.deltaY > 0 ? 10 : -10)));
+      dzSetStatus(`Profundidad del lápiz: z ${d3.airDepth} — el próximo trazo al aire cae ahí (Ctrl+rueda ajusta · apuntar a tinta la pisa)`);
+      return;
+    }
     e.preventDefault();
     // zoom AL CURSOR: el punto bajo el puntero queda quieto (no al centro)
     const d3 = DZ.d3, r = stage.getBoundingClientRect();
@@ -7275,7 +7297,15 @@ function dz3dAirDraw(e) {
   // ANCLA DE PROFUNDIDAD: si apuntás a un trazo existente, el plano nuevo
   // pasa por ESE punto 3D — dos elipses dibujadas desde ángulos distintos se
   // cruzan donde las apuntaste, no cada una por su lado (precisión Feather)
-  const anchor = dz3dPickAnchor(e.clientX, e.clientY);
+  let anchor = dz3dPickAnchor(e.clientX, e.clientY);
+  // sin tinta bajo el lápiz: manda la PROFUNDIDAD elegida con Ctrl+rueda
+  // (offset sobre el eje de visión — el "cursor 3D")
+  if (!anchor && d3.airDepth) {
+    const n = new DOMMatrix().rotateAxisAngle(1, 0, 0, rx).rotateAxisAngle(0, 1, 0, ry)
+      .transformPoint(new DOMPoint(0, 0, 1, 0));         // normal del billboard
+    const t = -d3.airDepth * DZ3D_DEPTH;                 // + = fondo (misma escala que el slider Z)
+    anchor = { world: new DOMPoint(n.x * t, n.y * t, n.z * t, 1) };
+  }
   // ¿ya hay un plano <g> mirando a esta cámara? (±8°: no explotar en planos)
   const dAng = (p, q) => Math.abs(((p - q) % 360 + 540) % 360 - 180);
   const near = (p, q) => dAng(p, q) <= 8;
