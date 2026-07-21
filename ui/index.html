@@ -275,7 +275,7 @@
       <hr><span data-act="rotl">Girar la vista  <kbd>[</kbd></span>
       <span data-act="rotr">Girar la vista  <kbd>]</kbd></span>
       <span data-act="enderezar">Enderezar la vista</span>
-      <hr><span data-act="diorama">Diorama (profundidad Z)</span>
+      <hr><span data-act="diorama">Cámara multiplano (profundidad Z)</span>
       <span data-act="cebolla">Papel cebolla</span>
       <span data-act="xsheet">X-sheet (planilla)</span>
       <span data-act="codigo">Código SVG</span>
@@ -286,7 +286,7 @@
       <hr><span data-act="bloquear">Bloquear / desbloquear</span>
       <span data-act="renombrar">Renombrar…</span>
       <span data-act="pivote">Fijar pivote de rig <kbd>J</kbd></span>
-      <span data-act="profundidad">Profundidad Z (diorama)…</span>
+      <span data-act="profundidad">Profundidad Z (cámara multiplano)…</span>
     </div></div>
     <div class="dz-menu" data-menu="animacion">Animación<div class="dz-dd">
       <span data-act="timeline">Línea de tiempo</span>
@@ -380,7 +380,7 @@
       <button class="ibtn" id="dzVec" title="Vectorizar: convierte la imagen importada/generada en trazos SVG editables (calcar). No más dibujo tosco a mano."><svg class="ico"><use href="#i-vector"/></svg></button>
       <button class="ibtn" id="dzCamBtn" title="Cámara (C): mové/zoomeá/rotá el encuadre y dejá claves por cuadro — el export sale por la cámara"><svg class="ico"><use href="#i-cam"/></svg></button>
       <button class="ibtn" id="dzRigBtn" title="Rig (): claves de posición/rotación/escala por PIEZA — posá el personaje en cada cuadro clave y LOW interpola (pegs de Toon Boom)"><svg class="ico"><use href="#i-key"/></svg></button>
-      <button class="ibtn" id="dzZBtn" title="Diorama: vista lateral del multiplano — arrastrá cada capa en profundidad (cerca/lejos de la cámara) sin mapas de nodos"><svg class="ico"><use href="#i-stage"/></svg></button>
+      <button class="ibtn" id="dzZBtn" title="Cámara multiplano: la herramienta de animación 2D con profundidad — arrastrá cada capa cerca/lejos de la cámara (parallax), como la cámara multiplano de Disney"><svg class="ico"><use href="#i-stage"/></svg></button>
       <button class="ibtn" id="dz3DBtn" title="Espacio 3D (estilo Blender): las capas flotan en profundidad y podés orbitar la escena, dibujar 2D sobre el plano activo y mover cada capa en los ejes X·Y·Z"><svg class="ico"><use href="#i-cube"/></svg></button>
       <div class="hsep"></div>
       <button class="ibtn" id="dzPenDbgBtn" title=" Diagnóstico de tableta: panel en vivo de eventos pointer — útil para depurar tabletas Huion/Wacom. Clic para activar/desactivar." onclick="dzPenDebugToggle()"></button>
@@ -422,7 +422,7 @@
            El compositing sin nodos: cada capa es una tarjeta física que corrés
            en profundidad, como el diorama de la cámara multiplano de Disney -->
       <div class="dz-zpanel" id="dzZPanel" hidden>
-        <div class="dz-op-head" id="dzZpHead"><i class="fas fa-masks-theater"></i> diorama (profundidad Z)
+        <div class="dz-op-head" id="dzZpHead"><i class="fas fa-masks-theater"></i> cámara multiplano (profundidad Z)
           <span class="dz-op-x" id="dzZpClose" title="Cerrar">×</span></div>
         <div class="dz-zstage" id="dzZStage">
           <div class="dz-zcam" title="Cámara — lo cercano (izquierda) se mueve más en los travellings"><i class="fas fa-camera-movie"></i></div>
@@ -576,7 +576,7 @@
     <div class="vsep"></div>
     <button class="ibtn active" id="tlOnion" title="Papel cebolla: mostrar/ocultar (el panel flotante lo personaliza)"><svg class="ico"><use href="#i-onion"/></svg></button>
     <button class="ibtn" id="tlXs" title="X-sheet: planilla de exposición vertical (cuadros, claves y cámara)"><svg class="ico"><use href="#i-xsheet"/></svg></button>
-    <button class="ibtn" id="tlLayers" title="Timeline por CAPAS: filas = capas, columnas = cuadros (como Toon Boom). La profundidad Z de cada capa es la misma del diorama/multiplano."><svg class="ico"><use href="#i-files"/></svg></button>
+    <button class="ibtn" id="tlLayers" title="Timeline por CAPAS: filas = capas, columnas = cuadros (como Toon Boom). La profundidad Z de cada capa es la misma de la cámara multiplano."><svg class="ico"><use href="#i-files"/></svg></button>
     <div class="tl-frames" id="tlFrames" title="Arrastrá sobre los cuadros para hojearlos (scrub)"></div>
     <button class="ibtn" id="tlKey" title="Marcar/desmarcar este cuadro como FOTOGRAMA CLAVE (pose principal del flujo pose-a-pose)"><svg class="ico"><use href="#i-key"/></svg></button>
     <button class="ibtn" id="tlAdd" title="Duplicar este cuadro al FINAL (flujo clásico: dibujar sobre la copia)"><svg class="ico"><use href="#i-plus"/></svg></button>

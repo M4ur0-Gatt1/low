@@ -6497,7 +6497,7 @@ async function dzTlGridRender() {
       `<span class="dz-eye eye" title="${hidden ? "Mostrar" : "Ocultar"}">${hidden ? "◌" : ""}</span>` +
       `<span class="dz-eye lock" title="${locked ? "Desbloquear" : "Bloquear"}" style="opacity:${locked ? 1 : .4}">${locked ? "<i class='fas fa-lock'></i>" : "🔓"}</span>` +
       `<span class="dz-tlg-name" title="${key}">${key}</span>` +
-      `<input class="dz-tlg-z" type="number" step="10" value="${z}" title="Profundidad Z (multiplano) — la misma del diorama"${liveEl ? "" : " disabled"}>`;
+      `<input class="dz-tlg-z" type="number" step="10" value="${z}" title="Profundidad Z — la misma de la cámara multiplano"${liveEl ? "" : " disabled"}>`;
     head.querySelector(".eye").onclick = () => {
       if (!liveEl) return; dzSnapshot();
       hidden ? liveEl.removeAttribute("display") : liveEl.setAttribute("display", "none");
@@ -7575,7 +7575,7 @@ function dz3dExit(silent) {
     dzPersist();
     dzBuildLayers();
     dzApplyZoom();
-    dzSetStatus("Lienzo plano — la profundidad Z de cada capa quedó guardada (diorama/parallax)");
+    dzSetStatus("Lienzo plano — la profundidad Z de cada capa quedó guardada (cámara multiplano/parallax)");
   }
 }
 
