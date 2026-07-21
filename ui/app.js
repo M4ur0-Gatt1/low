@@ -7025,18 +7025,102 @@ function dz3dSetRot(i, rx, ry, commit) {
   if (i === d3.act) dz3dZHandlePlace();
   if (commit) { DZ.dirty = true; dzPersist(); }
 }
-/* ── dibujo EN EL AIRE (gesto Feather): con lápiz/pincel, arrastrar sobre el
-   vacío dibuja YA — se reutiliza el plano billboard que mira a la cámara
-   actual, o se crea uno nuevo, y el pointerdown se redespacha a su superficie:
-   el navegador proyecta las coordenadas al plano y el trazo arranca en el
-   mismo gesto, sin soltar el lápiz ── */
+/* ── PROYECCIÓN pantalla→plano ──
+   Matriz total del plano: perspective(stage) · mundo (pan·zoom·órbita) ·
+   card (translateZ · rot3d). Como el plano es chato, el mapeo (u,v)→pantalla
+   es una homografía 3x3 invertible: con ella dibujamos "en el aire" sin
+   depender de offsetX (que solo existe si el evento cae sobre el plano). */
+function dz3dPlaneMatrix(el) {
+  const d3 = DZ.d3, stage = $("#dz3dStage");
+  const persp = parseFloat(getComputedStyle(stage).perspective) || 1400;
+  const z = parseFloat(el.getAttribute("data-z")) || 0;
+  const [crx, cry] = dz3dRot(el);
+  const P = new DOMMatrix();
+  P.m34 = -1 / persp;                        // w = 1 − z/d (perspectiva CSS)
+  return P.translate(d3.panX, d3.panY)
+    .scale(d3.zoom)
+    .rotateAxisAngle(1, 0, 0, d3.rx)
+    .rotateAxisAngle(0, 1, 0, d3.ry)
+    .translate(0, 0, -z * DZ3D_DEPTH)
+    .rotateAxisAngle(1, 0, 0, crx)
+    .rotateAxisAngle(0, 1, 0, cry);
+}
+/* punto del mouse (clientX/Y) → coordenadas SVG del plano `el`, o null si el
+   plano está de canto / detrás de cámara */
+function dz3dScreenToPlane(el, clientX, clientY) {
+  const d3 = DZ.d3, stage = $("#dz3dStage");
+  if (!d3 || !stage) return null;
+  const r = stage.getBoundingClientRect();
+  const mx = clientX - (r.left + r.width / 2);
+  const my = clientY - (r.top + r.height / 2);
+  const M = dz3dPlaneMatrix(el);
+  // homografía (u,v,1) → (X·w, Y·w, w): columnas x·y·afín de la 4x4
+  const a = M.m11, b = M.m21, c = M.m41,
+        d = M.m12, e = M.m22, f = M.m42,
+        g = M.m14, h = M.m24, i = M.m44;
+  const det = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
+  if (Math.abs(det) < 1e-9) return null;     // plano de canto: sin intersección útil
+  // inversa por adjunta, aplicada a (mx, my, 1)
+  const u = ((e * i - f * h) * mx + (c * h - b * i) * my + (b * f - c * e));
+  const v = ((f * g - d * i) * mx + (a * i - c * g) * my + (c * d - a * f));
+  const w = ((d * h - e * g) * mx + (b * g - a * h) * my + (a * e - b * d));
+  if (Math.abs(w) < 1e-9) return null;
+  const vb = d3.vb || [0, 0, 1080, 1080];
+  const W = vb[2] || 1080, H = vb[3] || 1080;
+  return { x: u / w + W / 2 + (vb[0] || 0), y: v / w + H / 2 + (vb[1] || 0) };
+}
+
+/* commit de un trazo terminado sobre la capa `el` (índice idx): compartido
+   por el dibujo sobre planos (wire) y el dibujo en el aire */
+function dz3dCommitStroke(el, idx, pts, tool, drawColor, drawW) {
+  if (pts.length < 3) return;
+  dzSnapshot();
+  const refined = dzRefineStroke(pts);
+  let stroke;
+  if (tool === "brush") stroke = dzBrushRibbon(refined, drawW, drawColor);
+  else {
+    stroke = document.createElementNS(SVGNS, "path");
+    stroke.setAttribute("d", dzSmoothPath(refined));
+    stroke.setAttribute("fill", "none");
+    stroke.setAttribute("stroke", drawColor);
+    stroke.setAttribute("stroke-width", drawW);
+    stroke.setAttribute("stroke-linecap", "round");
+    stroke.setAttribute("stroke-linejoin", "round");
+    stroke.setAttribute("data-low", "pencil");
+  }
+  if (!stroke) return;
+  if (el.tagName.toLowerCase() === "g") {
+    el.appendChild(stroke);
+    dzMirrorClone(stroke);                       // espejo en vivo también en 3D
+    DZ.dirty = true; dzPersist();
+    dz3dSyncCard(idx);
+  } else {
+    // capa suelta: el trazo se vuelve una capa hermana con la misma pose
+    const z = el.getAttribute("data-z");
+    if (z) stroke.setAttribute("data-z", z);
+    const rot = el.getAttribute("data-rot3d");
+    if (rot) stroke.setAttribute("data-rot3d", rot);
+    el.parentNode.insertBefore(stroke, el.nextSibling);
+    const mir = dzMirrorClone(stroke);
+    DZ.dirty = true; dzPersist();
+    dz3dInsertCard(stroke, idx + 1);             // sin reconstruir el mundo
+    if (mir) dz3dInsertCard(mir, idx + 2);
+  }
+  dzBuildLayers();
+}
+
+/* ── DIBUJO EN EL AIRE (gesto Feather): con lápiz/pincel, arrastrar sobre el
+   vacío dibuja YA desde cualquier ángulo — se reutiliza el plano billboard
+   que mira a la cámara actual (±8°) o se crea uno, y el trazo se proyecta
+   al plano con dz3dScreenToPlane. Sin eventos sintéticos: matemática. ── */
 function dz3dAirDraw(e) {
   const svg = $("#dzCanvas").querySelector("svg");
-  const d3 = DZ.d3;
-  if (!svg || !d3) return;
+  const d3 = DZ.d3, stage = $("#dz3dStage");
+  if (!svg || !d3 || !stage) return;
+  const tool = DZ.tool === "brush" ? "brush" : "pencil";
   const rx = Math.round(-d3.rx), ry = Math.round(-d3.ry);
   // ¿ya hay un plano <g> mirando a esta cámara? (±8°: no explotar en planos)
-  const near = (a, b) => Math.abs(a - b) <= 8;
+  const near = (p, q) => Math.abs(p - q) <= 8;
   let idx = d3.els.findIndex(el => {
     if (el.tagName.toLowerCase() !== "g") return false;
     const [erx, ery] = dz3dRot(el);
@@ -7054,17 +7138,41 @@ function dz3dAirDraw(e) {
     dzBuildLayers();
   }
   dz3dActivate(idx);
+  const el = d3.els[idx];
   const card = document.querySelector(`#dz3dWorld .dz3d-card[data-i="${idx}"]`);
-  const surf = card && card.querySelector('[data-dz3d="surf"]');
-  if (!surf) return;
-  // redespachar el gesto al plano: offsetX/offsetY llegan proyectados a sus
-  // coordenadas locales (mismo mecanismo que el dibujo sobre planos rotados)
-  surf.dispatchEvent(new PointerEvent("pointerdown", {
-    bubbles: true, cancelable: true, isPrimary: true,
-    pointerId: e.pointerId, pointerType: e.pointerType,
-    pressure: e.pressure || 0.5, button: 0, buttons: 1,
-    clientX: e.clientX, clientY: e.clientY,
-  }));
+  const cs = card && card.querySelector("svg");
+  if (!cs) return;
+  const p0 = dz3dScreenToPlane(el, e.clientX, e.clientY);
+  if (!p0) return;
+  const ptrack = {};
+  const pts = [[p0.x, p0.y, dzSmoothPressure(e.pressure || 0.5, ptrack)]];
+  const drawColor = DZ.drawColor || (tool === "brush" ? "#E93D82" : "#F0450E");
+  const drawW = DZ.drawW || 6;
+  const live = document.createElementNS(SVGNS, "path");
+  live.setAttribute("fill", "none");
+  live.setAttribute("stroke", drawColor);
+  live.setAttribute("stroke-width", drawW);
+  live.setAttribute("stroke-linecap", "round");
+  live.setAttribute("stroke-linejoin", "round");
+  live.setAttribute("opacity", "0.85");
+  cs.appendChild(live);
+  try { stage.setPointerCapture(e.pointerId); } catch (err) { /* pointer sintético */ }
+  const move = ev => {
+    const evs = (ev.getCoalescedEvents && ev.getCoalescedEvents().length)
+          ? ev.getCoalescedEvents() : [ev];
+    for (const c of evs) {
+      const p = dz3dScreenToPlane(el, c.clientX, c.clientY);
+      if (p) pts.push([p.x, p.y, dzSmoothPressure(c.pressure || 0.5, ptrack)]);
+    }
+    live.setAttribute("d", "M " + pts.map(p => p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" L "));
+  };
+  const up = () => {
+    stage.removeEventListener("pointermove", move); stage.removeEventListener("pointerup", up);
+    live.remove();
+    dz3dCommitStroke(el, idx, pts, tool, drawColor, drawW);
+  };
+  stage.addEventListener("pointermove", move);
+  stage.addEventListener("pointerup", up);
   e.preventDefault();
 }
 
@@ -7304,8 +7412,23 @@ function dz3dWireCard(card, cs) {
 
     // ── dibujo 2D sobre el plano activo (lápiz / pincel), en cualquier ángulo ──
     if (drawing) {
+      // si el plano activo NO mira a la cámara (>25°), el trazo va al AIRE
+      // (billboard): siempre dibujás donde estás mirando, como Feather.
+      // Para dibujar SOBRE un plano inclinado, orientate a él primero
+      // (presets Piso/Pared/Frente de la barra Z te orbitan solos).
+      if (tool === "pencil" || tool === "brush") {
+        const [crx, cry] = dz3dRot(el);
+        const dAng = (p, q) => Math.abs(((p - q) % 360 + 540) % 360 - 180);
+        if (Math.max(dAng(crx, -d3.rx), dAng(cry, -d3.ry)) > 25)
+          return dz3dAirDraw(e);
+      }
+      // coordenadas por PROYECCIÓN (homografía), no por offsetX: un solo
+      // camino matemático para dibujar sobre planos y en el aire, idéntico
+      // en pywebview, Chrome y tests — y verificable
+      const p0 = dz3dScreenToPlane(el, e.clientX, e.clientY);
+      if (!p0) return;
       const ptrack = {};                             // buffer de presión de ESTE trazo
-      const pts = [[e.offsetX, e.offsetY, dzSmoothPressure(e.pressure || 0.5, ptrack)]];
+      const pts = [[p0.x, p0.y, dzSmoothPressure(e.pressure || 0.5, ptrack)]];
       const drawColor = DZ.drawColor || (tool === "pencil" ? "#F0450E" : tool === "pen" ? "#F0450E" : "#E93D82");
       const drawW = DZ.drawW || (tool === "pen" ? 2 : 6);
       const live = document.createElementNS(SVGNS, "path");
@@ -7316,54 +7439,22 @@ function dz3dWireCard(card, cs) {
       live.setAttribute("stroke-linejoin", "round");
       live.setAttribute("opacity", "0.85");
       cs.appendChild(live);
-      surf.setPointerCapture(e.pointerId);
+      try { surf.setPointerCapture(e.pointerId); } catch (err) { /* pointer sintético */ }
       const move = ev => {
         // eventos coalescidos: el trazo captura TODOS los puntos intermedios
         // (misma fidelidad que el dibujo 2D, clave con tableta)
-        const evs = ev.getCoalescedEvents ? ev.getCoalescedEvents() : [ev];
-        for (const c of evs)
-          pts.push([c.offsetX, c.offsetY, dzSmoothPressure(c.pressure || 0.5, ptrack)]);
+        const evs = (ev.getCoalescedEvents && ev.getCoalescedEvents().length)
+          ? ev.getCoalescedEvents() : [ev];
+        for (const c of evs) {
+          const p = dz3dScreenToPlane(el, c.clientX, c.clientY);
+          if (p) pts.push([p.x, p.y, dzSmoothPressure(c.pressure || 0.5, ptrack)]);
+        }
         live.setAttribute("d", "M " + pts.map(p => p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" L "));
       };
       const up = () => {
         surf.removeEventListener("pointermove", move); surf.removeEventListener("pointerup", up);
         live.remove();
-        if (pts.length < 3) return;
-        dzSnapshot();
-        const refined = dzRefineStroke(pts);
-        let stroke;
-        if (tool === "brush") stroke = dzBrushRibbon(refined, drawW, drawColor);
-        else {
-          stroke = document.createElementNS(SVGNS, "path");
-          stroke.setAttribute("d", dzSmoothPath(refined));
-          stroke.setAttribute("fill", "none");
-          stroke.setAttribute("stroke", drawColor);
-          stroke.setAttribute("stroke-width", drawW);
-          stroke.setAttribute("stroke-linecap", "round");
-          stroke.setAttribute("stroke-linejoin", "round");
-          stroke.setAttribute("data-low", "pencil");
-        }
-        if (!stroke) return;
-        // al grupo activo si es <g>; si no, al lienzo con el mismo data-z
-        if (el.tagName.toLowerCase() === "g") {
-          el.appendChild(stroke);
-          dzMirrorClone(stroke);                     // espejo en vivo también en 3D
-        } else {
-          const z = el.getAttribute("data-z");
-          if (z) stroke.setAttribute("data-z", z);
-          const rot = el.getAttribute("data-rot3d");
-          if (rot) stroke.setAttribute("data-rot3d", rot);   // hereda la orientación del plano
-          el.parentNode.insertBefore(stroke, el.nextSibling);
-          const mir = dzMirrorClone(stroke);
-          DZ.dirty = true; dzPersist();
-          dz3dInsertCard(stroke, i + 1);             // plano nuevo sin rebuild total
-          if (mir) dz3dInsertCard(mir, i + 2);
-          dzBuildLayers();
-          return;
-        }
-        DZ.dirty = true; dzPersist();
-        dz3dSyncCard(i);
-        dzBuildLayers();
+        dz3dCommitStroke(el, i, pts, tool, drawColor, drawW);
       };
       surf.addEventListener("pointermove", move);
       surf.addEventListener("pointerup", up);
@@ -7373,7 +7464,9 @@ function dz3dWireCard(card, cs) {
 
     // ── mover la capa DENTRO de su plano (ejes X·Y locales) con guías ──
     if (tool === "select" || tool === "direct") {
-      const sx = e.offsetX, sy = e.offsetY;
+      const P0 = dz3dScreenToPlane(el, e.clientX, e.clientY);
+      if (!P0) return;
+      const sx = P0.x, sy = P0.y;
       const clone = cs.querySelector('[data-dz3d="content"]');
       const start = dzReadPos(clone);
       const guides = cs.querySelector('[data-dz3d="guides"]');
@@ -7392,9 +7485,11 @@ function dz3dWireCard(card, cs) {
       });
       const SNAP = 8;
       let dx = 0, dy = 0;
-      surf.setPointerCapture(e.pointerId);
+      try { surf.setPointerCapture(e.pointerId); } catch (err) { /* pointer sintético */ }
       const move = ev => {
-        dx = ev.offsetX - sx; dy = ev.offsetY - sy;
+        const P = dz3dScreenToPlane(el, ev.clientX, ev.clientY);
+        if (!P) return;
+        dx = P.x - sx; dy = P.y - sy;
         guides.innerHTML = "";
         if (b0 && !ev.altKey) {                       // Alt = mover libre, sin imán
           const cx = b0.x + b0.width / 2 + dx, cy = b0.y + b0.height / 2 + dy;
@@ -7809,6 +7904,7 @@ function dzApplySvgText(txt) {
   $("#dzProps").hidden = true; $("#dzEmpty").hidden = false; handle.hidden = true;
   dzApplyZoom(); dzMarkDirty(); dzBuildLayers();
   if (DZ.anim) dzOnionUpdate();
+  if (DZ.d3) dz3dBuild();   // en espacio 3D: reflejar el svg nuevo (undo/redo/código)
   return true;
 }
 function dzApplyCode() {

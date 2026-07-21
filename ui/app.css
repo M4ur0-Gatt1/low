@@ -668,13 +668,15 @@ body.light .dz3d-rulers .rbg { fill: rgba(245,244,241,.78); }
                                           solo flota el contenido del plano. */
   transition: outline-color .12s ease;
 }
-/* solo el plano ACTIVO muestra su marco (para saber dónde dibujás) */
-.dz3d-card.act { outline: 2px solid var(--red); background: rgba(255,255,255,.55); }
+/* solo el plano ACTIVO muestra su marco (para saber dónde dibujás).
+   SIN fondo: cualquier velo blanco multiplicado por N planos convertía la
+   escena en "una capa blanca por cada trazo". Los trazos flotan como en
+   Feather; el marco rojo del activo alcanza para ubicarse. */
+.dz3d-card.act { outline: 2px solid var(--red); background: none; }
 .dz3d-card:not(.act):hover { outline: 1px solid rgba(120,120,120,.35); }
-/* los svg de los planos NO llevan el fondo blanco del lienzo (.dz-canvas svg
-   background:#fff) — eso hacía que cada plano/línea se viera como un rectángulo
-   BLANCO opaco tapando todo en el 3D. Transparentes: solo se ve el dibujo. */
-.dz3d-card svg { display: block; cursor: crosshair; background: rgba(255,255,255,.40) !important; }
+/* los svg de los planos SIEMPRE transparentes (el fondo blanco del lienzo 2D
+   .dz-canvas svg NO aplica acá) — un fondo acá = un rectángulo tapando todo */
+.dz3d-card svg { display: block; cursor: crosshair; background: transparent !important; }
 /* al DIBUJAR, solo la superficie del plano ACTIVO recibe el trazo  el dibujo
    cae en el plano que elegiste (piso/pared/el que sea), no en el que quedó
    arriba (el papel blanco). Con la flecha de selección, todos son clickeables
