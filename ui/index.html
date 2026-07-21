@@ -151,7 +151,7 @@
 
     <aside class="treewrap" id="treewrap">
       <div class="proj" id="projName">SIN PROYECTO</div>
-      <div id="tree"><div class="tree-empty">⚠️ Abre una carpeta de proyecto para comenzar (botón de carpeta arriba)</div></div>
+      <div id="tree"><div class="tree-empty"> Abre una carpeta de proyecto para comenzar (botón de carpeta arriba)</div></div>
     </aside>
     <div class="splitter col" id="splitTree" title="Arrastrá para ajustar el ancho del explorador"></div>
 
@@ -228,7 +228,7 @@
     <select id="artSel" class="langsel" title="Artefactos generados"></select>
     <div class="flex1"></div>
     <button class="ibtn" id="artPrev" title="Imagen anterior del proyecto (←)"><svg class="ico"><use href="#i-chev-l"/></svg></button>
-    <button class="ibtn" id="artNext" title="Imagen siguiente del proyecto (→)"><svg class="ico"><use href="#i-chev-r"/></svg></button>
+    <button class="ibtn" id="artNext" title="Imagen siguiente del proyecto ()"><svg class="ico"><use href="#i-chev-r"/></svg></button>
     <button class="ibtn" id="artReload" title="Recargar"><svg class="ico"><use href="#i-history"/></svg></button>
     <button class="ibtn" id="artExt" title="Abrir en el navegador"><svg class="ico"><use href="#i-ext"/></svg></button>
     <button class="ibtn" id="artClose" title="Cerrar (Esc)"><svg class="ico"><use href="#i-x"/></svg></button>
@@ -272,8 +272,8 @@
       <span data-act="zoomout">Alejar <kbd>−</kbd></span>
       <span data-act="zoom100">Zoom 100% <kbd>0</kbd></span>
       <span data-act="fit">Ajustar a pantalla <kbd>F</kbd></span>
-      <hr><span data-act="rotl">Girar la vista ⟲ <kbd>[</kbd></span>
-      <span data-act="rotr">Girar la vista ⟳ <kbd>]</kbd></span>
+      <hr><span data-act="rotl">Girar la vista  <kbd>[</kbd></span>
+      <span data-act="rotr">Girar la vista  <kbd>]</kbd></span>
       <span data-act="enderezar">Enderezar la vista</span>
       <hr><span data-act="diorama">Diorama (profundidad Z)</span>
       <span data-act="cebolla">Papel cebolla</span>
@@ -326,7 +326,7 @@
     <button class="ibtn" id="dzZoomOut" title="Alejar (−)">−</button>
     <span class="dz-zoom" id="dzZoomLbl">100%</span>
     <button class="ibtn" id="dzZoomIn" title="Acercar (+)">+</button>
-    <button class="ibtn" id="dzZoomFit" title="Ajustar a pantalla (F) · 0 = 100% · espacio o mano (H) panea">⤢</button>
+    <button class="ibtn" id="dzZoomFit" title="Ajustar a pantalla (F) · 0 = 100% · espacio o mano (H) panea"></button>
     <div class="vsep"></div>
     <button class="ibtn" id="dzRulersBtn" title="Reglas (Ctrl+R): arrastrá desde una regla para crear una guía"><svg class="ico"><use href="#i-ruler"/></svg></button>
     <button class="ibtn" id="dzGridBtn" title="Cuadrícula: grilla de referencia alineada al lienzo"><svg class="ico"><use href="#i-xsheet"/></svg></button>
@@ -379,11 +379,11 @@
       <button class="ibtn" id="dzBg" title="Generar un FONDO con IA y enviarlo al fondo del lienzo (eje z)"><svg class="ico"><use href="#i-bg"/></svg></button>
       <button class="ibtn" id="dzVec" title="Vectorizar: convierte la imagen importada/generada en trazos SVG editables (calcar). No más dibujo tosco a mano."><svg class="ico"><use href="#i-vector"/></svg></button>
       <button class="ibtn" id="dzCamBtn" title="Cámara (C): mové/zoomeá/rotá el encuadre y dejá claves por cuadro — el export sale por la cámara"><svg class="ico"><use href="#i-cam"/></svg></button>
-      <button class="ibtn" id="dzRigBtn" title="Rig (◆): claves de posición/rotación/escala por PIEZA — posá el personaje en cada cuadro clave y LOW interpola (pegs de Toon Boom)"><svg class="ico"><use href="#i-key"/></svg></button>
+      <button class="ibtn" id="dzRigBtn" title="Rig (): claves de posición/rotación/escala por PIEZA — posá el personaje en cada cuadro clave y LOW interpola (pegs de Toon Boom)"><svg class="ico"><use href="#i-key"/></svg></button>
       <button class="ibtn" id="dzZBtn" title="Diorama: vista lateral del multiplano — arrastrá cada capa en profundidad (cerca/lejos de la cámara) sin mapas de nodos"><svg class="ico"><use href="#i-stage"/></svg></button>
       <button class="ibtn" id="dz3DBtn" title="Espacio 3D (estilo Blender): las capas flotan en profundidad y podés orbitar la escena, dibujar 2D sobre el plano activo y mover cada capa en los ejes X·Y·Z"><svg class="ico"><use href="#i-cube"/></svg></button>
       <div class="hsep"></div>
-      <button class="ibtn" id="dzPenDbgBtn" title="🩺 Diagnóstico de tableta: panel en vivo de eventos pointer — útil para depurar tabletas Huion/Wacom. Clic para activar/desactivar." onclick="dzPenDebugToggle()">🩺</button>
+      <button class="ibtn" id="dzPenDbgBtn" title=" Diagnóstico de tableta: panel en vivo de eventos pointer — útil para depurar tabletas Huion/Wacom. Clic para activar/desactivar." onclick="dzPenDebugToggle()"></button>
     </div>
     <div class="dz-canvas" id="dzCanvas">
       <!-- cuadrícula (Ctrl+R activa reglas; la grilla y guías se prenden en la barra) -->
@@ -410,15 +410,15 @@
         <span class="dz-sh s"  data-hx="0"  data-hy="1"></span>
         <span class="dz-sh se" data-hx="1"  data-hy="1"></span>
       </div>
-      <div class="dz-rotate" id="dzRotate" title="Arrastrá para rotar · Shift: de a 15°" hidden>⟳</div>
-      <!-- cámara (📹): el encuadre animable — arrastrá para mover, esquina = zoom, ⟳ = rotar -->
+      <div class="dz-rotate" id="dzRotate" title="Arrastrá para rotar · Shift: de a 15°" hidden></div>
+      <!-- cámara (📹): el encuadre animable — arrastrá para mover, esquina = zoom,  = rotar -->
       <div class="dz-cam" id="dzCam" hidden>
         <span class="dz-cam-tag" id="dzCamTag">📹 cámara</span>
         <div class="dz-cam-size" id="dzCamSize" title="Arrastrá: zoom de cámara (achica el encuadre = acerca)"></div>
-        <div class="dz-cam-rot" id="dzCamRot" title="Arrastrá para rotar la cámara">⟳</div>
+        <div class="dz-cam-rot" id="dzCamRot" title="Arrastrá para rotar la cámara"></div>
       </div>
       <div class="dz-pivotmark" id="dzPivot" title="Pivote de rotación (rig) — la rotación gira alrededor de acá" hidden>✛</div>
-      <!-- 🎭 Diorama: vista lateral del multiplano (cámara → capas → fondo).
+      <!-- 🎭 Diorama: vista lateral del multiplano (cámara  capas  fondo).
            El compositing sin nodos: cada capa es una tarjeta física que corrés
            en profundidad, como el diorama de la cámara multiplano de Disney -->
       <div class="dz-zpanel" id="dzZPanel" hidden>
@@ -428,7 +428,7 @@
           <div class="dz-zcam" title="Cámara — lo cercano (izquierda) se mueve más en los travellings">📹</div>
           <div class="dz-zrail" id="dzZRail"></div>
         </div>
-        <div class="dz-zhint">← cerca (se mueve más) · plano de acción · lejos (fondo) →<br>
+        <div class="dz-zhint">← cerca (se mueve más) · plano de acción · lejos (fondo) <br>
         arrastrá las tarjetas · el parallax sale solo al mover la cámara</div>
       </div>
       <!-- X-sheet: planilla de exposición vertical (flotante) -->
@@ -453,7 +453,7 @@
         </div>
       </div>
       <div class="dz-onionpanel" id="dzRigPanel" hidden>
-        <div class="dz-op-head" id="dzRigHead">◆ rig <span class="dz-op-x" id="dzRigClose" title="Cerrar">×</span></div>
+        <div class="dz-op-head" id="dzRigHead"> rig <span class="dz-op-x" id="dzRigClose" title="Cerrar">×</span></div>
         <div class="dz-op-row"><span>Pieza</span>
           <input type="text" id="rigId" placeholder="elegí y nombrá…" title="Id de la pieza (Enter para asignar) — seleccioná con la flecha blanca (D)">
         </div>
@@ -462,11 +462,11 @@
           <input type="number" id="rigY" value="0" step="1" title="Desplazamiento Y">
         </div>
         <div class="dz-op-row"><span>Rot · Esc</span>
-          <input type="number" id="rigR" value="0" step="1" title="Rotación (°) alrededor del pivote 📌">
+          <input type="number" id="rigR" value="0" step="1" title="Rotación (°) alrededor del pivote ">
           <input type="number" id="rigS" value="1" step="0.05" title="Escala alrededor del pivote">
         </div>
         <div class="dz-op-row">
-          <button class="ghost" id="rigKey" title="Clavar la pose en este cuadro (K)">◆ clavar</button>
+          <button class="ghost" id="rigKey" title="Clavar la pose en este cuadro (K)"> clavar</button>
           <button class="ghost" id="rigDel" title="Quitar la clave de este cuadro">✕</button>
         </div>
         <div class="dz-op-row"><div class="dz-suggest" id="rigChips"></div></div>
@@ -476,11 +476,11 @@
         </div>
         <div class="dz-op-row">
           <button class="ghost" id="perfRec" title="⏺ Grabar una TOMA: cuenta 3-2-1 y actuá el movimiento arrastrando la pieza (Shift = rotarla desde el pivote). Las pasadas anteriores se reproducen mientras grabás — como un titiritero por capas.">⏺ actuar</button>
-          <button class="ghost" id="perfPlay" title="Ver la actuación completa">▶</button>
-          <button class="ghost" id="perfSmooth" title="✨ Suavizar la toma (limpia el temblor del pulso sin perder la intención)">✨</button>
-          <button class="ghost" id="perfBake" title="🔥 Generar los cuadros del lapso (para exportar GIF/video)">🔥</button>
+          <button class="ghost" id="perfPlay" title="Ver la actuación completa"></button>
+          <button class="ghost" id="perfSmooth" title=" Suavizar la toma (limpia el temblor del pulso sin perder la intención)"></button>
+          <button class="ghost" id="perfBake" title=" Generar los cuadros del lapso (para exportar GIF/video)"></button>
         </div>
-        <div class="dz-hint" id="rigHint">posá → ◆ → otro cuadro → posá → ◆ · LOW interpola entre claves</div>
+        <div class="dz-hint" id="rigHint">posá    otro cuadro  posá   · LOW interpola entre claves</div>
       </div>
       <div class="dz-pin" id="dzPin" hidden>💬</div>
     </div>
@@ -566,8 +566,8 @@
   <div class="dz-timeline" id="dzTimeline" hidden>
     <button class="ibtn" id="tlFirst" title="Primer cuadro">⏮</button>
     <button class="ibtn" id="tlPrev" title="Cuadro anterior (,)">◀</button>
-    <button class="ibtn" id="tlPlay" title="Reproducir / parar">▶</button>
-    <button class="ibtn" id="tlNext" title="Cuadro siguiente (.)">▸</button>
+    <button class="ibtn" id="tlPlay" title="Reproducir / parar"></button>
+    <button class="ibtn" id="tlNext" title="Cuadro siguiente (.)"></button>
     <button class="ibtn" id="tlLast" title="Último cuadro">⏭</button>
     <label class="tl-field" title="Cuadros por segundo">fps<input type="number" id="tlFps" value="12" min="1" max="60" class="dz-win"></label>
     <button class="ibtn active" id="tlLoop" title="Loop: repetir en bucle al reproducir"><svg class="ico"><use href="#i-routine"/></svg></button>
@@ -596,7 +596,7 @@
   <!-- timeline por CAPAS × cuadros (estilo Toon Boom): filas capa, columnas cuadro -->
   <div class="dz-tlgrid" id="dzTlGrid" hidden>
     <div class="dz-tlg-head">
-      <span class="dz-tlg-corner">capas ↓ · cuadros →</span>
+      <span class="dz-tlg-corner">capas ↓ · cuadros </span>
       <div class="dz-tlg-cols" id="dzTlgCols"></div>
     </div>
     <div class="dz-tlg-rows" id="dzTlgRows"></div>

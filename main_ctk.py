@@ -127,7 +127,7 @@ class LOWApp:
 
         s._initp(); s._ui(); s._apply_theme()
         s._new_tab()
-        s.amsg("system", "Bienvenido a LOW — ⚙ para las API keys · 📁 para abrir un proyecto\n"
+        s.amsg("system", "Bienvenido a LOW —  para las API keys ·  para abrir un proyecto\n"
                          "Comandos: /compare /history /resume /browse /form /scrape /preview "
                          "/ssh /upload /read /write /exec /run /files")
         s.root.protocol("WM_DELETE_WINDOW", s._close)
@@ -199,7 +199,7 @@ class LOWApp:
         s.minilogos = [c for c in s.minilogos if c.winfo_exists()]
         for cv in s.minilogos:
             cv.configure(bg=t["panel"]); s._draw_logo(cv, 18)
-        s.thbtn.configure(text="☀" if s.theme == "dark" else "☾")
+        s.thbtn.configure(text="" if s.theme == "dark" else "")
         if s._inp_ph:
             s.inp.configure(text_color=t["faint"])
         s._retabs(); s.ln._redraw()
@@ -228,7 +228,7 @@ class LOWApp:
     def _draw_logo(s, cv, size):
         cv.delete("all")
         s._round_rect(cv, 1, 1, size - 1, size - 1, int(size * 0.3), fill=s.T["green"])
-        cv.create_text(size // 2, size // 2 + 1, text="★", fill="#E5322D",
+        cv.create_text(size // 2, size // 2 + 1, text="", fill="#E5322D",
                        font=(s.UI, max(7, int(size * 0.42)), "bold"))
 
     def _mini_logo(s, parent):
@@ -265,7 +265,7 @@ class LOWApp:
         pill = s._reg(ctk.CTkFrame(hdi, corner_radius=9, border_width=1),
                       fg_color="panel2", border_color="line")
         pill.pack(side="left")
-        s._reg(ctk.CTkLabel(pill, text="●", font=(s.UI, 8), width=10),
+        s._reg(ctk.CTkLabel(pill, text="", font=(s.UI, 8), width=10),
                fg_color="transparent", text_color="green").pack(side="left", padx=(10, 4), pady=4)
         s.pv = tk.StringVar(value=s.cfg.get_active_provider())
         s.pb = s._reg(ctk.CTkComboBox(pill, values=list(PROVIDERS.keys()), variable=s.pv,
@@ -298,13 +298,13 @@ class LOWApp:
         s.q.bind("<Return>", s._qsend)
         s.q.bind("<Escape>", lambda e: s.ed.focus_set())
         # botones derecha
-        runb = s._reg(ctk.CTkButton(hdi, text="▶ Ejecutar", height=32, corner_radius=9,
+        runb = s._reg(ctk.CTkButton(hdi, text=" Ejecutar", height=32, corner_radius=9,
                                     font=(s.UI, 10, "bold"), command=s._run),
                       fg_color="red", hover_color="redh", text_color="#FFFFFF")
         runb.pack(side="right")
-        for ch, cmd in (("💾", s._save), ("📂", s._open), ("📁", s._setws), ("⚙", s._set)):
+        for ch, cmd in (("", s._save), ("", s._open), ("", s._setws), ("", s._set)):
             s._ibtn(hdi, ch, cmd).pack(side="right", padx=(0, 6))
-        s.thbtn = s._ibtn(hdi, "☀", s._toggle_theme)
+        s.thbtn = s._ibtn(hdi, "", s._toggle_theme)
         s.thbtn.pack(side="right", padx=(0, 6))
 
         # ══ Cuerpo ══
@@ -316,10 +316,10 @@ class LOWApp:
         act = s._reg(ctk.CTkFrame(bd, width=46, corner_radius=0), fg_color="panel")
         act.grid(row=0, column=0, sticky="ns"); act.pack_propagate(False)
         s._sep(bd, row=0, column=1, sticky="ns").configure(width=1)
-        s.ab_exp = s._abtn(act, "▤", s._toggle_tree, active=True)
+        s.ab_exp = s._abtn(act, "", s._toggle_tree, active=True)
         s._abtn(act, "⌕", lambda: s.q.focus_set())
         s._abtn(act, "⑂", s._git_info)
-        s.ab_ag = s._abtn(act, "★", s._toggle_agent, red=True)
+        s.ab_ag = s._abtn(act, "", s._toggle_agent, red=True)
 
         # árbol de archivos
         s.treewrap = s._reg(ctk.CTkFrame(bd, width=200, corner_radius=0), fg_color="panel")
@@ -369,7 +369,7 @@ class LOWApp:
                fg_color="transparent", text_color="txt").pack(side="left")
         s._reg(ctk.CTkLabel(th, text="Problemas · Salida", font=(s.UI, 9)),
                fg_color="transparent", text_color="faint").pack(side="left", padx=10)
-        s.termtog = s._reg(ctk.CTkButton(th, text="▾", width=24, height=20,
+        s.termtog = s._reg(ctk.CTkButton(th, text="", width=24, height=20,
                                          corner_radius=6, font=(s.UI, 10),
                                          command=s._toggle_term),
                            fg_color="transparent", text_color="mut", hover_color="panel2")
@@ -392,7 +392,7 @@ class LOWApp:
                                       font=(s.MONO, 8)),
                          fg_color="greensoft", text_color="green")
         s.badge.pack(side="left", padx=8)
-        for ch, cmd in (("＋", s._new_chat), ("⟲", s._history), ("⚖", s._cmp_ui)):
+        for ch, cmd in (("", s._new_chat), ("", s._history), ("⚖", s._cmp_ui)):
             s._reg(ctk.CTkButton(ah, text=ch, width=26, height=24, corner_radius=6,
                                  font=(s.UI, 11), command=cmd),
                    fg_color="transparent", text_color="mut", hover_color="panel2")\
@@ -423,7 +423,7 @@ class LOWApp:
                                       activate_scrollbars=False),
                        fg_color="panel2", text_color="txt")
         s.inp.grid(row=0, column=0, sticky="ew", padx=(4, 0), pady=3)
-        send = s._reg(ctk.CTkButton(inw, text="→", width=32, height=32, corner_radius=9,
+        send = s._reg(ctk.CTkButton(inw, text="", width=32, height=32, corner_radius=9,
                                     font=(s.UI, 13, "bold"), command=s._send),
                       fg_color="red", hover_color="redh", text_color="#FFFFFF")
         send.grid(row=0, column=1, sticky="se", padx=6, pady=5)
@@ -437,7 +437,7 @@ class LOWApp:
         ftw.grid(row=4, column=0, sticky="ew")
         ft = s._reg(ctk.CTkFrame(ftw, corner_radius=0), fg_color="panel")
         ft.pack(fill="x", padx=14, pady=3)
-        s.apidot = s._reg(ctk.CTkLabel(ft, text="●", font=(s.UI, 8), width=10),
+        s.apidot = s._reg(ctk.CTkLabel(ft, text="", font=(s.UI, 8), width=10),
                           fg_color="transparent", text_color="green")
         s.apidot.pack(side="left")
         s.apis = s._reg(ctk.CTkLabel(ft, text="0 APIs conectadas", font=(s.UI, 9)),
@@ -504,9 +504,9 @@ class LOWApp:
 
     def _toggle_term(s):
         if s.out.winfo_manager():
-            s.out.pack_forget(); s.termtog.configure(text="▸")
+            s.out.pack_forget(); s.termtog.configure(text="")
         else:
-            s.out.pack(fill="x"); s.termtog.configure(text="▾")
+            s.out.pack(fill="x"); s.termtog.configure(text="")
 
     # ── proveedor / modelos ───────────────────────────────
     def _initp(s):
@@ -542,12 +542,12 @@ class LOWApp:
         s.cfg.set_active_provider(n); s._initp(); s._rmodels()
         s.mv.set(s.cfg.get_model(n) or (s.prov.model if s.prov else ""))
         s._update_apis()
-        s.amsg("system", f"Proveedor → {n} · {s.mv.get()}")
+        s.amsg("system", f"Proveedor  {n} · {s.mv.get()}")
 
     def _modelch(s, e=None):
         s.cfg.set_model(s.pv.get(), s.mv.get().strip())
         s._initp()
-        s.st.configure(text=f"Modelo → {s.mv.get()}")
+        s.st.configure(text=f"Modelo  {s.mv.get()}")
 
     def _update_apis(s):
         provs = s.cfg.data.get("providers", {})
@@ -567,7 +567,7 @@ class LOWApp:
             return
         s.ws = str(p)
         s._tree_fill(); s._update_branch()
-        s.amsg("system", f"📁 Workspace: {p}")
+        s.amsg("system", f" Workspace: {p}")
 
     def _tree_fill(s):
         s.tree.delete(*s.tree.get_children()); s.tree_paths = {}
@@ -591,7 +591,7 @@ class LOWApp:
                 if p.is_dir():
                     if p.name in IGNORE_DIRS:
                         continue
-                    node = s.tree.insert(parent, "end", text="▸ " + p.name, open=False)
+                    node = s.tree.insert(parent, "end", text=" " + p.name, open=False)
                     if depth < 3:
                         add(p, node, depth + 1, max_items)
                     item_count += 1
@@ -672,7 +672,7 @@ class LOWApp:
             active = tid == s.cur
             s._setrole(tab["frame"], fg_color=("panel2" if active else "transparent"))
             s._setrole(tab["nl"], text_color=("txt" if active else "mut"))
-            tab["dl"].configure(text="●" if tab["modified"] else "")
+            tab["dl"].configure(text="" if tab["modified"] else "")
 
     def _close_tab(s, tid):
         tab = s.tabs.get(tid)
@@ -698,7 +698,7 @@ class LOWApp:
         try:
             content = Path(p).read_text(encoding="utf-8", errors="replace")
         except OSError as e:
-            s.amsg("system", f"❌ No pude abrir {p}: {e}")
+            s.amsg("system", f" No pude abrir {p}: {e}")
             return
         s._add_tab(p, os.path.basename(p), content)
 
@@ -707,7 +707,7 @@ class LOWApp:
             return
         if not s._loading and s.cur in s.tabs and not s.tabs[s.cur]["modified"]:
             s.tabs[s.cur]["modified"] = True
-            s.tabs[s.cur]["dl"].configure(text="●")
+            s.tabs[s.cur]["dl"].configure(text="")
         s.ed.edit_modified(False)
 
     # ── editor ────────────────────────────────────────────
@@ -778,13 +778,13 @@ class LOWApp:
             .pack(anchor="w", padx=(4, 12))
 
     def _bubble_sys(s, text):
-        s._reg(ctk.CTkLabel(s.chat, text="⚡ " + text, font=(s.UI, 8), wraplength=300,
+        s._reg(ctk.CTkLabel(s.chat, text=" " + text, font=(s.UI, 8), wraplength=300,
                             justify="left"),
                fg_color="transparent", text_color="mut")\
             .pack(anchor="w", pady=(8, 0), padx=4)
 
     def _tmsg(s, name, res):
-        s._reg(ctk.CTkLabel(s.chat, text=f"⚙ {name} → {res}", font=(s.MONO, 8),
+        s._reg(ctk.CTkLabel(s.chat, text=f" {name}  {res}", font=(s.MONO, 8),
                             wraplength=290, justify="left"),
                fg_color="transparent", text_color="mut")\
             .pack(anchor="w", pady=(4, 0), padx=(16, 4))
@@ -832,7 +832,7 @@ class LOWApp:
                       fg_color="panel", border_color="line")
         top = s._reg(ctk.CTkFrame(card, corner_radius=0), fg_color="transparent")
         top.pack(fill="x", padx=12, pady=(9, 0))
-        s._reg(ctk.CTkLabel(top, text="✎", font=(s.UI, 9), width=0),
+        s._reg(ctk.CTkLabel(top, text="", font=(s.UI, 9), width=0),
                fg_color="transparent", text_color="red").pack(side="left")
         s._reg(ctk.CTkLabel(top, text=name, font=(s.MONO, 8), width=0),
                fg_color="transparent", text_color="txt").pack(side="left", padx=6)
@@ -851,7 +851,7 @@ class LOWApp:
             s.st.configure(text=msg)
         ok = s._reg(ctk.CTkButton(btns, text="Aceptar", height=28, corner_radius=8,
                                   font=(s.UI, 9, "bold"),
-                                  command=lambda: (s._accept(), done("✅ Cambios aceptados"))),
+                                  command=lambda: (s._accept(), done(" Cambios aceptados"))),
                     fg_color="red", hover_color="redh", text_color="#FFFFFF")
         no = s._reg(ctk.CTkButton(btns, text="Rechazar", height=28, corner_radius=8,
                                   border_width=1, font=(s.UI, 9),
@@ -947,10 +947,10 @@ class LOWApp:
                            "costo": r.cost, "resp": r.content[:200]}
                     results.append(res)
                     s.root.after(0, lambda r=res: s.amsg(
-                        "system", f"✅ {r['prov']} · {r['model']}: {r['lat_ms']}ms · "
+                        "system", f" {r['prov']} · {r['model']}: {r['lat_ms']}ms · "
                                   f"{r['tokens']}t · ${r['costo']:.4f}\n   {r['resp'][:120]}"))
                 except Exception as e:
-                    s.root.after(0, lambda pn=pn, e=e: s.amsg("system", f"❌ {pn}: {e}"))
+                    s.root.after(0, lambda pn=pn, e=e: s.amsg("system", f" {pn}: {e}"))
 
             ts = [threading.Thread(target=run_one, args=(m,), daemon=True) for m in models]
             for th in ts:
@@ -963,7 +963,7 @@ class LOWApp:
             fp.write_text(json.dumps({"prompt": prompt, "resultados": results,
                                       "ts": time.time()}, indent=2, ensure_ascii=False),
                           encoding="utf-8")
-            s.root.after(0, lambda: s.amsg("system", f"💾 Guardado: {fp.name}"))
+            s.root.after(0, lambda: s.amsg("system", f" Guardado: {fp.name}"))
         threading.Thread(target=worker, daemon=True).start()
 
     # ── HISTORY ───────────────────────────────────────────
@@ -979,10 +979,10 @@ class LOWApp:
                     first = msgs[0]["content"][:80] if msgs else "(vacía)"
                 except Exception:
                     first = "(error)"
-                s.amsg("system", f"📁 {f.stem}: {first}")
-            s.amsg("system", "💡 /resume <id> para restaurar")
+                s.amsg("system", f" {f.stem}: {first}")
+            s.amsg("system", " /resume <id> para restaurar")
         except Exception as e:
-            s.amsg("system", f"❌ {e}")
+            s.amsg("system", f" {e}")
 
     def _resume(s, sid):
         f = s.ses_dir / f"{sid}.json"
@@ -1004,9 +1004,9 @@ class LOWApp:
             # Mantener solo los últimos 16 turnos para no saturar el contexto
             s._mem = s._mem[-16:]
             s.ses_msgs = msgs
-            s.amsg("system", f"📂 Restaurada ({len(msgs)} msgs)")
+            s.amsg("system", f" Restaurada ({len(msgs)} msgs)")
         except Exception as e:
-            s.amsg("system", f"❌ {e}")
+            s.amsg("system", f" {e}")
 
     def _clear_chat(s):
         for w in s.chat.winfo_children():
@@ -1052,9 +1052,9 @@ class LOWApp:
         s.amsg("user", msg)
         if not s.prov or not (s.cfg.get_api_key(s.cfg.get_active_provider())
                               or s.cfg.get_active_provider() == "custom"):
-            s.amsg("Fidel", "Configura la API key (⚙) para empezar")
+            s.amsg("Fidel", "Configura la API key () para empezar")
             return
-        s.st.configure(text="🧠 Pensando…")
+        s.st.configure(text=" Pensando…")
         threading.Thread(target=s._chat_worker, args=(msg, cod), daemon=True).start()
 
     def _get_tools(s):
@@ -1071,20 +1071,20 @@ class LOWApp:
             if name == "read_file":
                 p = Path(s.ws if s.ws else ".") / args["path"]
                 return p.read_text(encoding="utf-8", errors="replace")[:5000] \
-                    if p.exists() else "❌ No existe"
+                    if p.exists() else " No existe"
             if name == "write_file":
                 p = Path(s.ws if s.ws else ".") / args["path"]
                 p.parent.mkdir(parents=True, exist_ok=True)
                 p.write_text(args["content"], encoding="utf-8")
-                return f"✅ Escrito ({len(args['content'])}c)"
+                return f" Escrito ({len(args['content'])}c)"
             if name == "exec_cmd":
                 r = subprocess.run(args["command"], shell=True, capture_output=True,
                                    text=True, timeout=30, cwd=s.ws)
-                return f"⚡ exit={r.returncode}\n" + ((r.stdout + "\n" + r.stderr).strip()[:3000])
+                return f" exit={r.returncode}\n" + ((r.stdout + "\n" + r.stderr).strip()[:3000])
             if name == "run_code":
                 c = s.ed.get("1.0", "end").strip()
                 if not c or c == "// Nuevo archivo":
-                    return "❌ Editor vacio"
+                    return " Editor vacio"
                 return json.dumps(CodeRunner.run(c, args.get("language", s.lv.get())),
                                   indent=2)[:3000]
             if name == "list_files":
@@ -1094,7 +1094,7 @@ class LOWApp:
                                  for f in sorted(Path(s.ws).rglob("*"))
                                  if f.is_file() and f.suffix in CODE_EXT)[:3000]
         except Exception as e:
-            return f"❌ {e}"
+            return f" {e}"
 
     def _chat_worker(s, msg, cod):
         r = None
@@ -1136,19 +1136,19 @@ class LOWApp:
                     # Mostrar detalles más específicos de la herramienta
                     tool_desc = fn
                     if fn == "read_file" and "path" in args:
-                        tool_desc = f"📖 Leyendo {args['path']}"
+                        tool_desc = f" Leyendo {args['path']}"
                     elif fn == "write_file" and "path" in args:
-                        tool_desc = f"✏️ Escribiendo {args['path']}"
+                        tool_desc = f" Escribiendo {args['path']}"
                     elif fn == "exec_cmd":
-                        tool_desc = "⚡ Ejecutando comando"
+                        tool_desc = " Ejecutando comando"
                     elif fn == "run_code":
-                        tool_desc = "▶ Ejecutando código"
+                        tool_desc = " Ejecutando código"
                     elif fn == "list_files":
-                        tool_desc = "📁 Listando archivos"
+                        tool_desc = " Listando archivos"
                     elif fn == "search_code":
-                        tool_desc = "🔍 Buscando código"
+                        tool_desc = " Buscando código"
                     s.root.after(0, lambda td=tool_desc, rr=str(res)[:150]: s._tmsg(td, rr))
-            # código propuesto → tarjeta Aceptar/Rechazar
+            # código propuesto  tarjeta Aceptar/Rechazar
             content = ""
             for mr in reversed(ms):
                 if mr.get("role") == "assistant" and mr.get("content"):
@@ -1164,9 +1164,9 @@ class LOWApp:
                 s._mem = s._mem[-16:]  # mantener solo los últimos 16 turnos
             if r:
                 s.root.after(0, lambda: s.st.configure(
-                    text=f"✅ {r.tokens_used}t · ${r.cost:.4f} · {r.model}"))
+                    text=f" {r.tokens_used}t · ${r.cost:.4f} · {r.model}"))
         except Exception as e:
-            s.root.after(0, lambda e=e: s.amsg("Fidel", f"❌ {e}"))
+            s.root.after(0, lambda e=e: s.amsg("Fidel", f" {e}"))
             s.root.after(0, lambda: s.st.configure(text="Error"))
 
     # ── ejecutar código ───────────────────────────────────
@@ -1178,7 +1178,7 @@ class LOWApp:
             s._toggle_term()
         lang = s.lv.get()
         s._log(f"➜ run {lang}\n", "p")
-        s.st.configure(text="⚡ Ejecutando…")
+        s.st.configure(text=" Ejecutando…")
 
         def work():
             r = CodeRunner.run(c, lang)
@@ -1187,7 +1187,7 @@ class LOWApp:
 
     def _show(s, r):
         if r.get("error"):
-            s._log(f"❌ {r['error']}\n", "err")
+            s._log(f" {r['error']}\n", "err")
         else:
             if r["stdout"]:
                 s._log(r["stdout"])
@@ -1219,7 +1219,7 @@ class LOWApp:
         fp = Path(s.ws if s.ws else ".") / f
         fp.parent.mkdir(parents=True, exist_ok=True)
         fp.write_text(c, encoding="utf-8")
-        s.amsg("system", f"✅ {fp}")
+        s.amsg("system", f" {fp}")
 
     def _exec(s, cmd):
         try:
@@ -1227,7 +1227,7 @@ class LOWApp:
                                timeout=30, cwd=s.ws)
             s.amsg("system", f"$ {cmd}\n{(r.stdout + r.stderr)[:2000]}")
         except Exception as e:
-            s.amsg("system", f"❌ {e}")
+            s.amsg("system", f" {e}")
 
     def _preview(s):
         def serve():
@@ -1235,7 +1235,7 @@ class LOWApp:
             os.chdir(d)
             with socketserver.TCPServer(("", 0), http.server.SimpleHTTPRequestHandler) as h:
                 p = h.server_address[1]
-                s.root.after(0, lambda: s.amsg("system", f"🌐 http://localhost:{p}"))
+                s.root.after(0, lambda: s.amsg("system", f" http://localhost:{p}"))
                 webbrowser.open(f"http://localhost:{p}")
                 h.serve_forever()
         threading.Thread(target=serve, daemon=True).start()
@@ -1246,7 +1246,7 @@ class LOWApp:
                                text=True, timeout=60)
             s.amsg("system", "🔌\n" + (r.stdout + r.stderr)[:2000])
         except Exception as e:
-            s.amsg("system", f"❌ {e}")
+            s.amsg("system", f" {e}")
 
     def _upload(s, a):
         try:
@@ -1254,11 +1254,11 @@ class LOWApp:
                                text=True, timeout=120)
             s.amsg("system", "📤\n" + (r.stdout + r.stderr)[:2000])
         except Exception as e:
-            s.amsg("system", f"❌ {e}")
+            s.amsg("system", f" {e}")
 
     def _browse(s, url):
         webbrowser.open(url)
-        s.amsg("system", f"🌐 {url}")
+        s.amsg("system", f" {url}")
 
     def _form(s, url, data):
         try:
@@ -1266,18 +1266,18 @@ class LOWApp:
             r = requests.post(url, data=d, timeout=15)
             s.amsg("system", f"📋 Form ({r.status_code})")
         except Exception as e:
-            s.amsg("system", f"❌ {e}")
+            s.amsg("system", f" {e}")
 
     def _scrape(s, url):
         try:
             r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
-            s.amsg("system", f"📄 {url[:60]} ({len(r.text)}b)")
+            s.amsg("system", f" {url[:60]} ({len(r.text)}b)")
         except Exception as e:
-            s.amsg("system", f"❌ {e}")
+            s.amsg("system", f" {e}")
 
     def _ws_files(s):
         if not s.ws:
-            s.amsg("system", "Abre un workspace (📁)")
+            s.amsg("system", "Abre un workspace ()")
             return
         cf = [f for f in sorted(Path(s.ws).rglob("*"))
               if f.is_file() and f.suffix in CODE_EXT]
@@ -1310,7 +1310,7 @@ class LOWApp:
         tab["modified"] = False
         tab["dl"].configure(text="")
         s.root.title(f"Fidel — {tab['name']}")
-        s.st.configure(text=f"💾 {os.path.basename(p)}")
+        s.st.configure(text=f" {os.path.basename(p)}")
 
     # ── búsqueda/orden rápida (Ctrl+K) ────────────────────
     def _qsend(s, e=None):
@@ -1357,7 +1357,7 @@ class LOWApp:
             for p, v in es.items():
                 s.cfg.set_api_key(p, v.get().strip())
             s._initp(); s._update_apis()
-            s.amsg("system", "✅ Keys guardadas")
+            s.amsg("system", " Keys guardadas")
             w.destroy()
         ctk.CTkButton(box, text="Guardar", height=32, corner_radius=9,
                       font=(s.UI, 10, "bold"), fg_color=t["red"], hover_color=t["redh"],

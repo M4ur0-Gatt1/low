@@ -88,7 +88,7 @@ def cmd_new(args):
         json.dumps(meta, indent=2), encoding="utf-8"
     )
 
-    print(f"✅ Proyecto creado: {path}/")
+    print(f" Proyecto creado: {path}/")
     print(f"   scene.json      — escena principal")
     print(f"   timeline.json   — línea de tiempo")
     print(f"   comp.json       — compositor de nodos")
@@ -100,7 +100,7 @@ def cmd_render(args):
     """Renderizar una escena a video/imagen."""
     scene_path = Path(args.scene)
     if not scene_path.exists():
-        print(f"❌ Escena no encontrada: {scene_path}")
+        print(f" Escena no encontrada: {scene_path}")
         sys.exit(1)
 
     scene = Scene.load(scene_path)
@@ -138,13 +138,13 @@ def cmd_render(args):
     else:
         out_path = scene_path.parent / f"{scene.name}.{settings.format}"
 
-    print(f"🎬 Renderizando {scene.name}...")
-    print(f"   {scene.width}x{scene.height} @ {scene.fps}fps → {out_path}")
+    print(f" Renderizando {scene.name}...")
+    print(f"   {scene.width}x{scene.height} @ {scene.fps}fps  {out_path}")
 
     exporter = Exporter(engine, settings)
     result = exporter.export(out_path, progress_callback=lambda p: print(f"   {p*100:.0f}%", end="\r"))
 
-    print(f"\n✅ Renderizado: {result}")
+    print(f"\n Renderizado: {result}")
     return result
 
 
@@ -176,7 +176,7 @@ def cmd_storyboard(args):
     """Generar storyboard desde un guion con IA."""
     script_path = Path(args.script)
     if not script_path.exists():
-        print(f"❌ Guion no encontrado: {script_path}")
+        print(f" Guion no encontrado: {script_path}")
         sys.exit(1)
 
     script = script_path.read_text(encoding="utf-8")
@@ -187,14 +187,14 @@ def cmd_storyboard(args):
     for i, s in enumerate(scenes):
         print(f"   {i+1}. {s.get('scene', 'Sin nombre')}")
         for a in s.get("actions", []):
-            print(f"      🎬 {a}")
+            print(f"       {a}")
         for d in s.get("dialogs", []):
             print(f"      💬 {d}")
 
     # Guardar
     out_path = Path(args.output or "storyboard.json")
     out_path.write_text(json.dumps(scenes, indent=2), encoding="utf-8")
-    print(f"\n✅ Storyboard guardado: {out_path}")
+    print(f"\n Storyboard guardado: {out_path}")
     return scenes
 
 
@@ -202,7 +202,7 @@ def cmd_pose(args):
     """Generar librería de poses para un personaje."""
     card_path = Path(args.character)
     if not card_path.exists():
-        print(f"❌ Character card no encontrada: {card_path}")
+        print(f" Character card no encontrada: {card_path}")
         sys.exit(1)
 
     card_data = json.loads(card_path.read_text(encoding="utf-8"))
@@ -211,7 +211,7 @@ def cmd_pose(args):
 
     if args.all:
         poses = maker.generate_all("poses")
-        print(f"✅ {len(poses)} poses generadas")
+        print(f" {len(poses)} poses generadas")
     else:
         print(f"📋 Poses disponibles: {', '.join(maker.STANDARD_POSES)}")
 
@@ -233,7 +233,7 @@ def cmd_export(args):
     out_path = args.output or f"{scene.name}.{fmt}"
     exporter = Exporter(engine, settings)
     result = exporter.export(out_path)
-    print(f"✅ Exportado: {result}")
+    print(f" Exportado: {result}")
     return result
 
 
@@ -242,7 +242,7 @@ def cmd_compose(args):
     graph = NodeGraph(name=args.name or "comp")
 
     if args.template == "basic":
-        # Template: source → blur → output
+        # Template: source  blur  output
         src = SourceNode("src1")
         blur = BlurNode("blur1")
         out = OutputNode("output")
@@ -253,10 +253,10 @@ def cmd_compose(args):
         graph.connect("src1", "out", "blur1", "in")
         graph.connect("blur1", "out", "output", "in")
 
-        print("✅ Template 'basic' creado: source → blur → output")
+        print(" Template 'basic' creado: source  blur  output")
 
     elif args.template == "composite":
-        # Template: source A + source B → blend → color → output
+        # Template: source A + source B  blend  color  output
         src_a = SourceNode("src_a")
         src_b = SourceNode("src_b")
         blend = BlendNode("blend1")
@@ -273,7 +273,7 @@ def cmd_compose(args):
         graph.connect("blend1", "out", "cc1", "in")
         graph.connect("cc1", "out", "output", "in")
 
-        print("✅ Template 'composite' creado: A+B → blend → color → output")
+        print(" Template 'composite' creado: A+B  blend  color  output")
 
     out_path = args.output or f"{graph.name}.json"
     Path(out_path).write_text(json.dumps(graph.to_dict(), indent=2), encoding="utf-8")
@@ -368,7 +368,7 @@ class AnimationAPI:
         """Añade keyframe a un actor."""
         actor = self._find_actor(actor_name)
         if not actor:
-            print(f"❌ Actor '{actor_name}' no encontrado")
+            print(f" Actor '{actor_name}' no encontrado")
             return
 
         tr = actor.get_state_at(frame)[0]

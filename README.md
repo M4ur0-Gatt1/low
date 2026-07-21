@@ -1,4 +1,4 @@
-# LOW ★
+# LOW 
 
 **Editor de código con agente IA multi-proveedor.** Escribís una orden, el agente
 lee, escribe y ejecuta archivos de tu proyecto — y LOW verifica que el código
@@ -26,7 +26,7 @@ En [Releases](../../releases) está la última versión:
 | Sistema | Archivo |
 |---|---|
 | Windows 10/11 | `LOWSetup-x.y.z.exe` (instalador, no pide administrador) |
-| macOS | `LOW-macos.zip` (primera vez: clic derecho → Abrir, por Gatekeeper) |
+| macOS | `LOW-macos.zip` (primera vez: clic derecho  Abrir, por Gatekeeper) |
 | Linux | `LOW-linux` (`chmod +x` y ejecutar) |
 
 ## Correr desde el código
@@ -44,7 +44,7 @@ en macOS usa WebKit del sistema; en Linux, Qt WebEngine.
 
 ## Configurar
 
-Engranaje ⚙ → pegá tus API keys. Para empezar gratis:
+Engranaje   pegá tus API keys. Para empezar gratis:
 
 - **Groq** — [console.groq.com](https://console.groq.com) · recomendado:
   `openai/gpt-oss-120b`

@@ -53,7 +53,7 @@ DEFAULT_TASK = ("Escribe un programa Python que imprima los primeros 10 numeros 
                 "primos en una sola linea separados por coma.")
 DEFAULT_EXPECTED = "2, 3, 5, 7, 11, 13, 17, 19, 23, 29"
 
-# System prompt por defecto del agente. Editable desde ⚙ — LOW no agrega
+# System prompt por defecto del agente. Editable desde  — LOW no agrega
 # ningún filtro ni instrucción oculta más allá de esto.
 DEFAULT_SP = ("Estás corriendo en LOW v" + LOW_VERSION + ". Eres LOW, agente creativo y programador senior orientado a programación, diseño, video y animación. Tienes HERRAMIENTAS: read_file, "
               "write_file, edit_file, exec_cmd, run_code, list_files, search_code, "
@@ -121,7 +121,7 @@ DEFAULT_SP = ("Estás corriendo en LOW v" + LOW_VERSION + ". Eres LOW, agente cr
               "'commit -m \"mensaje\"', 'push' (gh CLI esta autenticado para crear repos). "
               "Para servidores usa ssh_exec (podes pasar un alias guardado o usuario@ip) "
               "y scp_upload para subir archivos. REGLA CLAVE: si una herramienta devuelve "
-              "un error (empieza con ❌), NO repitas la misma llamada — LEE el mensaje, "
+              "un error (empieza con ), NO repitas la misma llamada — LEE el mensaje, "
               "corregi los argumentos (ej: si falta 'path', agregalo) o cambia de enfoque. "
               "Repetir la misma llamada da el mismo error. Al escribir codigo: sintaxis "
               "valida y COMPLETO, sin funciones a medias, TODOs ni placeholders — tiene que "
@@ -165,7 +165,7 @@ class Api:
         s.ses_msgs = []
         s._written = []
         s._mem = []          # memoria de conversación (pares user/assistant)
-        s._checkpoint = {}   # {path: contenido_previo|None} del último turno → /undo
+        s._checkpoint = {}   # {path: contenido_previo|None} del último turno  /undo
         s._ollama = []       # modelos locales de Ollama detectados (para failover)
         s._cancel = False    # bandera para detener una consulta en curso
         s._self_improvement = SelfImprovementSystem(data_dir())  # Sistema de automejora
@@ -180,7 +180,7 @@ class Api:
 
     def _mem_limit(s):
         """Cuántos mensajes de la conversación recordar (2 por turno).
-        Configurable desde ⚙ (config agent.memory_turns)."""
+        Configurable desde  (config agent.memory_turns)."""
         try:
             return max(2, int(s.cfg.data.get("agent", {}).get("memory_turns", 24))) * 2
         except (TypeError, ValueError):
@@ -234,7 +234,7 @@ class Api:
             lesson = re.sub(r"<think>.*?</think>", "", r.content or "", flags=re.DOTALL).strip()
             if lesson:
                 s._save_lesson(lesson)
-                s._push("sys", f"🧠 Aprendí: {lesson[:180]}")
+                s._push("sys", f" Aprendí: {lesson[:180]}")
         except Exception as e:
             log(f"reflect fallo: {e}")
 
@@ -251,7 +251,7 @@ class Api:
             return []
 
     def skills(s):
-        """Para el frontend: lista de habilidades aprendidas (⚙/panel)."""
+        """Para el frontend: lista de habilidades aprendidas (/panel)."""
         return s._load_skills()
 
     def delete_skill(s, name):
@@ -345,7 +345,7 @@ class Api:
             skill = json.loads(m.group(0))
             if s._save_skill(skill):
                 nm = s._as_text(skill.get("name"))
-                s._push("sys", f"🧠 Nueva habilidad: {nm}")
+                s._push("sys", f" Nueva habilidad: {nm}")
                 return nm
         except Exception as e:
             # defensa amplia a propósito: aprender NUNCA debe romper un turno exitoso
@@ -378,10 +378,10 @@ class Api:
     def save_character(s, name, desc):
         name, desc = (name or "").strip(), (desc or "").strip()
         if not name or not desc:
-            return "❌ Falta el nombre o la descripción del personaje"
+            return " Falta el nombre o la descripción del personaje"
         f = s._chars_file()
         if not f:
-            return "❌ No hay proyecto abierto"
+            return " No hay proyecto abierto"
         chars = [c for c in s._load_characters()
                  if c.get("name", "").lower() != name.lower()]
         chars.append({"name": name[:60], "desc": desc[:1200],
@@ -391,9 +391,9 @@ class Api:
             f.write_text(json.dumps(chars[-20:], ensure_ascii=False, indent=1),
                          encoding="utf-8")
         except OSError as e:
-            return f"❌ {e}"
+            return f" {e}"
         s._push("sys", f"👤 Ficha de personaje guardada: {name}")
-        return (f"✅ Ficha de «{name}» guardada — se va a inyectar en TODOS los prompts "
+        return (f" Ficha de «{name}» guardada — se va a inyectar en TODOS los prompts "
                 "de imagen/video que lo mencionen, para que no cambie entre generaciones")
 
     def delete_character(s, name):
@@ -462,10 +462,10 @@ class Api:
         el texto de resultado para la tool `remember`."""
         note = (note or "").strip().lstrip("-•").strip()
         if not note:
-            return "❌ Nota vacía"
+            return " Nota vacía"
         f = s._mem_file()
         if not f:
-            return "❌ No hay proyecto abierto — no puedo guardar memoria de proyecto"
+            return " No hay proyecto abierto — no puedo guardar memoria de proyecto"
         prev = s._load_project_memory()
         # dedup laxo: si ya está esa línea (ignorando may/min), no repetir
         if any(note.lower() == ln.strip().lstrip("-•").strip().lower()
@@ -478,10 +478,10 @@ class Api:
                 if header:
                     fh.write(header)
                 fh.write(f"- {note}\n")
-            s._push("sys", f"📌 Recordé del proyecto: {note[:140]}")
-            return f"✅ Guardado en memoria del proyecto: {note[:120]}"
+            s._push("sys", f" Recordé del proyecto: {note[:140]}")
+            return f" Guardado en memoria del proyecto: {note[:120]}"
         except OSError as e:
-            return f"❌ {e}"
+            return f" {e}"
 
     # ── infraestructura ───────────────────────────────────
     def _push(s, event, data):
@@ -581,7 +581,7 @@ class Api:
         s.cfg.save()
 
     def save_agent_config(s, steps, conts, mem, verify_runtime=None, verify_design=None):
-        """Guarda los límites del agente (⚙). LOW no le pone techo al trabajo
+        """Guarda los límites del agente (). LOW no le pone techo al trabajo
         salvo el que elijas acá y el de la API."""
         a = s.cfg.data.setdefault("agent", {})
 
@@ -779,7 +779,7 @@ class Api:
         base, cur = m.group(1), int(m.group(2))
         frames = s.list_frames(path)["frames"]
         try:
-            # renumerar de atrás hacia adelante: _f005→_f006, _f004→_f005…
+            # renumerar de atrás hacia adelante: _f005_f006, _f004_f005…
             nums = sorted((int(s._FRAME_RX.match(Path(f).name).group(2))
                            for f in frames), reverse=True)
             for n in nums:
@@ -839,7 +839,7 @@ class Api:
                 return {"path": str(out), "n": 1}
             if kind in ("mp4", "webm"):
                 # Video real con ffmpeg (no necesita Pillow). Los cuadros ya vienen
-                # rasterizados como PNG del frontend → los escribo a temp y encodeo.
+                # rasterizados como PNG del frontend  los escribo a temp y encodeo.
                 import shutil
                 import tempfile
                 ff = shutil.which("ffmpeg")
@@ -959,9 +959,9 @@ class Api:
                 return {"data": "data:image/png;base64," + base64.b64encode(data).decode("ascii"),
                         "used": "SiliconFlow (Qwen-Image-Edit)"}
             return {"error": err or fal_err or "no se pudo colorear"}
-        return {"error": fal_err or "cargá una API key de fal.ai o SiliconFlow (⚙) para el coloreado con IA"}
+        return {"error": fal_err or "cargá una API key de fal.ai o SiliconFlow () para el coloreado con IA"}
 
-    # ── vectorización: raster (PNG/JPG) → SVG EDITABLE ("calcar") ────────
+    # ── vectorización: raster (PNG/JPG)  SVG EDITABLE ("calcar") ────────
     # El truco para que la IA "dibuje bien": en vez de escribir coordenadas SVG a
     # ciegas (sale tosco), genera/toma un raster y lo TRAZA a vectores editables.
     _VTRACE_PRESETS = {
@@ -984,7 +984,7 @@ class Api:
         - remove_bg: detecta el color de fondo por las 4 esquinas y lo vuelve
           color llave con tolerancia (la varita mágica de Photoshop, global) —
           después _strip_key_paths borra esos paths del SVG.
-        - mode='lineas': luminancia → umbral de Otsu → tinta negra pura, para
+        - mode='lineas': luminancia  umbral de Otsu  tinta negra pura, para
           CALCAR solo las líneas del dibujo (line-art/boceto).
         Devuelve (png_bytes, key_color|None).
         """
@@ -1145,7 +1145,7 @@ class Api:
 
     @staticmethod
     def _smooth_closed(pts):
-        """Catmull-Rom → beziers cúbicas cerradas: curva suave que pasa por
+        """Catmull-Rom  beziers cúbicas cerradas: curva suave que pasa por
         todos los puntos del contorno."""
         n = len(pts)
         if n < 3:
@@ -1276,14 +1276,14 @@ class Api:
 
     def _vectorize(s, png_bytes, detail="medium", mode="color",
                    remove_bg=False, bg_tol=32):
-        """PNG/JPG (bytes) → (svg_str, error). vtracer local (offline, gratis)
+        """PNG/JPG (bytes)  (svg_str, error). vtracer local (offline, gratis)
         primero; si no está, fal.ai recraft/vectorize (IA, needs key).
         mode: 'color' (formas por color) | 'lineas' (calca el trazo) |
         'contorno' (trazos largos unificados sin puntitos, para animación)."""
         binary = mode in ("lineas", "contorno")
         # line-art/contorno: trazador NUMPY primero — corre en cualquier Python
         # (incluido 3.14, donde vtracer crashea) y traza SOLO la tinta a un path
-        # con fill-rule evenodd → NUNCA genera capas de fondo blanco.
+        # con fill-rule evenodd  NUNCA genera capas de fondo blanco.
         if binary:
             svg_np = s._vectorize_np(png_bytes, mode, remove_bg, bg_tol)
             if svg_np:
@@ -1337,7 +1337,7 @@ class Api:
                     return None, "fal devolvió un formato inesperado"
             return None, err
         return None, (last_err or "vectorización no disponible: instalá vtracer "
-                      "(pip install vtracer) o cargá una API key de fal.ai en ⚙")
+                      "(pip install vtracer) o cargá una API key de fal.ai en ")
 
     def _read_img_bytes(s, image):
         """Bytes de una imagen desde data URL o ruta (relativa al workspace o abs)."""
@@ -1358,7 +1358,7 @@ class Api:
 
     def vectorize_image(s, image, detail="medium", mode="color",
                         remove_bg=False, bg_tol=32):
-        """API para el frontend: raster (data URL o ruta) → {svg} editable."""
+        """API para el frontend: raster (data URL o ruta)  {svg} editable."""
         raw, err = s._read_img_bytes(image)
         if err:
             return {"error": err}
@@ -1395,11 +1395,11 @@ class Api:
             return {"error": str(e)}
 
     def ai_keyframe(s, path, prompt):
-        """✨ El modelo dibuja el PRÓXIMO fotograma clave a partir del cuadro
+        """ El modelo dibuja el PRÓXIMO fotograma clave a partir del cuadro
         actual + la descripción del movimiento, y se inserta como cuadro nuevo
         justo después. Es el flujo pose-a-pose de Toon Boom con IA."""
         if not s.prov:
-            return {"error": "No hay proveedor activo — configurá una API key (⚙)"}
+            return {"error": "No hay proveedor activo — configurá una API key ()"}
         p = Path(path)
         if not s._FRAME_RX.match(p.name):
             return {"error": "no es un cuadro de animación (_fNNN.svg)"}
@@ -1466,7 +1466,7 @@ class Api:
         creativas distintas (en paralelo) para que el usuario elija una y pueda
         volver a evolucionar desde ella. Devuelve {variants: [{dir, svg}]}."""
         if not s.prov:
-            return {"error": "No hay proveedor activo — configurá una API key (⚙)"}
+            return {"error": "No hay proveedor activo — configurá una API key ()"}
         svg = (current_svg or "").strip()
         if not svg:
             try:
@@ -1536,7 +1536,7 @@ class Api:
         s._initp()
 
     def save_failover_order(s, order):
-        """Guarda el orden de prioridad de providers para failover (⚙)."""
+        """Guarda el orden de prioridad de providers para failover ()."""
         if isinstance(order, list) and order:
             s.cfg.data["failover_order"] = order
             s.cfg.save()
@@ -1765,13 +1765,13 @@ class Api:
     def _chain(s):
         """Cadena de failover: (proveedor, modelo). El activo usa el modelo que
         eligió el usuario; los de respaldo usan su modelo RÁPIDO conocido. Termina
-        en Ollama local (custom) que no tiene límites de cupo → siempre responde.
+        en Ollama local (custom) que no tiene límites de cupo  siempre responde.
         
-        El orden de prioridad se puede configurar en ⚙ → failover_order. Si no,
-        usa el orden por defecto (deepseek → siliconflow → nvidia → ... → custom)."""
+        El orden de prioridad se puede configurar en   failover_order. Si no,
+        usa el orden por defecto (deepseek  siliconflow  nvidia  ...  custom)."""
         provs = s.cfg.data.get("providers", {})
         active = s.cfg.get_active_provider()
-        # Orden configurable por el usuario (⚙); si no, el default histórico
+        # Orden configurable por el usuario (); si no, el default histórico
         pref = s.cfg.data.get("failover_order") or [
             "deepseek", "siliconflow", "nvidia", "groq", "openai",
             "anthropic", "qwen", "glm", "xai", "digitalocean", "agnes",
@@ -1822,16 +1822,16 @@ class Api:
         provider = (provider or "").strip().lower()
         prompt = prompt or ""
         if not provider or not prompt:
-            return "❌ ask_model necesita {provider, prompt}."
+            return " ask_model necesita {provider, prompt}."
         provs = s.cfg.data.get("providers", {})
         if provider not in provs:
             avail = ", ".join(p for p in provs if p not in s.MEDIA_ONLY)
-            return f"❌ Proveedor '{provider}' no existe. Disponibles: {avail}."
+            return f" Proveedor '{provider}' no existe. Disponibles: {avail}."
         if provider in s.MEDIA_ONLY:
-            return f"❌ '{provider}' es de medios (video), no sirve para chat."
+            return f" '{provider}' es de medios (video), no sirve para chat."
         d = provs[provider]
         if not (d.get("api_key") or provider == "custom"):
-            return f"❌ '{provider}' no tiene API key configurada (⚙ para cargarla)."
+            return f" '{provider}' no tiene API key configurada ( para cargarla)."
         model = (model or "").strip() or s.FAST_MODEL.get(provider) or d.get("model") or None
         # Si hay imagen, usar modelo de visión si está configurado
         if image and provider in s.VISION_MODEL:
@@ -1859,10 +1859,10 @@ class Api:
             r = p.chat(messages, temperature=0.3, max_tokens=2048)
             txt = re.sub(r"<think>.*?</think>", "", r.content or "", flags=re.DOTALL).strip()
             used = f"{provider}·{model or p.model}"
-            s._push("sys", f"🤝 Delegué a {used}" + (" (con imagen)" if image else ""))
-            return f"🤝 Respuesta de {used}:\n{txt[:4000]}" if txt else f"🤝 {used} no devolvió texto"
+            s._push("sys", f" Delegué a {used}" + (" (con imagen)" if image else ""))
+            return f" Respuesta de {used}:\n{txt[:4000]}" if txt else f" {used} no devolvió texto"
         except Exception as e:
-            return (f"❌ ask_model {provider} falló: {str(e)[:200]}. "
+            return (f" ask_model {provider} falló: {str(e)[:200]}. "
                     "Probá otro proveedor o hacelo vos.")
 
     def _anim(s, action, params):
@@ -1873,7 +1873,7 @@ class Api:
         try:
             import low_anim
         except Exception as e:
-            return f"❌ Motor de animación no disponible: {e}"
+            return f" Motor de animación no disponible: {e}"
         api = getattr(s, "_anim_api", None)
         if api is None:
             api = s._anim_api = low_anim.AnimationAPI()
@@ -1892,11 +1892,11 @@ class Api:
                 proj = base / name
                 api.save_project(str(proj))
                 s._push("wrote", {"path": str(proj / "scene.json")})
-                return (f"✅ Proyecto de animación '{name}' creado en {name}/ "
+                return (f" Proyecto de animación '{name}' creado en {name}/ "
                         "(scene.json, timeline.json, comp.json). Ahora agregá actores "
                         "con action='add_actor'.")
             if not api.current_scene:
-                return "❌ Primero creá un proyecto con action='new'."
+                return " Primero creá un proyecto con action='new'."
             if action == "add_actor":
                 svg = params.get("svg", "") or ""
                 sp = params.get("svg_path") or params.get("path")
@@ -1905,23 +1905,23 @@ class Api:
                     if p.exists():
                         svg = p.read_text(encoding="utf-8", errors="replace")
                     else:
-                        return f"❌ No existe el SVG: {sp}"
+                        return f" No existe el SVG: {sp}"
                 nm = params.get("name") or "actor"
                 api.add_actor(params.get("layer", "main"), nm, svg,
                               float(params.get("x", 0)), float(params.get("y", 0)))
-                return f"✅ Actor '{nm}' agregado a la capa '{params.get('layer', 'main')}'."
+                return f" Actor '{nm}' agregado a la capa '{params.get('layer', 'main')}'."
             if action == "keyframe":
                 actor = params.get("actor", "")
                 api.add_keyframe(actor, int(params.get("frame", 0)),
                                  x=_f("x"), y=_f("y"), rotation=_f("rotation"),
                                  scale_x=_f("scale_x"), scale_y=_f("scale_y"),
                                  opacity=_f("opacity"))
-                return f"✅ Keyframe en frame {params.get('frame', 0)} para '{actor}'."
+                return f" Keyframe en frame {params.get('frame', 0)} para '{actor}'."
             if action == "walk_cycle":
                 actor = params.get("actor", "")
                 api.generate_walk_cycle(actor, int(params.get("start", 0)),
                                         int(params.get("duration", 24)))
-                return f"✅ Ciclo de caminata generado para '{actor}'."
+                return f" Ciclo de caminata generado para '{actor}'."
             if action in ("render", "export"):
                 fmt = params.get("format", "mp4")
                 rel = params.get("output") or f"anim/{(api.current_scene.name or 'anim')}.{fmt}"
@@ -1929,16 +1929,16 @@ class Api:
                 out.parent.mkdir(parents=True, exist_ok=True)
                 api.export(str(out), format=fmt, preset=params.get("preset", "hd"))
                 s._push("wrote", {"path": str(out)})
-                return f"🎬 Exportado: {rel}"
+                return f" Exportado: {rel}"
             if action == "storyboard":
                 from tools.animation.ai_pipeline import StoryboardAI
                 scenes = StoryboardAI().parse_script(params.get("script", "") or "")
                 return (f"📋 Storyboard: {len(scenes)} escena(s).\n"
                         + json.dumps(scenes, ensure_ascii=False)[:1800])
-            return ("❌ Acción desconocida. Usá: new, add_actor, keyframe, walk_cycle, "
+            return (" Acción desconocida. Usá: new, add_actor, keyframe, walk_cycle, "
                     "render, storyboard.")
         except Exception as e:
-            return f"❌ anim {action}: {e}"
+            return f" anim {action}: {e}"
 
     @staticmethod
     def _arg_path(args):
@@ -1976,7 +1976,7 @@ class Api:
         return parts
 
     def save_ssh_hosts(s, hosts):
-        """Guarda la lista de servidores SSH (⚙). Cada uno: name, user, host, port, key."""
+        """Guarda la lista de servidores SSH (). Cada uno: name, user, host, port, key."""
         clean = []
         for h in (hosts or []):
             name = (h.get("name") or "").strip()
@@ -1991,7 +1991,7 @@ class Api:
         return {"ssh_hosts": clean}
 
     # ── redes sociales (módulo social/) ────────────────────────────
-    # La autorización SIEMPRE se hace desde acá (⚙ → Redes Sociales): LOW abre
+    # La autorización SIEMPRE se hace desde acá (  Redes Sociales): LOW abre
     # el navegador y recibe el token por callback local. Tokens cifrados (DPAPI).
     def _social(s):
         import social.service as svc
@@ -2016,7 +2016,7 @@ class Api:
             except Exception:
                 continue
         raise RuntimeError("ningún proveedor de IA respondió — configurá una "
-                           "API key en ⚙")
+                           "API key en ")
 
     def social_state(s):
         try:
@@ -2259,7 +2259,7 @@ class Api:
         return [
             {"type": "function", "function": {"name": "read_file", "description": "Lee un archivo (ruta relativa al workspace O absoluta). Para archivos grandes leelo por partes con start_line y max_lines; si la salida avisa que hay mas, segui desde el start_line que indica.", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "start_line": {"type": "integer", "description": "linea inicial, 1 = principio"}, "max_lines": {"type": "integer", "description": "cuantas lineas leer; 0 = hasta el final o el tope"}}, "required": ["path"]}}},
             {"type": "function", "function": {"name": "write_file", "description": "Escribe archivo COMPLETO (crea o reemplaza todo el contenido). Para archivos existentes grandes preferi edit_file.", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}}},
-            {"type": "function", "function": {"name": "edit_file", "description": "Reemplaza un fragmento de un archivo existente sin reescribir el resto (PREFERILO sobre write_file en archivos que ya existen). old_text tiene que identificar UNA SOLA parte del archivo; copialo de un read_file previo — la indentación exacta ayuda pero se tolera alguna diferencia de espacios. Para varios cambios en el mismo archivo, mandá edits:[{old_text,new_text},...] en UNA sola llamada en vez de muchas. Si da '❌ No encontré ese texto', te devuelve las líneas reales del archivo: copiá el old_text de ahí, no reintentes a ciegas.", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old_text": {"type": "string"}, "new_text": {"type": "string"}, "edits": {"type": "array", "description": "opcional: varios reemplazos en este archivo, cada uno {old_text,new_text}", "items": {"type": "object", "properties": {"old_text": {"type": "string"}, "new_text": {"type": "string"}}}}}, "required": ["path"]}}},
+            {"type": "function", "function": {"name": "edit_file", "description": "Reemplaza un fragmento de un archivo existente sin reescribir el resto (PREFERILO sobre write_file en archivos que ya existen). old_text tiene que identificar UNA SOLA parte del archivo; copialo de un read_file previo — la indentación exacta ayuda pero se tolera alguna diferencia de espacios. Para varios cambios en el mismo archivo, mandá edits:[{old_text,new_text},...] en UNA sola llamada en vez de muchas. Si da ' No encontré ese texto', te devuelve las líneas reales del archivo: copiá el old_text de ahí, no reintentes a ciegas.", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old_text": {"type": "string"}, "new_text": {"type": "string"}, "edits": {"type": "array", "description": "opcional: varios reemplazos en este archivo, cada uno {old_text,new_text}", "items": {"type": "object", "properties": {"old_text": {"type": "string"}, "new_text": {"type": "string"}}}}}, "required": ["path"]}}},
             {"type": "function", "function": {"name": "exec_cmd", "description": "Ejecuta comando shell", "parameters": {"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]}}},
             {"type": "function", "function": {"name": "run_code", "description": "Corre codigo del editor", "parameters": {"type": "object", "properties": {"language": {"type": "string"}}, "required": ["language"]}}},
             {"type": "function", "function": {"name": "list_files", "description": "Lista archivos del workspace", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}}}},
@@ -2275,9 +2275,9 @@ class Api:
             {"type": "function", "function": {"name": "social_export", "description": "Genera versiones de una imagen/diseño (png/jpg/svg) en el TAMAÑO EXACTO de cada red social, con recorte centrado, y las guarda en social/. Plataformas: instagram_post (1080x1080), instagram_story (1080x1920), facebook_post (1200x630), x_post (1600x900), linkedin_post (1200x627), tiktok, youtube_thumbnail, pinterest, whatsapp_status; o alias instagram/facebook/x/linkedin/youtube; o 'all'. El COPY y los hashtags escribilos vos aparte en social/post.md.", "parameters": {"type": "object", "properties": {"image": {"type": "string", "description": "ruta a la imagen/diseño fuente"}, "platforms": {"type": "array", "items": {"type": "string"}, "description": "lista de plataformas o formatos; default ['all']"}}, "required": ["image"]}}},
             {"type": "function", "function": {"name": "write_doc", "description": "Crea un DOCUMENTO Word (.docx) real, que se abre en Word/LibreOffice/Google Docs. El contenido va en markdown simple: # titulo, ## subtitulo, - viñetas, **negrita**, y párrafos separados por línea en blanco. Usalo cuando pidan un documento de texto, informe, carta, presupuesto, etc.", "parameters": {"type": "object", "properties": {"path": {"type": "string", "description": "ruta destino, ej docs/informe.docx"}, "content": {"type": "string", "description": "contenido en markdown simple"}}, "required": ["path", "content"]}}},
             {"type": "function", "function": {"name": "edit_image", "description": "EDITA una imagen existente (png/jpg/webp) con IA según un pedido en lenguaje natural (ej: 'cambiá el fondo a azul', 'sacale el texto', 'convertila en acuarela'). Guarda una VERSIÓN nueva al lado (no pisa la original). Requiere key de SiliconFlow.", "parameters": {"type": "object", "properties": {"path": {"type": "string", "description": "ruta a la imagen a editar"}, "prompt": {"type": "string", "description": "qué cambiar, concreto"}}, "required": ["path", "prompt"]}}},
-            {"type": "function", "function": {"name": "animate_image", "description": "ANIMA una imagen existente (png/jpg): imagen→video que MANTIENE el estilo del cuadro. Usa LTX-2.3 si hay key (rápido, CON audio generado, hasta 20s) y si no Wan 2.2 en SiliconFlow (~5s, 2-4 min). Ideal para storyboard/animatic: describí el movimiento ('zoom lento hacia la cara', 'las hojas se mueven con el viento', 'la cámara recorre de izquierda a derecha'). Guarda un .mp4 al lado.", "parameters": {"type": "object", "properties": {"image": {"type": "string", "description": "ruta a la imagen a animar"}, "prompt": {"type": "string", "description": "qué movimiento/acción debe tener"}}, "required": ["image", "prompt"]}}},
+            {"type": "function", "function": {"name": "animate_image", "description": "ANIMA una imagen existente (png/jpg): imagenvideo que MANTIENE el estilo del cuadro. Usa LTX-2.3 si hay key (rápido, CON audio generado, hasta 20s) y si no Wan 2.2 en SiliconFlow (~5s, 2-4 min). Ideal para storyboard/animatic: describí el movimiento ('zoom lento hacia la cara', 'las hojas se mueven con el viento', 'la cámara recorre de izquierda a derecha'). Guarda un .mp4 al lado.", "parameters": {"type": "object", "properties": {"image": {"type": "string", "description": "ruta a la imagen a animar"}, "prompt": {"type": "string", "description": "qué movimiento/acción debe tener"}}, "required": ["image", "prompt"]}}},
             {"type": "function", "function": {"name": "generate_video", "description": "Genera un VIDEO desde una descripción de texto. Usa LTX-2.3 si hay key (rápido, CON audio, hasta 20s) y si no Wan 2.2 T2V (~5s, 2-4 min). Para mantener estilo entre planos de un storyboard preferí animate_image sobre un cuadro ya diseñado. Guarda un .mp4.", "parameters": {"type": "object", "properties": {"prompt": {"type": "string", "description": "escena, estilo y movimiento de cámara"}, "path": {"type": "string", "description": "ruta destino, ej video/plano01.mp4 (opcional)"}}, "required": ["prompt"]}}},
-            {"type": "function", "function": {"name": "social_publish", "description": "PUBLICA (o programa) contenido en una red social conectada (⚙ → Redes Sociales): instagram, facebook, linkedin, x, tiktok. LOW valida el copy contra la IDENTIDAD DE MARCA cargada (tono, palabras prohibidas, hashtags) ANTES de publicar — si la viola de forma no corregible, se rechaza. La pieza gráfica sale de: un template de Canva ('template_id' + el copy, LOW rellena y exporta), o una imagen/video local del workspace ('asset'). 'schedule_at' (YYYY-MM-DD HH:MM, hora local) la programa; sin schedule_at publica YA. Antes de usarla podés ver qué hay conectado con social_status.", "parameters": {"type": "object", "properties": {"network": {"type": "string", "description": "instagram | facebook | linkedin | x | tiktok"}, "content": {"type": "string", "description": "el copy/idea del post — LOW lo valida y adapta a la marca y a los límites de la red"}, "template_id": {"type": "string", "description": "ID de un Brand Template de Canva (ver social_status) para generar la gráfica"}, "asset": {"type": "string", "description": "ruta a imagen/video del workspace si no usás template de Canva"}, "schedule_at": {"type": "string", "description": "cuándo publicar, 'YYYY-MM-DD HH:MM' (opcional; vacío = ahora)"}}, "required": ["network", "content"]}}},
+            {"type": "function", "function": {"name": "social_publish", "description": "PUBLICA (o programa) contenido en una red social conectada (  Redes Sociales): instagram, facebook, linkedin, x, tiktok. LOW valida el copy contra la IDENTIDAD DE MARCA cargada (tono, palabras prohibidas, hashtags) ANTES de publicar — si la viola de forma no corregible, se rechaza. La pieza gráfica sale de: un template de Canva ('template_id' + el copy, LOW rellena y exporta), o una imagen/video local del workspace ('asset'). 'schedule_at' (YYYY-MM-DD HH:MM, hora local) la programa; sin schedule_at publica YA. Antes de usarla podés ver qué hay conectado con social_status.", "parameters": {"type": "object", "properties": {"network": {"type": "string", "description": "instagram | facebook | linkedin | x | tiktok"}, "content": {"type": "string", "description": "el copy/idea del post — LOW lo valida y adapta a la marca y a los límites de la red"}, "template_id": {"type": "string", "description": "ID de un Brand Template de Canva (ver social_status) para generar la gráfica"}, "asset": {"type": "string", "description": "ruta a imagen/video del workspace si no usás template de Canva"}, "schedule_at": {"type": "string", "description": "cuándo publicar, 'YYYY-MM-DD HH:MM' (opcional; vacío = ahora)"}}, "required": ["network", "content"]}}},
             {"type": "function", "function": {"name": "social_status", "description": "Muestra el estado del módulo de redes: cuentas conectadas, templates de Canva disponibles (con sus placeholders), identidad de marca cargada y la cola de publicaciones (pendientes/publicadas/fallidas). Usala antes de social_publish.", "parameters": {"type": "object", "properties": {}}}},
             {"type": "function", "function": {"name": "web_search", "description": "Busca en internet (DuckDuckGo, sin API key) y devuelve los primeros resultados con título, URL y resumen. Usalo para info actual, documentación, precios, noticias, etc. Después podés leer una URL con web_fetch.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}}},
             {"type": "function", "function": {"name": "web_fetch", "description": "Descarga una URL y devuelve su texto legible (quita HTML/scripts). Usalo para LEER una página, doc o API pública. Devuelve hasta ~8000 caracteres.", "parameters": {"type": "object", "properties": {"url": {"type": "string"}}, "required": ["url"]}}},
@@ -2323,10 +2323,10 @@ class Api:
     @staticmethod
     def _is_tool_err(res):
         """True si el resultado de una tool NO representa avance real: errores
-        (❌) o el aviso de llamada repetida (⚠ Ya ejecutaste). El resto (✅,
+        () o el aviso de llamada repetida ( Ya ejecutaste). El resto (,
         contenido de read_file, salida de comandos, etc.) cuenta como progreso."""
         t = str(res or "").lstrip()
-        return t.startswith("❌") or t.startswith("⚠ Ya ejecutaste")
+        return t.startswith("") or t.startswith(" Ya ejecutaste")
 
     @staticmethod
     def _norm_ws(t):
@@ -2403,17 +2403,17 @@ class Api:
             if name == "read_file":
                 rel = s._arg_path(args)
                 if not rel:
-                    return ("❌ Falta 'path'. Llamá read_file con {\"path\": \"archivo.js\"} "
+                    return (" Falta 'path'. Llamá read_file con {\"path\": \"archivo.js\"} "
                             "(opcional start_line/max_lines). No repitas sin el path.")
                 p = Path(rel) if os.path.isabs(rel) else s._base() / rel
                 if not p.exists():
-                    return f"❌ No existe: {rel}. Usá list_files para ver los nombres exactos."
+                    return f" No existe: {rel}. Usá list_files para ver los nombres exactos."
                 if p.is_dir():
-                    return "❌ Es un directorio — usá list_files"
+                    return " Es un directorio — usá list_files"
                 try:
                     txt = p.read_text(encoding="utf-8", errors="replace")
                 except OSError as e:
-                    return f"❌ {e}"
+                    return f" {e}"
                 lines = txt.splitlines(keepends=True)
                 start = max(1, int(args.get("start_line", 1) or 1))
                 maxl = int(args.get("max_lines", 0) or 0)
@@ -2430,11 +2430,11 @@ class Api:
             if name == "write_file":
                 rel = s._arg_path(args)
                 if not rel:
-                    return ("❌ Falta 'path'. Llamá write_file con "
+                    return (" Falta 'path'. Llamá write_file con "
                             "{\"path\": \"archivo.py\", \"content\": \"...\"}. "
                             "No repitas la llamada sin el path — corregila.")
                 if "content" not in args and "text" not in args:
-                    return ("❌ Falta 'content' — write_file necesita {path, content} con el "
+                    return (" Falta 'content' — write_file necesita {path, content} con el "
                             "contenido COMPLETO del archivo. Si querés cambiar solo una parte, usá edit_file.")
                 content = args.get("content")
                 if content is None:
@@ -2450,16 +2450,16 @@ class Api:
                 p.write_text(content, encoding="utf-8")
                 s._written.append(str(p))
                 s._push("wrote", {"path": str(p)})
-                return f"✅ Escrito {rel} ({len(content)}c)"
+                return f" Escrito {rel} ({len(content)}c)"
             if name == "edit_file":
                 rel = s._arg_path(args)
                 if not rel:
-                    return ("❌ Falta 'path'. Llamá edit_file con "
+                    return (" Falta 'path'. Llamá edit_file con "
                             "{path, old_text, new_text} (o {path, edits:[{old_text,new_text},...]}). "
                             "No repitas sin el path.")
                 p = s._base() / rel
                 if not p.exists():
-                    return f"❌ No existe {rel} — usa write_file para crear un archivo nuevo"
+                    return f" No existe {rel} — usa write_file para crear un archivo nuevo"
                 # acepta un solo reemplazo {old_text,new_text} o varios en {edits:[...]}
                 edits = args.get("edits")
                 if not isinstance(edits, list) or not edits:
@@ -2468,7 +2468,7 @@ class Api:
                 try:
                     src = p.read_text(encoding="utf-8", errors="replace")
                 except OSError as e:
-                    return f"❌ {e}"
+                    return f" {e}"
                 orig = src
                 ranges = []
                 for i, ed in enumerate(edits):
@@ -2478,17 +2478,17 @@ class Api:
                     if new is None:
                         new = ed.get("new") or ""
                     if not old:
-                        return ("❌ old_text vacío" + tag + " — copiá el fragmento EXACTO a "
+                        return (" old_text vacío" + tag + " — copiá el fragmento EXACTO a "
                                 "reemplazar (de un read_file previo, con su indentación).")
                     cnt = src.count(old)
                     if cnt == 1:
                         a = src.find(old); b = a + len(old)
                     elif cnt == 0:
-                        # match exacto falló → intento tolerante a espacios/indentación
+                        # match exacto falló  intento tolerante a espacios/indentación
                         span = s._find_fuzzy(src, old)
                         if span is None:
                             hint = s._nearest_hint(src, old)
-                            return ("❌ No encontré ese texto en el archivo" + tag +
+                            return (" No encontré ese texto en el archivo" + tag +
                                     ". Releé con read_file y copiá el fragmento EXACTO "
                                     "(indentación incluida).\n" + hint).rstrip()
                         a, b = span
@@ -2497,7 +2497,7 @@ class Api:
                         if src[a:b].endswith("\n") and new and not new.endswith("\n"):
                             new += "\n"
                     else:
-                        return (f"❌ Ese texto aparece {cnt} veces" + tag +
+                        return (f" Ese texto aparece {cnt} veces" + tag +
                                 " — agregá más líneas de contexto para que sea único.")
                     if new == src[a:b]:
                         continue  # ese reemplazo no cambia nada, saltarlo
@@ -2505,38 +2505,38 @@ class Api:
                     src = src[:a] + new + src[b:]
                     ranges.append([line_start, line_start + new.count("\n")])
                 if src == orig:
-                    return ("⚠ El edit no cambió nada (el new_text ya estaba igual). "
+                    return (" El edit no cambió nada (el new_text ya estaba igual). "
                             "Si el archivo ya está como querés, decilo y seguí.")
                 key = str(p)
                 if key not in s._checkpoint:
                     s._checkpoint[key] = orig
                 p.write_text(src, encoding="utf-8")
                 s._written.append(str(p))
-                # rango de líneas tocado → el frontend lo abre, scrollea y resalta
+                # rango de líneas tocado  el frontend lo abre, scrollea y resalta
                 lo = min(r[0] for r in ranges); hi = max(r[1] for r in ranges)
                 s._push("wrote", {"path": str(p), "range": [lo, hi]})
                 nch = len(ranges)
-                return f"✅ Editado {rel} ({nch} cambio{'s' if nch != 1 else ''})"
+                return f" Editado {rel} ({nch} cambio{'s' if nch != 1 else ''})"
             if name == "exec_cmd":
                 cmd = args.get("command") or args.get("cmd") or ""
                 if not cmd:
-                    return "❌ Falta 'command'. Llamá exec_cmd con {\"command\": \"...\"}."
+                    return " Falta 'command'. Llamá exec_cmd con {\"command\": \"...\"}."
                 r = s._run_shell(cmd, timeout=30)
-                return f"⚡ exit={r.returncode}\n" + ((r.stdout + "\n" + r.stderr).strip()[:3000])
+                return f" exit={r.returncode}\n" + ((r.stdout + "\n" + r.stderr).strip()[:3000])
             if name == "git":
                 a = (args.get("args") or "").strip()
                 if not a:
-                    return "❌ Faltan argumentos de git (ej: 'commit -m \"msg\"', 'push')"
+                    return " Faltan argumentos de git (ej: 'commit -m \"msg\"', 'push')"
                 r = s._run_shell("git " + a, timeout=180)
                 out = (r.stdout + "\n" + r.stderr).strip()
-                return f"⎇ git {a} (exit={r.returncode})\n{out[:3500] or '(sin salida)'}"
+                return f" git {a} (exit={r.returncode})\n{out[:3500] or '(sin salida)'}"
             if name == "ssh_exec":
                 target, key, port = s._resolve_ssh(args.get("host", ""))
                 if not target:
-                    return "❌ Falta el host (alias guardado o usuario@ip)"
+                    return " Falta el host (alias guardado o usuario@ip)"
                 cmd = args.get("command", "")
                 if not cmd:
-                    return "❌ Falta el comando a ejecutar en el servidor"
+                    return " Falta el comando a ejecutar en el servidor"
                 r = subprocess.run(s._ssh_base(target, key, port) + [cmd],
                                    capture_output=True, text=True, timeout=180)
                 out = (r.stdout + "\n" + r.stderr).strip()
@@ -2544,7 +2544,7 @@ class Api:
             if name == "scp_upload":
                 target, key, port = s._resolve_ssh(args.get("host", ""))
                 if not target:
-                    return "❌ Falta el host"
+                    return " Falta el host"
                 local = args.get("local", "")
                 lp = local if os.path.isabs(local) else str(s._base() / local)
                 remote = args.get("remote", "")
@@ -2556,10 +2556,10 @@ class Api:
                 parts += [lp, f"{target}:{remote}"]
                 r = subprocess.run(parts, capture_output=True, text=True, timeout=300)
                 out = (r.stdout + "\n" + r.stderr).strip()
-                return f"📤 {local} → {target}:{remote} (exit={r.returncode})\n{out[:2000]}"
+                return f"📤 {local}  {target}:{remote} (exit={r.returncode})\n{out[:2000]}"
             if name == "run_code":
                 if not code or code.strip() == "// Nuevo archivo":
-                    return "❌ Editor vacio"
+                    return " Editor vacio"
                 return json.dumps(CodeRunner.run(code, args.get("language", lang)),
                                   indent=2)[:3000]
             if name == "list_files":
@@ -2595,27 +2595,27 @@ class Api:
             if name == "generate_image":
                 prompt = (args.get("prompt") or "").strip()
                 if not prompt:
-                    return "❌ Falta 'prompt' — describí la imagen que querés generar."
+                    return " Falta 'prompt' — describí la imagen que querés generar."
                 size = args.get("size") or "1024x1024"
                 rel = args.get("path") or (
                     f"assets/img_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
                 img_bytes, used, err = s._gen_image(s._enhance_gen_prompt(prompt, "imagen"), size,
                                                     seed=args.get("seed"))
                 if err:
-                    return f"❌ {err}"
+                    return f" {err}"
                 p = s._base() / rel
                 p.parent.mkdir(parents=True, exist_ok=True)
                 p.write_bytes(img_bytes)
                 s._written.append(str(p))
                 s._push("wrote", {"path": str(p)})
-                return f"✅ Imagen generada con {used} → {rel}"
+                return f" Imagen generada con {used}  {rel}"
             if name == "refine_image":
                 rel = s._arg_path(args)
                 if not rel:
-                    return "❌ Falta 'path' a la imagen"
+                    return " Falta 'path' a la imagen"
                 p = Path(rel) if os.path.isabs(rel) else s._base() / rel
                 if not p.exists():
-                    return f"❌ No existe: {rel}"
+                    return f" No existe: {rel}"
                 focus = (args.get("focus") or "").strip()
                 # prompt de refinado fijo en inglés (no pasa por el traductor: es técnica)
                 rp = ("Enhance this image like a professional upscaler: dramatically increase "
@@ -2625,7 +2625,7 @@ class Api:
                       + (f" Pay special attention to: {focus}." if focus else ""))
                 data, err = s._edit_image_api(str(p), rp)
                 if err:
-                    return f"❌ {err}"
+                    return f" {err}"
                 out = p.with_name(f"{p.stem}_hd.png")
                 n = 2
                 while out.exists():
@@ -2633,55 +2633,55 @@ class Api:
                 out.write_bytes(data)
                 s._written.append(str(out))
                 s._push("wrote", {"path": str(out)})
-                return f"✅ Imagen refinada (detalle+nitidez) → {out.name}"
+                return f" Imagen refinada (detalle+nitidez)  {out.name}"
             if name == "edit_image":
                 rel = s._arg_path(args)
                 if not rel:
-                    return "❌ Falta 'path' a la imagen"
+                    return " Falta 'path' a la imagen"
                 r = s.edit_image(rel, args.get("prompt") or "")
                 if r.get("error"):
-                    return f"❌ {r['error']}"
-                return f"✅ Imagen editada → {r['name']} (versión nueva, la original queda intacta)"
+                    return f" {r['error']}"
+                return f" Imagen editada  {r['name']} (versión nueva, la original queda intacta)"
             if name == "animate_image":
                 rel = args.get("image") or s._arg_path(args)
                 if not rel:
-                    return "❌ Falta 'image' (ruta a la imagen a animar)"
+                    return " Falta 'image' (ruta a la imagen a animar)"
                 p = Path(rel) if os.path.isabs(rel) else s._base() / rel
                 if not p.exists():
-                    return f"❌ No existe: {rel}"
+                    return f" No existe: {rel}"
                 prompt = s._enhance_gen_prompt(args.get("prompt") or "gentle cinematic motion", "video")
                 data, used, err = s._gen_video_any(prompt, image_path=str(p))
                 if err:
-                    return f"❌ {err}"
+                    return f" {err}"
                 out = s._save_video(data, f"video/{p.stem}_anim.mp4"
                                     if not os.path.isabs(rel) else str(Path(rel).with_suffix("")) + "_anim.mp4")
-                return f"✅ Imagen animada con {used} → {out.name} (mantiene el estilo del cuadro)"
+                return f" Imagen animada con {used}  {out.name} (mantiene el estilo del cuadro)"
             if name == "generate_video":
                 prompt = (args.get("prompt") or "").strip()
                 if not prompt:
-                    return "❌ Falta 'prompt' con la escena"
+                    return " Falta 'prompt' con la escena"
                 rel = args.get("path") or f"video/video_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4"
                 if not rel.lower().endswith(".mp4"):
                     rel += ".mp4"
                 data, used, err = s._gen_video_any(s._enhance_gen_prompt(prompt, "video"))
                 if err:
-                    return f"❌ {err}"
+                    return f" {err}"
                 out = s._save_video(data, rel)
-                return f"✅ Video generado con {used} → {rel}"
+                return f" Video generado con {used}  {rel}"
             if name == "write_doc":
                 rel = s._arg_path(args)
                 if not rel:
-                    return "❌ Falta 'path' (ej: docs/informe.docx)"
+                    return " Falta 'path' (ej: docs/informe.docx)"
                 if not rel.lower().endswith(".docx"):
                     rel += ".docx"
                 content = args.get("content") or args.get("text") or ""
                 if not content.strip():
-                    return "❌ Falta 'content' con el texto del documento"
+                    return " Falta 'content' con el texto del documento"
                 p = s._base() / rel
                 out = s._write_docx(p, content)
                 s._written.append(out)
-                s._push("sys", f"📄 Documento Word creado: {rel}")
-                return f"✅ Documento .docx creado: {rel} (se abre con Word/LibreOffice)"
+                s._push("sys", f" Documento Word creado: {rel}")
+                return f" Documento .docx creado: {rel} (se abre con Word/LibreOffice)"
             if name == "social_publish":
                 try:
                     svc = s._social()
@@ -2689,7 +2689,7 @@ class Api:
                     if asset:
                         p = Path(asset) if os.path.isabs(asset) else s._base() / asset
                         if not p.exists():
-                            return f"❌ No existe el asset: {asset}"
+                            return f" No existe el asset: {asset}"
                         asset = str(p)
                     qid = svc.enqueue(args.get("network", ""),
                                       args.get("content", ""),
@@ -2697,33 +2697,33 @@ class Api:
                                       asset_path=asset,
                                       scheduled_at=(args.get("schedule_at") or "").strip())
                     if (args.get("schedule_at") or "").strip():
-                        return (f"✅ Programado #{qid} para {args['schedule_at']} en "
+                        return (f" Programado #{qid} para {args['schedule_at']} en "
                                 f"{args.get('network')}. LOW lo valida contra la marca "
                                 "y lo publica solo (autopiloto).")
                     return svc.process_item(qid, s._social_ask,
                                             lambda m: s._push("sys", m))
                 except Exception as e:
-                    return f"❌ social_publish: {str(e)[:300]}"
+                    return f" social_publish: {str(e)[:300]}"
             if name == "social_status":
                 try:
                     st = s._social().state()
                     conn = [f"{p['label']}: {p['handle'] or '✔'}"
                             for p in st["platforms"] if p["connected"]]
                     lines = ["Cuentas conectadas: " + (", ".join(conn) or
-                             "NINGUNA — el usuario debe conectarlas en ⚙ → Redes Sociales")]
+                             "NINGUNA — el usuario debe conectarlas en   Redes Sociales")]
                     if st.get("templates"):
                         lines.append("Templates de Canva: " + "; ".join(
                             f"{t['name']} (id {t['id']})" for t in st["templates"][:15]))
                     b = st.get("brand") or {}
                     lines.append("Marca: " + (f"tono='{b.get('tone', '')[:80]}', "
                                  f"{len(b.get('banned', []))} palabras prohibidas"
-                                 if b.get("tone") else "SIN CARGAR (⚙ → Redes Sociales)"))
+                                 if b.get("tone") else "SIN CARGAR (  Redes Sociales)"))
                     for q_ in st.get("queue", [])[:10]:
                         lines.append(f"  cola #{q_['id']} {q_['network']} "
                                      f"[{q_['status']}] {q_.get('error') or ''}")
                     return "\n".join(lines)
                 except Exception as e:
-                    return f"❌ social_status: {str(e)[:300]}"
+                    return f" social_status: {str(e)[:300]}"
             if name == "web_search":
                 return s._web_search(args.get("query") or args.get("q") or "")
             if name == "web_fetch":
@@ -2738,13 +2738,13 @@ class Api:
             if name == "vectorize":
                 raw, err = s._read_img_bytes(s._arg_path(args) or args.get("image"))
                 if err:
-                    return f"❌ {err}"
+                    return f" {err}"
                 svg, err = s._vectorize(raw, args.get("detail", "medium"),
                                         mode=args.get("mode", "color"),
                                         remove_bg=bool(args.get("remove_bg")),
                                         bg_tol=int(args.get("bg_tol") or 32))
                 if not svg:
-                    return f"❌ {err}"
+                    return f" {err}"
                 rel = args.get("out") or f"disenos/vector_{datetime.datetime.now().strftime('%H%M%S')}.svg"
                 if not rel.endswith(".svg"):
                     rel += ".svg"
@@ -2753,18 +2753,18 @@ class Api:
                 p.write_text(svg, encoding="utf-8")
                 s._written.append(str(p))
                 s._push("wrote", {"path": str(p)})
-                return (f"✅ Vectorizado → {rel} ({svg.count('<path')} trazos editables). "
+                return (f" Vectorizado  {rel} ({svg.count('<path')} trazos editables). "
                         "Abrilo en el editor ✒ para ajustarlo.")
             if name == "illustrate":
                 prompt = args.get("prompt") or ""
                 if not prompt:
-                    return "❌ Falta 'prompt' (describí la ilustración: estilo, colores, composición)."
+                    return " Falta 'prompt' (describí la ilustración: estilo, colores, composición)."
                 data, used, gerr = s._gen_image(prompt, size=args.get("size", "1024x1024"))
                 if not data:
-                    return f"❌ No pude generar el raster base: {gerr}"
+                    return f" No pude generar el raster base: {gerr}"
                 svg, verr = s._vectorize(data, args.get("detail", "high"))
                 if not svg:
-                    return f"❌ Generé el raster pero no pude vectorizar: {verr}"
+                    return f" Generé el raster pero no pude vectorizar: {verr}"
                 rel = args.get("out") or f"disenos/ilustracion_{datetime.datetime.now().strftime('%H%M%S')}.svg"
                 if not rel.endswith(".svg"):
                     rel += ".svg"
@@ -2773,20 +2773,20 @@ class Api:
                 p.write_text(svg, encoding="utf-8")
                 s._written.append(str(p))
                 s._push("wrote", {"path": str(p)})
-                return (f"✅ Ilustración vectorial → {rel} ({svg.count('<path')} trazos, vía {used}). "
+                return (f" Ilustración vectorial  {rel} ({svg.count('<path')} trazos, vía {used}). "
                         "Editable en el ✒ (cada zona de color es un path).")
             if name == "remember":
                 return s._remember(args.get("note") or args.get("text") or "")
             if name == "social_export":
                 rel = args.get("image") or s._arg_path(args)
                 if not rel:
-                    return "❌ Falta 'image' (ruta a la imagen/diseño fuente)"
+                    return " Falta 'image' (ruta a la imagen/diseño fuente)"
                 src = Path(rel) if os.path.isabs(rel) else s._base() / rel
                 if not src.exists():
-                    return f"❌ No existe: {rel}"
+                    return f" No existe: {rel}"
                 data_url, err = s._source_dataurl(str(src))
                 if err or not data_url:
-                    return f"❌ No pude leer la fuente: {err}"
+                    return f" No pude leer la fuente: {err}"
                 fmts = s._resolve_platforms(args.get("platforms"))
                 outdir = s._base() / "social" / src.stem
                 outdir.mkdir(parents=True, exist_ok=True)
@@ -2808,37 +2808,37 @@ class Api:
                 if first:
                     s._push("wrote", {"path": first})
                 rel_out = outdir.relative_to(s._base()) if str(outdir).startswith(str(s._base())) else outdir
-                msg = f"✅ {len(done)} imagen(es) en {rel_out}/:\n  " + "\n  ".join(done)
+                msg = f" {len(done)} imagen(es) en {rel_out}/:\n  " + "\n  ".join(done)
                 if fail:
-                    msg += "\n⚠ fallaron: " + ", ".join(fail)
+                    msg += "\n fallaron: " + ", ".join(fail)
                 msg += "\nAcordate de escribir el copy + hashtags por plataforma en social/post.md"
                 return msg
             if name == "check_design":
                 rel = s._arg_path(args)
                 if not rel:
-                    return "❌ Falta 'path' al .svg a revisar"
+                    return " Falta 'path' al .svg a revisar"
                 p = Path(rel) if os.path.isabs(rel) else s._base() / rel
                 if not p.exists():
-                    return f"❌ No existe: {rel}"
+                    return f" No existe: {rel}"
                 struct = s._check_svg(str(p))
                 try:
                     svg = p.read_text(encoding="utf-8", errors="replace")
                 except OSError as e:
-                    return f"❌ {e}"
+                    return f" {e}"
                 visual = s._critique_design(svg, "revisión de diseño")
                 if not struct and not visual:
-                    return "✅ El diseño se ve bien (estructura válida y sin problemas visuales evidentes)."
+                    return " El diseño se ve bien (estructura válida y sin problemas visuales evidentes)."
                 out = []
                 if struct:
-                    out.append("⚠ Estructura: " + struct)
+                    out.append(" Estructura: " + struct)
                 if visual:
-                    out.append("👁 Revisión visual:\n" + visual)
+                    out.append(" Revisión visual:\n" + visual)
                 else:
                     out.append("(no había un modelo de visión disponible para la revisión visual)"
                                if not s._vision_target()[0] else "")
                 return "\n".join(x for x in out if x)
         except Exception as e:
-            return f"❌ {e}"
+            return f" {e}"
 
     @staticmethod
     def _sf_image_models(key, skip=()):
@@ -2899,14 +2899,14 @@ class Api:
         return prompt + (f"\n\nCharacter reference (MUST match exactly): {sheet}"
                          if sheet else "")
 
-    # ── video (Wan 2.2 en SiliconFlow): texto→video y IMAGEN→video (animar) ──
+    # ── video (Wan 2.2 en SiliconFlow): textovideo y IMAGENvideo (animar) ──
     VIDEO_T2V = "Wan-AI/Wan2.2-T2V-A14B"
     VIDEO_I2V = "Wan-AI/Wan2.2-I2V-A14B"
 
     @staticmethod
     def _sf_video_models(key, i2v=False):
         """Modelos de video disponibles HOY en el catálogo (cambia seguido).
-        i2v=True busca imagen→video; si no, texto→video."""
+        i2v=True busca imagenvideo; si no, textovideo."""
         try:
             r = requests.get("https://api.siliconflow.com/v1/models",
                              headers={"Authorization": f"Bearer {key}"}, timeout=10)
@@ -2925,7 +2925,7 @@ class Api:
         busca en el catálogo vivo el que lo sepa hacer. Devuelve (bytes, error)."""
         sk = s.cfg.get_api_key("siliconflow")
         if not sk:
-            return None, "video necesita la API key de SiliconFlow (⚙)"
+            return None, "video necesita la API key de SiliconFlow ()"
         hdr = {"Authorization": f"Bearer {sk}", "Content-Type": "application/json"}
         body = {"prompt": prompt, "image_size": size}   # image_size es OBLIGATORIO
         if image_path:
@@ -2952,13 +2952,13 @@ class Api:
                 continue
             if rid:
                 if model != known:
-                    s._push("sys", f"🎬 Usé {model} (el modelo conocido no estaba disponible)")
+                    s._push("sys", f" Usé {model} (el modelo conocido no estaba disponible)")
                 break
             sub_err = f"{model}: {r.text[:150]}"
             log(f"video submit rechazado {model}: {r.text[:150]}")
         if not rid:
             return None, sub_err or "ningún modelo de video disponible en el catálogo"
-        s._push("sys", "🎬 Generando video (~2-4 min)… te aviso cuando esté.")
+        s._push("sys", " Generando video (~2-4 min)… te aviso cuando esté.")
         for i in range(60):                     # hasta 10 minutos
             time.sleep(10)
             try:
@@ -2968,7 +2968,7 @@ class Api:
                 continue
             st = d.get("status")
             if i % 6 == 5:
-                s._push("sys", f"🎬 Video: {st}… ({(i + 1) * 10}s)")
+                s._push("sys", f" Video: {st}… ({(i + 1) * 10}s)")
             if st == "Succeed":
                 vids = (d.get("results") or {}).get("videos") or []
                 if not vids or not vids[0].get("url"):
@@ -2994,7 +2994,7 @@ class Api:
         Devuelve (bytes, error). La imagen local va como data-URI base64."""
         key = s.cfg.get_api_key("ltx")
         if not key:
-            return None, "video LTX necesita la API key (⚙ → ltx · console.ltx.video/api-keys)"
+            return None, "video LTX necesita la API key (  ltx · console.ltx.video/api-keys)"
         model = s.cfg.get_model("ltx") or "ltx-2-3-fast"
         # duración: al valor válido más cercano (la API rechaza intermedios)
         try:
@@ -3016,7 +3016,7 @@ class Api:
             except OSError as e:
                 return None, str(e)
             url = "https://api.ltx.video/v1/image-to-video"
-        s._push("sys", f"🎬 Generando video con LTX ({model}, {duration}s)…")
+        s._push("sys", f" Generando video con LTX ({model}, {duration}s)…")
         try:
             r = requests.post(url, json=body, timeout=(30, 600),
                               headers={"Authorization": f"Bearer {key}",
@@ -3035,14 +3035,14 @@ class Api:
         return None, f"LTX {r.status_code}: {detail}"
 
     # ── fal.ai: gateway universal (Seedance, Flux, Kling, Wan, Veo…). Queue API:
-    # POST https://queue.fal.run/<model_id> → {request_id, status_url, response_url};
+    # POST https://queue.fal.run/<model_id>  {request_id, status_url, response_url};
     # se poolea status_url hasta COMPLETED y se lee response_url. Auth: "Key <k>".
     def _fal_run(s, model_id, body, kind="video"):
         """Somete un job a fal.ai, poolea hasta COMPLETED y devuelve (bytes, error).
         kind = 'video' | 'image' (para saber qué URL extraer del resultado)."""
         key = s.cfg.get_api_key("fal")
         if not key:
-            return None, "fal.ai necesita API key (⚙ → fal · fal.ai/dashboard/keys)"
+            return None, "fal.ai necesita API key (  fal · fal.ai/dashboard/keys)"
         hdr = {"Authorization": f"Key {key}", "Content-Type": "application/json"}
         try:
             r = requests.post(f"https://queue.fal.run/{model_id}", headers=hdr,
@@ -3055,7 +3055,7 @@ class Api:
         status_url, response_url = j.get("status_url"), j.get("response_url")
         if not response_url:                      # respuesta síncrona (sin cola)
             return s._fal_extract(j, kind)
-        s._push("sys", f"🎬 Generando con fal.ai ({model_id})…")
+        s._push("sys", f" Generando con fal.ai ({model_id})…")
         for i in range(90):                       # hasta ~15 min
             time.sleep(10)
             try:
@@ -3064,7 +3064,7 @@ class Api:
                 continue
             state = st.get("status")
             if i % 6 == 5:
-                s._push("sys", f"🎬 fal.ai: {state}… ({(i + 1) * 10}s)")
+                s._push("sys", f" fal.ai: {state}… ({(i + 1) * 10}s)")
             if state == "COMPLETED":
                 try:
                     out = requests.get(response_url, headers=hdr, timeout=60).json()
@@ -3136,14 +3136,14 @@ class Api:
             if data:
                 return data, "fal.ai (Seedance)", None
             errs.append(err)
-            s._push("sys", f"⚠ fal.ai falló ({str(err)[:110]}) → pruebo otro proveedor…")
+            s._push("sys", f" fal.ai falló ({str(err)[:110]})  pruebo otro proveedor…")
         if s.cfg.get_api_key("ltx"):
             data, err = s._ltx_video(prompt, image_path=image_path)
             if data:
                 return data, "LTX", None
             errs.append(err)
             if s.cfg.get_api_key("siliconflow"):
-                s._push("sys", f"⚠ LTX falló ({str(err)[:120]}) → pruebo con Wan/SiliconFlow…")
+                s._push("sys", f" LTX falló ({str(err)[:120]})  pruebo con Wan/SiliconFlow…")
         if s.cfg.get_api_key("siliconflow"):
             data, err = s._sf_video(prompt, image_path=image_path)
             if data:
@@ -3151,7 +3151,7 @@ class Api:
             errs.append(err)
         if not errs:
             errs.append("no hay API key de video: cargá LTX (console.ltx.video/api-keys) "
-                        "o SiliconFlow en ⚙")
+                        "o SiliconFlow en ")
         return None, None, " · ".join(str(e) for e in errs if e)
 
     def _save_video(s, data, rel):
@@ -3169,7 +3169,7 @@ class Api:
         sk = s.cfg.get_api_key("siliconflow")
         if not sk:
             return None, ("editar imágenes necesita la API key de SiliconFlow "
-                          "cargada en Configuración (⚙)")
+                          "cargada en Configuración ()")
         p = Path(img_path)
         mime = s.IMG_MIME.get(p.suffix.lower())
         if not mime:
@@ -3211,7 +3211,7 @@ class Api:
         data, err = s._edit_image_api(str(p), s._enhance_gen_prompt((prompt or "").strip(), "edición de imagen"))
         if err:
             return {"error": err}
-        # versionar: foto.png → foto_v2.png, foto_v3.png…
+        # versionar: foto.png  foto_v2.png, foto_v3.png…
         n, out = 2, p.with_name(f"{p.stem}_v2.png")
         while out.exists():
             n += 1
@@ -3284,7 +3284,7 @@ class Api:
                     err_sf = f"SiliconFlow {model}: {e}"
         if not ok and not sk and not s.cfg.get_api_key("fal"):
             return None, None, ("no hay API key de fal.ai, OpenAI ni SiliconFlow cargada — "
-                                 "agregá una en Configuración (⚙) para generar imágenes")
+                                 "agregá una en Configuración () para generar imágenes")
         return None, None, " · ".join(x for x in (err_fal, err_openai, err_sf) if x) or "no se pudo generar la imagen"
 
     # ── documentos .docx (Word) sin dependencias: un docx es un zip con XML ──
@@ -3402,7 +3402,7 @@ class Api:
                     return p
             except OSError:
                 pass
-        # un único archivo suelto → probablemente es el que hay que correr
+        # un único archivo suelto  probablemente es el que hay que correr
         return pys[0] if len(pys) == 1 else None
 
     def _check_runtime(s):
@@ -3429,12 +3429,12 @@ class Api:
             return ""
         base = os.path.basename(entry)
         try:
-            s._push("sys", f"▶ Verificando que {base} corra sin errores…")
+            s._push("sys", f" Verificando que {base} corra sin errores…")
             r = subprocess.run([exe, entry], capture_output=True, text=True,
                                timeout=12, cwd=str(s._base()),
                                env={**os.environ, "PYTHONIOENCODING": "utf-8"})
         except subprocess.TimeoutExpired:
-            # no terminó en 12s: server, loop o input() → no lo tomo como falla
+            # no terminó en 12s: server, loop o input()  no lo tomo como falla
             return ""
         except (OSError, subprocess.SubprocessError):
             return ""
@@ -3452,7 +3452,7 @@ class Api:
     # rasterizamos (vía el propio webview), se lo mostramos a un modelo de visión
     # y devolvemos una crítica accionable para que corrija.
     def _rasterize_svg(s, svg):
-        """SVG → PNG dataURL usando el motor del webview. Devuelve (dataurl, error)."""
+        """SVG  PNG dataURL usando el motor del webview. Devuelve (dataurl, error)."""
         if not s._window:
             return None, "sin ventana"
         try:
@@ -3646,15 +3646,15 @@ class Api:
                 break
         return out
 
-    _search_cache = {}   # query → (timestamp, resultado) — no martillar los motores
+    _search_cache = {}   # query  (timestamp, resultado) — no martillar los motores
 
     def _web_search(s, query):
-        """Busca en internet sin API key. Cadena de motores: DuckDuckGo HTML →
-        Bing HTML → Mojeek → instant answers de DDG. Cachea 5 min por consulta
+        """Busca en internet sin API key. Cadena de motores: DuckDuckGo HTML 
+        Bing HTML  Mojeek  instant answers de DDG. Cachea 5 min por consulta
         para no gatillar límites de peticiones con búsquedas repetidas."""
         q = (query or "").strip()
         if not q:
-            return "❌ Falta la búsqueda (query)"
+            return " Falta la búsqueda (query)"
         hit = s._search_cache.get(q.lower())
         if hit and time.time() - hit[0] < 300:
             return hit[1]
@@ -3678,11 +3678,11 @@ class Api:
             r = requests.get(url, headers=s._UA, timeout=20)
             r.raise_for_status()
         except requests.RequestException as e:
-            return f"❌ No pude abrir {url}: {e}"
+            return f" No pude abrir {url}: {e}"
         ct = r.headers.get("content-type", "")
         text = r.text
         if "html" in ct or re.search(r"<html", text[:500], re.IGNORECASE):
-            # sacar script/style y tags → texto plano
+            # sacar script/style y tags  texto plano
             text = re.sub(r"(?is)<(script|style|noscript)[^>]*>.*?</\1>", " ", text)
             text = re.sub(r"(?s)<[^>]+>", " ", text)
             text = _html.unescape(text)
@@ -3773,7 +3773,7 @@ class Api:
 
     def _check_design_written(s, request):
         """Crítica visual de los .svg escritos este turno (auto-verificación).
-        ON por default (el vector es lo más precario de los modelos → hay que mirarlo).
+        ON por default (el vector es lo más precario de los modelos  hay que mirarlo).
         Desactivable con agent.verify_design=false. Revisa TODOS los .svg del turno."""
         if not s.cfg.data.get("agent", {}).get("verify_design", True):
             return ""
@@ -3788,7 +3788,7 @@ class Api:
                 svg = Path(p).read_text(encoding="utf-8", errors="replace")
             except OSError:
                 continue
-            s._push("sys", f"👁 Mirando {base} para revisar el diseño…")
+            s._push("sys", f" Mirando {base} para revisar el diseño…")
             visual = s._critique_design(svg, request)
             parts = []
             if struct:
@@ -3824,7 +3824,7 @@ class Api:
                     s._push("agent_delta", ev["text"])
                 elif t == "done":
                     r = ev["response"]
-                if s._cancel:      # el usuario apretó detener → cortar el stream
+                if s._cancel:      # el usuario apretó detener  cortar el stream
                     break
             if thinking:
                 s._push("think_end", {})
@@ -3879,7 +3879,7 @@ class Api:
                        "openai-gpt-oss-120b) son baratos y buenos. No delegues lo que necesite "
                        "tus otras herramientas (archivos, git, imágenes).")
             # Habilidades: inyectar solo las relevantes al pedido (patrón positivo).
-            # OJO CACHE: esto varía por mensaje → NO va en el system prompt (rompería
+            # OJO CACHE: esto varía por mensaje  NO va en el system prompt (rompería
             # el prefijo cacheado). Se agrega al mensaje del usuario (parte no cacheada).
             rel_skills = s._relevant_skills(msg)
             skills_hint = ""
@@ -3923,19 +3923,19 @@ class Api:
             rt_fixes = 0      # correcciones pedidas por errores de EJECUCIÓN (runtime)
             design_fixes = 0  # correcciones pedidas por la revisión visual de un .svg
             max_tok = 8192   # se ajusta solo (413 lo baja, archivo cortado lo sube)
-            seen_calls = {}   # (tool, args) -> veces repetida en este turno → detectar bucles
+            seen_calls = {}   # (tool, args) -> veces repetida en este turno  detectar bucles
             stall = 0         # tramos seguidos sin ejecutar ninguna tool
             stalled_out = False
             hit_cap = False
-            tool_runs = 0     # tools que AVANZARON (resultado sin ❌) → progreso real
+            tool_runs = 0     # tools que AVANZARON (resultado sin )  progreso real
             fail_streak = 0   # tools seguidas que fallaron sin ningún éxito en el medio
-            edit_fails = 0    # edit_file fallidos seguidos → escalar la guía
+            edit_fails = 0    # edit_file fallidos seguidos  escalar la guía
             # cadena de failover: si el modelo actual se cae/agota, saltar al siguiente
             chain = s._chain()   # [(proveedor, modelo), ...]
             ci = 0
             if chain:
                 s.prov = s._mk_provider(*chain[0])
-            # imagen adjunta + modelo sin visión → cambiar SOLO este turno a un
+            # imagen adjunta + modelo sin visión  cambiar SOLO este turno a un
             # modelo que VEA (antes fallaba o el modelo ignoraba la imagen)
             if image and image.get("data"):
                 cur = (chain[0][1] if chain and chain[0][1] else
@@ -3947,10 +3947,10 @@ class Api:
                     if vp:
                         s.prov = vp
                         chain = [(vtag.split("/")[0], "/".join(vtag.split("/")[1:]))] + chain
-                        s._push("sys", f"🖼 Imagen adjunta → uso {vtag} para este mensaje (tu modelo no ve imágenes)")
+                        s._push("sys", f" Imagen adjunta  uso {vtag} para este mensaje (tu modelo no ve imágenes)")
                     else:
-                        s._push("sys", "⚠ Tu modelo no ve imágenes y no hay ninguno con visión configurado — la imagen puede ser ignorada")
-            # Límites del agente: configurables desde ⚙ (config "agent"). La filosofía
+                        s._push("sys", " Tu modelo no ve imágenes y no hay ninguno con visión configurado — la imagen puede ser ignorada")
+            # Límites del agente: configurables desde  (config "agent"). La filosofía
             # de LOW es NO ponerle techo al trabajo — el único freno real es que el
             # agente deje de AVANZAR (bucle) o el costo/límite de la API. max_steps =
             # rondas de tools por tramo; max_continuations = cuántas veces sigue solo.
@@ -3960,15 +3960,15 @@ class Api:
             max_attempts = max(cfg_steps, len(chain) * 3 + 4)
             continuations = 0
             MAX_AUTO_CONTINUATIONS = int(ag.get("max_continuations", 25) or 25)
-            no_progress = 0            # tramos seguidos sin ningún avance → ahí sí paramos
+            no_progress = 0            # tramos seguidos sin ningún avance  ahí sí paramos
             last_progress = (0, 0)     # (archivos escritos, herramientas ejecutadas)
-            verified_ok = False        # el turno terminó limpio (sin errores) → aprender habilidad
+            verified_ok = False        # el turno terminó limpio (sin errores)  aprender habilidad
             turn_tools = s._session_tools(msg)   # tool gating por sesión (cache estable)
             while True:
                 hit_cap = False
                 for attempt in range(max_attempts):
                     if s._cancel:
-                        return {"text": "⏹ Detenido.", "status": "Detenido"}
+                        return {"text": " Detenido.", "status": "Detenido"}
                     try:
                         # temperatura baja: las llamadas a herramientas requieren
                         # JSON exacto y los Llama en Groq lo fallan con temp alta
@@ -3977,12 +3977,12 @@ class Api:
                         err = str(e)
                         low = err.lower()
                         decom = "decommission" in low
-                        # 413: el request excede el límite por minuto (típico free tier) →
+                        # 413: el request excede el límite por minuto (típico free tier) 
                         # achicar la respuesta pedida y reintentar en el mismo modelo
                         if ("413" in err or "too large" in low or "reduce your message" in low) \
                                 and max_tok > 1024:
                             max_tok = max(1024, max_tok // 2)
-                            log(f"413 → reintento con max_tokens={max_tok}")
+                            log(f"413  reintento con max_tokens={max_tok}")
                             continue
                         if use_tools and "400" in err and not decom:
                             if "Failed to call a function" in err or "tool_use_failed" in err:
@@ -3993,33 +3993,33 @@ class Api:
                                 if flubs <= 2:
                                     continue
                                 use_tools = False
-                                s._push("sys", "⚠ El modelo falló 3 veces armando la llamada a herramienta — respondo sin herramientas este mensaje")
+                                s._push("sys", " El modelo falló 3 veces armando la llamada a herramienta — respondo sin herramientas este mensaje")
                                 continue
                             use_tools = False
                             log(f"tools deshabilitadas tras 400: {err[:200]}")
-                            s._push("sys", "⚠ Este modelo no acepta herramientas — respondo sin ellas (no puede crear archivos)")
+                            s._push("sys", " Este modelo no acepta herramientas — respondo sin ellas (no puede crear archivos)")
                             continue
-                        # ── FAILOVER: modelo caído/agotado/dado de baja → siguiente ──
+                        # ── FAILOVER: modelo caído/agotado/dado de baja  siguiente ──
                         if (s._is_failover(err) or decom) and ci + 1 < len(chain):
                             prev = chain[ci][0]
                             ci += 1
                             nxt, nxt_model = chain[ci]
                             s.prov = s._mk_provider(nxt, nxt_model)
-                            s._push("sys", f"⚠ {prev} no disponible ({err[:50].strip()}…) "
-                                           f"→ cambiando automáticamente a {nxt} · {nxt_model or 'default'}")
-                            log(f"failover {prev} → {nxt}/{nxt_model}: {err[:150]}")
+                            s._push("sys", f" {prev} no disponible ({err[:50].strip()}…) "
+                                           f" cambiando automáticamente a {nxt} · {nxt_model or 'default'}")
+                            log(f"failover {prev}  {nxt}/{nxt_model}: {err[:150]}")
                             use_tools = True
                             flubs = 0
                             continue
-                        # sin más proveedores en la cadena → mensaje útil, no el stack crudo
+                        # sin más proveedores en la cadena  mensaje útil, no el stack crudo
                         if ("11434" in err or "10061" in err or "connection refused" in low
                                 or ("localhost" in low and "connection" in low)):
-                            return {"text": "❌ Ollama no está corriendo en localhost:11434. "
+                            return {"text": " Ollama no está corriendo en localhost:11434. "
                                             "Arrancalo (`ollama serve`, con un modelo instalado) "
-                                            "o elegí otro proveedor con API key en ⚙ (arriba a la "
+                                            "o elegí otro proveedor con API key en  (arriba a la "
                                             "izquierda).", "status": "Error"}
                         if "403" in err and ("subscription" in low or "tier" in low):
-                            return {"text": "❌ Ese modelo necesita un tier de suscripción más alto "
+                            return {"text": " Ese modelo necesita un tier de suscripción más alto "
                                             "(en DigitalOcean los PROPIETARIOS —Claude, GPT-4o/GPT-5, "
                                             "o-series— están gateados). Elegí en el selector uno "
                                             "ABIERTO, que sí anda en tu plan: deepseek-v4-pro, "
@@ -4029,15 +4029,15 @@ class Api:
                         if "429" in err or "rate limit" in low:
                             return {"text": "⏳ Límite de requests por minuto alcanzado (429) en "
                                             "todos los proveedores disponibles. Esperá ~1 minuto y "
-                                            "seguí, o cargá otra API key en ⚙ para repartir la carga. "
+                                            "seguí, o cargá otra API key en  para repartir la carga. "
                                             "Tip: en tareas grandes conviene un tier más alto o menos "
-                                            "verificaciones (⚙ → agente).",
+                                            "verificaciones (  agente).",
                                     "status": "Rate limit"}
                         raise
                     # el usuario detuvo (o el stream se cortó sin respuesta)
                     if s._cancel or r is None:
                         return {"streamed": bool(getattr(s, "_live", False)),
-                                "full": "", "text": "" if getattr(s, "_live", False) else "⏹ Detenido.",
+                                "full": "", "text": "" if getattr(s, "_live", False) else " Detenido.",
                                 "status": "Detenido"}
                     raw = r.raw or {}
                     msg_resp = raw.get("choices", [{}])[0].get("message", {})
@@ -4057,9 +4057,9 @@ class Api:
                                          "unterminated", "eol while scanning"))
                             if trunc and max_tok < 16384:
                                 max_tok = min(16384, max_tok * 2)
-                                s._push("sys", f"⚠ El archivo parece haberse cortado por el límite de tokens — subo a {max_tok} y pido que lo reescriba completo ({fixes}/2)…")
+                                s._push("sys", f" El archivo parece haberse cortado por el límite de tokens — subo a {max_tok} y pido que lo reescriba completo ({fixes}/2)…")
                             else:
-                                s._push("sys", f"⚠ Verifiqué el código y tiene errores de sintaxis — pidiendo corrección ({fixes}/2)…")
+                                s._push("sys", f" Verifiqué el código y tiene errores de sintaxis — pidiendo corrección ({fixes}/2)…")
                             ms.append({"role": "assistant", "content": text})
                             ms.append({"role": "user", "content":
                                        "Verifiqué los archivos que escribiste y tienen errores de sintaxis:\n"
@@ -4070,16 +4070,16 @@ class Api:
                             text = ""
                             continue
                         if errs:
-                            s._push("sys", f"⚠ Quedaron errores de sintaxis sin resolver:\n{errs}")
+                            s._push("sys", f" Quedaron errores de sintaxis sin resolver:\n{errs}")
                             s._reflect_and_learn(msg, f"dejaste código con errores de sintaxis: {errs[:200]}")
                             break
-                        # sintaxis OK → verificación de EJECUCIÓN: correr el punto de
+                        # sintaxis OK  verificación de EJECUCIÓN: correr el punto de
                         # entrada y, si revienta en runtime, pedir corrección con el
                         # traceback (no alcanza con que compile: tiene que ANDAR)
                         rt = s._check_runtime()
                         if rt and use_tools and rt_fixes < 2:
                             rt_fixes += 1
-                            s._push("sys", f"⚠ Compila pero falla al ejecutarse — pidiendo corrección ({rt_fixes}/2)…")
+                            s._push("sys", f" Compila pero falla al ejecutarse — pidiendo corrección ({rt_fixes}/2)…")
                             ms.append({"role": "assistant", "content": text})
                             ms.append({"role": "user", "content":
                                        "Verifiqué ejecutando el código y falla en tiempo de ejecución:\n"
@@ -4089,7 +4089,7 @@ class Api:
                             text = ""
                             continue
                         if rt:
-                            s._push("sys", f"⚠ Quedó un error de ejecución sin resolver:\n{rt}")
+                            s._push("sys", f" Quedó un error de ejecución sin resolver:\n{rt}")
                             s._reflect_and_learn(msg, f"dejaste código que compila pero falla al correr: {rt[:200]}")
                             break
                         # VECTORES: si escribió un .svg, que el modelo lo VEA (render +
@@ -4097,7 +4097,7 @@ class Api:
                         dz = s._check_design_written(msg)
                         if dz and use_tools and design_fixes < 3:
                             design_fixes += 1
-                            s._push("sys", f"👁 Revisé el diseño y hay cosas para mejorar — pidiendo ajuste ({design_fixes}/3)…")
+                            s._push("sys", f" Revisé el diseño y hay cosas para mejorar — pidiendo ajuste ({design_fixes}/3)…")
                             ms.append({"role": "assistant", "content": text})
                             ms.append({"role": "user", "content":
                                        "Rendericé el SVG y lo revisé visualmente. Observaciones:\n" + dz +
@@ -4112,7 +4112,7 @@ class Api:
                     # Los modelos "thinking" de DeepSeek EXIGEN que se les devuelva su
                     # reasoning_content junto al mensaje con tool_calls, o responden
                     # 400 "The reasoning_content in the thinking mode must be passed
-                    # back". El transport ya lo captura en raw → lo reinyectamos.
+                    # back". El transport ya lo captura en raw  lo reinyectamos.
                     if msg_resp.get("reasoning_content"):
                         asst["reasoning_content"] = msg_resp["reasoning_content"]
                     ms.append(asst)
@@ -4125,20 +4125,20 @@ class Api:
                         except (json.JSONDecodeError, TypeError):
                             args = {}
                         # bucle sin avance: la MISMA llamada (herramienta + argumentos)
-                        # ya se ejecutó antes en este turno → no repetirla, avisar.
+                        # ya se ejecutó antes en este turno  no repetirla, avisar.
                         # exec_cmd/run_code quedan afuera: repetirlos SI puede tener
                         # sentido (ej. correr los tests de nuevo tras un fix).
                         sig = (fn, json.dumps(args, sort_keys=True, ensure_ascii=False))
                         dedupe = fn not in ("exec_cmd", "run_code")
                         seen_calls[sig] = seen_calls.get(sig, 0) + 1
                         if dedupe and seen_calls[sig] > 1:
-                            res = ("⚠ Ya ejecutaste exactamente esta misma llamada antes en "
+                            res = (" Ya ejecutaste exactamente esta misma llamada antes en "
                                    "este turno — el resultado va a ser igual. No la repitas: "
                                    "cambia de enfoque o responde con lo que ya tenes.")
                         else:
                             res = s._exec_tool(fn, args, code, lang)
                             ran_any = True
-                        # avance REAL = la tool no devolvió error. Un ❌ (típico:
+                        # avance REAL = la tool no devolvió error. Un  (típico:
                         # edit_file que no encuentra el fragmento) NO es progreso —
                         # antes se contaba como tal y por eso los bucles no se
                         # detectaban y se quemaban los 40×25 pasos en silencio.
@@ -4174,13 +4174,13 @@ class Api:
                     # llamada sea distinta (el dedup no lo caza). Cortar y avisar.
                     if fail_streak >= 5:
                         stalled_out = True
-                        s._push("sys", "⏹ El agente encadenó varios errores de herramienta sin avanzar — corté el turno.")
+                        s._push("sys", " El agente encadenó varios errores de herramienta sin avanzar — corté el turno.")
                         break
-                    # ninguna tool se ejecutó (todas repetidas/vacías) → tramo perdido
+                    # ninguna tool se ejecutó (todas repetidas/vacías)  tramo perdido
                     stall = 0 if ran_any else stall + 1
                     if stall >= 2:
                         stalled_out = True
-                        s._push("sys", "⏹ El agente quedó repitiendo la misma acción sin avanzar — corté el turno.")
+                        s._push("sys", " El agente quedó repitiendo la misma acción sin avanzar — corté el turno.")
                         break
                 else:
                     # se agotaron los pasos de herramientas sin llegar a una respuesta final
@@ -4204,7 +4204,7 @@ class Api:
                                "lo que ya hiciste ni resumir. Si ya terminaste, decilo en una linea."})
                     continue
                 break
-            # código propuesto → tarjeta Aceptar/Rechazar en el frontend
+            # código propuesto  tarjeta Aceptar/Rechazar en el frontend
             for mr in reversed(ms):
                 if mr.get("role") == "assistant" and mr.get("content"):
                     bs = re.findall(r"```(?:\w+)?\n(.+?)```", mr["content"], re.DOTALL)
@@ -4218,7 +4218,7 @@ class Api:
             done = list(dict.fromkeys(s._written))
             done_str = ", ".join(Path(p).name for p in done)
             if not text and stalled_out:
-                text = ("⏹ Corté el turno: el agente se trabó (repitió acciones o encadenó "
+                text = (" Corté el turno: el agente se trabó (repitió acciones o encadenó "
                         "errores de herramienta sin avanzar)." +
                         (f" Alcancé a tocar {len(done)} archivo(s): {done_str}."
                          if done else "") +
@@ -4239,17 +4239,17 @@ class Api:
                             f" y llegué al tope de {continuations} tramos automáticos "
                             "(seguridad para no quemar tokens). La conversación recuerda el "
                             "contexto: escribí «segui» y continúo desde donde quedé. Si es una "
-                            "tarea siempre grande, subí «tramos automáticos» en ⚙.")
+                            "tarea siempre grande, subí «tramos automáticos» en .")
             if not text:
-                # el modelo no cerró con texto pero SÍ hubo trabajo real → resumir yo
+                # el modelo no cerró con texto pero SÍ hubo trabajo real  resumir yo
                 # (antes esto caía en "el modelo no devolvió respuesta" y parecía que
                 # no había pasado nada, cuando en realidad había editado archivos)
                 if done:
-                    text = (f"✅ Listo. Toqué {len(done)} archivo(s): {done_str}. "
+                    text = (f" Listo. Toqué {len(done)} archivo(s): {done_str}. "
                             "(El modelo no dejó un resumen escrito, así que te lo resumo yo — "
                             "revisá los cambios y decime si querés ajustar algo.)")
                 elif tool_runs:
-                    text = ("✅ Terminé de ejecutar las acciones del pedido. (El modelo no dejó "
+                    text = (" Terminé de ejecutar las acciones del pedido. (El modelo no dejó "
                             "un resumen escrito.) Decime si querés que profundice en algo.")
                 else:
                     try:
@@ -4258,12 +4258,12 @@ class Api:
                     except Exception:
                         rc = ""
                     text = rc.strip()[:1500] or \
-                        "⚠ El modelo no devolvió respuesta (se quedó razonando o cortó). " \
+                        " El modelo no devolvió respuesta (se quedó razonando o cortó). " \
                         "Probá de nuevo o cambiá de modelo."
             if r:
                 cached = getattr(r, "cached_tokens", 0) or 0
-                cache_txt = f" · 💾 {cached}t cache" if cached else ""
-                status = f"✅ {r.tokens_used}t{cache_txt} · ${r.cost:.4f} · {r.model}"
+                cache_txt = f" ·  {cached}t cache" if cached else ""
+                status = f" {r.tokens_used}t{cache_txt} · ${r.cost:.4f} · {r.model}"
             else:
                 status = "Listo"
             # guardar el turno en memoria (solo texto limpio, robusto entre modelos).
@@ -4293,7 +4293,7 @@ class Api:
         except Exception as e:
             import traceback
             log("send_chat fallo:\n" + traceback.format_exc())
-            return {"text": f"❌ {e}", "status": "Error"}
+            return {"text": f" {e}", "status": "Error"}
 
     def undo_turn(s):
         """Revierte todos los archivos que el agente escribió en el último turno."""
@@ -4340,7 +4340,7 @@ class Api:
         def run_one(pn):
             res = {"prov": pn, "model": provs[pn].get("model", "?"), "lat_ms": 0,
                    "tokens": 0, "costo": 0.0, "sintaxis": False, "corre": False,
-                   "salida_ok": None, "detalle": "", "icon": "❌"}
+                   "salida_ok": None, "detalle": "", "icon": ""}
             try:
                 kw = {"model": provs[pn].get("model", "") or None}
                 if provs[pn].get("base_url"):
@@ -4371,9 +4371,9 @@ class Api:
                         if not res["salida_ok"]:
                             res["detalle"] = "salida distinta: " + \
                                 out.get("stdout", "").strip()[:120]
-                res["icon"] = ("✅" if funciona(res) else
+                res["icon"] = ("" if funciona(res) else
                                "🟡" if res["corre"] else
-                               "⚠" if res["sintaxis"] else "❌")
+                               "" if res["sintaxis"] else "")
                 results.append(res)
                 s._push("sys", f"{res['icon']} {pn} · {res['model']}: "
                                f"{res['lat_ms']}ms · {res['tokens']}t · ${res['costo']:.4f}"
@@ -4381,7 +4381,7 @@ class Api:
             except Exception as e:
                 res["detalle"] = str(e)[:160]
                 results.append(res)
-                s._push("sys", f"❌ {pn}: {res['detalle']}")
+                s._push("sys", f" {pn}: {res['detalle']}")
 
         def worker():
             s._push("sys", f"⚖ Desafío de código para {len(models)} modelos:\n«{task[:140]}»")
@@ -4402,7 +4402,7 @@ class Api:
             fp.write_text(json.dumps({"tarea": task, "esperado": expected,
                                       "resultados": results, "ts": time.time()},
                                      indent=2, ensure_ascii=False), encoding="utf-8")
-            s._push("sys", f"💾 Guardado: {fp.name}")
+            s._push("sys", f" Guardado: {fp.name}")
         threading.Thread(target=worker, daemon=True).start()
 
     # ── historial de sesiones ─────────────────────────────
@@ -4628,7 +4628,7 @@ class Api:
                 fp = Path(s.ws if s.ws else ".") / fn
                 fp.parent.mkdir(parents=True, exist_ok=True)
                 fp.write_text(ct, encoding="utf-8")
-                return msgs(f"✅ {fp}")
+                return msgs(f" {fp}")
             if cmd == "exec" and arg:
                 r = s._run_shell(arg, timeout=30, cwd=s.ws)
                 return msgs(f"$ {arg}\n{(r.stdout + r.stderr)[:2000]}")
@@ -4638,12 +4638,12 @@ class Api:
                         s._lessons_path().unlink()
                     except OSError:
                         pass
-                    return msgs("🧠 Lecciones borradas.")
+                    return msgs(" Lecciones borradas.")
                 ls = s._load_lessons()
                 if not ls:
-                    return msgs("🧠 Todavía no aprendí lecciones — aparecen cuando algo falla. "
+                    return msgs(" Todavía no aprendí lecciones — aparecen cuando algo falla. "
                                 "(/lecciones borrar para reiniciar)")
-                return msgs("🧠 Lecciones aprendidas (se le re-inyectan al agente):\n"
+                return msgs(" Lecciones aprendidas (se le re-inyectan al agente):\n"
                             + "\n".join(f"• {x['txt']}" for x in ls[-20:]))
             if cmd in ("habilidades", "skills"):
                 arg_s = arg.strip()
@@ -4652,12 +4652,12 @@ class Api:
                         s._skills_path().unlink()
                     except OSError:
                         pass
-                    return msgs("🧠 Habilidades borradas.")
+                    return msgs(" Habilidades borradas.")
                 sk = s._load_skills()
                 if not sk:
-                    return msgs("🧠 Todavía no aprendí habilidades — aparecen cuando resolvés "
+                    return msgs(" Todavía no aprendí habilidades — aparecen cuando resolvés "
                                 "bien una tarea reutilizable. (/habilidades borrar para reiniciar)")
-                return msgs("🧠 Habilidades aprendidas (se aplican cuando el pedido se parece):\n"
+                return msgs(" Habilidades aprendidas (se aplican cuando el pedido se parece):\n"
                             + "\n".join(f"• {x['name']} — {x.get('when','')}" for x in sk[-25:]))
             if cmd in ("memoria", "memory"):
                 if not s.ws:
@@ -4670,15 +4670,15 @@ class Api:
                             f.unlink()
                     except OSError:
                         pass
-                    return msgs("📌 Memoria del proyecto borrada.")
-                if arg_m:                       # /memoria <texto> → agregar a mano
+                    return msgs(" Memoria del proyecto borrada.")
+                if arg_m:                       # /memoria <texto>  agregar a mano
                     return msgs(s._remember(arg_m))
                 pm = s._load_project_memory()
                 if not pm:
-                    return msgs("📌 Este proyecto todavía no tiene memoria. Se va llenando "
+                    return msgs(" Este proyecto todavía no tiene memoria. Se va llenando "
                                 "sola cuando el agente descubre cosas durables, o agregá con "
                                 "«/memoria <hecho>». Vive en .low/memoria.md")
-                return msgs("📌 Memoria de este proyecto (se le reinyecta al agente):\n" + pm[:2500])
+                return msgs(" Memoria de este proyecto (se le reinyecta al agente):\n" + pm[:2500])
             if cmd == "git" and arg:
                 return msgs(s._exec_tool("git", {"args": arg}, "", "python"))
             if cmd == "commit":
@@ -4703,7 +4703,7 @@ class Api:
                 return msgs("📤\n" + (r.stdout + r.stderr)[:2000])
             if cmd == "browse" and arg:
                 webbrowser.open(arg)
-                return msgs(f"🌐 {arg}")
+                return msgs(f" {arg}")
             if cmd == "form" and arg:
                 parts = arg.split()
                 url, data = parts[0], " ".join(parts[1:])
@@ -4712,7 +4712,7 @@ class Api:
                 return msgs(f"📋 Form ({r.status_code})")
             if cmd == "scrape" and arg:
                 r = requests.get(arg, headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
-                return msgs(f"📄 {arg[:60]} ({len(r.text)}b)")
+                return msgs(f" {arg[:60]} ({len(r.text)}b)")
             if cmd == "preview":
                 serve_dir = s.ws or "."
 
@@ -4724,14 +4724,14 @@ class Api:
                             *a, directory=serve_dir, **k)
                     with socketserver.TCPServer(("", 0), handler) as h:
                         port = h.server_address[1]
-                        s._push("sys", f"🌐 http://localhost:{port}")
+                        s._push("sys", f" http://localhost:{port}")
                         webbrowser.open(f"http://localhost:{port}")
                         h.serve_forever()
                 threading.Thread(target=serve, daemon=True).start()
-                return msgs("🌐 Sirviendo el workspace…")
+                return msgs(" Sirviendo el workspace…")
             return msgs(f"Comando desconocido: /{cmd}")
         except Exception as e:
-            return msgs(f"❌ {e}")
+            return msgs(f" {e}")
 
 
 def main():

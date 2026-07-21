@@ -3,7 +3,7 @@
 SOLO media: no es un modelo de chat (marcado media-only en main.py, no entra en
 la cadena de failover ni en el selector de modelo). La generación real la hacen
 main.py `_fal_video` / `_fal_image` (queue API de fal). Esta clase existe para que
-el proveedor esté REGISTRADO —`get_provider('fal')` no rompe— y aparezca en ⚙.
+el proveedor esté REGISTRADO —`get_provider('fal')` no rompe— y aparezca en .
 
 Key: https://fal.ai/dashboard/keys · modelos: https://fal.ai/models
 """
@@ -30,7 +30,7 @@ class FALProvider(AIProvider):
     def chat(self, messages, system_prompt="", temperature=0.7,
              max_tokens=4096, tools=None) -> AIResponse:
         return AIResponse(
-            content="⚠ fal.ai es un gateway de IMAGEN/VIDEO, no de chat. Pedí una "
+            content=" fal.ai es un gateway de IMAGEN/VIDEO, no de chat. Pedí una "
                     "imagen o un video y el agente lo usa solo; no lo elijas como "
                     "modelo del agente.",
             model=self.model, finish_reason="stop")

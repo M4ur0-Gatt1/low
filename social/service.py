@@ -1,14 +1,14 @@
 """Servicio de redes sociales: orquestador del módulo social.
 
 Expone:
-- state() → plataformas disponibles, cuentas conectadas, brand
-- connect(platform, client_id, client_secret) → OAuth loopback
-- disconnect(platform) → borra tokens
-- save_brand(profile_json) → guarda BrandProfile
-- set_brand_guide(text) → guarda guía extensa (RAG)
-- sync_templates() → sincroniza templates de Canva
-- process_item(qid, llm_fn, notify_fn) → valida → render → publica
-- start_scheduler(llm_fn, notify_fn) → thread que procesa cola cada 60s
+- state()  plataformas disponibles, cuentas conectadas, brand
+- connect(platform, client_id, client_secret)  OAuth loopback
+- disconnect(platform)  borra tokens
+- save_brand(profile_json)  guarda BrandProfile
+- set_brand_guide(text)  guarda guía extensa (RAG)
+- sync_templates()  sincroniza templates de Canva
+- process_item(qid, llm_fn, notify_fn)  valida  render  publica
+- start_scheduler(llm_fn, notify_fn)  thread que procesa cola cada 60s
 """
 import json, time, threading, requests
 from datetime import datetime, timezone
@@ -183,7 +183,7 @@ class SocialService:
             "SELECT auth_blob FROM social_accounts WHERE platform='canva' AND status='active'")
         row = cur.fetchone()
         if not row:
-            return [{"error": "Canva no conectado — configuralo en ⚙"}]
+            return [{"error": "Canva no conectado — configuralo en "}]
 
         tokens = json.loads(decrypt(row["auth_blob"]))
         from .canva_client import CanvaClient
@@ -230,7 +230,7 @@ class SocialService:
             (network,)).fetchone()
         if not acct:
             raise ValueError(f"{network} no está conectada — conectala en "
-                             "⚙ → Redes Sociales")
+                             "  Redes Sociales")
 
         tpl_row_id = None
         if template_id:
@@ -265,7 +265,7 @@ class SocialService:
             self.conn.commit()
 
     def process_item(self, qid: int, llm_fn, notify_fn) -> dict:
-        """Procesa un item de la cola: valida → renderiza → publica."""
+        """Procesa un item de la cola: valida  renderiza  publica."""
         cur = self.conn.execute("SELECT * FROM content_queue WHERE id=?", (qid,))
         item = cur.fetchone()
         if not item:
@@ -302,7 +302,7 @@ class SocialService:
                     "UPDATE content_queue SET status='failed', error=? WHERE id=?",
                     (json.dumps(result.get("violations", [])), qid))
                 self.conn.commit()
-                notify_fn(f"❌ Contenido #{qid} rechazado: "
+                notify_fn(f" Contenido #{qid} rechazado: "
                           + json.dumps(result.get("violations", [])))
                 return {"ok": False, "violations": result["violations"]}
 
@@ -336,7 +336,7 @@ class SocialService:
                         (asset_url, qid))
                     self.conn.commit()
                 else:
-                    notify_fn("⚠ Canva no conectado — se publica sin imagen")
+                    notify_fn(" Canva no conectado — se publica sin imagen")
 
             self.conn.execute(
                 "UPDATE content_queue SET status=COALESCE(status,'ready') WHERE id=?", (qid,))
@@ -354,7 +354,7 @@ class SocialService:
                 "UPDATE content_queue SET status='failed', error=? WHERE id=?",
                 (str(e)[:500], qid))
             self.conn.commit()
-            notify_fn(f"❌ Error procesando #{qid}: {e}")
+            notify_fn(f" Error procesando #{qid}: {e}")
             return {"error": str(e)[:300]}
 
     def _publish(self, qid: int, notify_fn) -> dict:
@@ -398,7 +398,7 @@ class SocialService:
                 "published_at=? WHERE id=?",
                 (str(post_id), datetime.now(timezone.utc).isoformat(), qid))
             self.conn.commit()
-            notify_fn(f"✅ Publicado en {acct['platform']}: {post_id}")
+            notify_fn(f" Publicado en {acct['platform']}: {post_id}")
             return {"ok": True, "post_id": str(post_id)}
         except requests.HTTPError as e:
             status_code = e.response.status_code if e.response else 0
@@ -417,7 +417,7 @@ class SocialService:
 
     def tick(self, llm_fn, notify_fn):
         """Procesa items vencidos en la cola (borradores incluidos: el flujo
-        completo draft → validar → render → publicar corre acá)."""
+        completo draft  validar  render  publicar corre acá)."""
         now = datetime.now(timezone.utc).isoformat()
         cur = self.conn.execute(
             "SELECT id, status FROM content_queue "
@@ -432,7 +432,7 @@ class SocialService:
                 else:
                     self._publish(row["id"], notify_fn)
             except Exception as e:
-                notify_fn(f"❌ tick #{row['id']}: {e}")
+                notify_fn(f" tick #{row['id']}: {e}")
 
 
 # singleton thread-safe
