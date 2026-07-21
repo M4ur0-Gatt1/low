@@ -720,6 +720,11 @@ body.light .dz3d-rulers .rbg { fill: rgba(245,244,241,.78); }
   font: 600 11px 'JetBrains Mono', monospace; color: var(--txt);
   max-width: 130px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.dz3d-orbadge {
+  font: 600 10px 'JetBrains Mono', monospace; color: var(--cyan);
+  border: 1px solid var(--cyan); border-radius: 99px; padding: 1px 8px; white-space: nowrap;
+}
+.dz3d-orbadge:empty { display: none; }
 /* botones de la barra 3D: nuevo plano y presets de orientación */
 .dz3d-add, .dz3d-or {
   background: transparent; border: 1px solid var(--line); border-radius: 7px;

@@ -6679,6 +6679,7 @@ function dz3dBuild() {
     </div>
     <div class="dz3d-zbar" id="dz3dZbar" hidden>
       <span class="dz3d-zname" id="dz3dZname"></span>
+      <span class="dz3d-orbadge" id="dz3dOrBadge" title="Eje/orientación del plano activo"></span>
       <span class="dz3d-axlbl z">Z</span>
       <input type="range" id="dz3dZr" min="-60" max="400" step="1" value="0"
         title="Profundidad del plano activo: negativo = más cerca de la cámara, 0 = plano de acción, positivo = fondo">
@@ -6765,8 +6766,18 @@ function dz3dBuild() {
   stage.querySelectorAll(".dz3d-or").forEach(b => b.onclick = () => {
     const i = DZ.d3.act; if (i < 0) return;
     const OR = { front: [0, 0], floor: [90, 0], left: [0, 90], right: [0, -90] };
-    if (b.dataset.or === "face") dz3dSetRot(i, -DZ.d3.rx, -DZ.d3.ry, true);   // billboard
-    else { const [rx, ry] = OR[b.dataset.or]; dz3dSetRot(i, rx, ry, true); }
+    // vista que muestra ese plano DE FRENTE (para dibujar cómodo, no de canto)
+    const VIEW = { front: [0, 0], floor: [-89.9, 0], left: [0, -90], right: [0, 90] };
+    if (b.dataset.or === "face") {
+      dz3dSetRot(i, -DZ.d3.rx, -DZ.d3.ry, true);           // billboard: ya mira a cámara
+    } else {
+      const [rx, ry] = OR[b.dataset.or]; dz3dSetRot(i, rx, ry, true);
+      const [vrx, vry] = VIEW[b.dataset.or];               // orbitar para verlo de frente
+      DZ.d3.rx = vrx; DZ.d3.ry = vry; dz3dApply();
+      stage.querySelectorAll(".dz3d-gizmo [data-v]").forEach(x => x.classList.remove("active"));
+    }
+    dz3dAxisBadge();
+    dzSetStatus("Plano en «" + dz3dOrientName(DZ.d3.els[i]) + "» — dibujá de frente; orbitá con arrastre para ver la escena");
   });
 
   // ── barra Z (slider) + manejador Z arrastrable ──
@@ -6842,6 +6853,21 @@ function dz3dRot(el) {
   const r = (el.getAttribute("data-rot3d") || "0,0").split(",").map(Number);
   return [r[0] || 0, r[1] || 0];
 }
+/* nombre legible de la orientación del plano (para el indicador de eje) */
+function dz3dOrientName(el) {
+  const [rx, ry] = dz3dRot(el);
+  const near = (a, b) => Math.abs(((a - b) % 360 + 540) % 360 - 180) < 20;
+  if (near(rx, 0) && near(ry, 0)) return "Frente (Z)";
+  if (near(rx, 90) || near(rx, -90)) return "Piso (Y)";
+  if (near(ry, 90) || near(ry, -90)) return "Pared (X)";
+  return `libre ${Math.round(rx)}°/${Math.round(ry)}°`;
+}
+/* actualiza el indicador de eje/orientación del plano activo en la barra Z */
+function dz3dAxisBadge() {
+  const b = $("#dz3dOrBadge");
+  if (!b || !DZ.d3 || DZ.d3.act < 0) { if (b) b.textContent = ""; return; }
+  b.textContent = dz3dOrientName(DZ.d3.els[DZ.d3.act]);
+}
 function dz3dCardZ(card, el) {
   const z = parseFloat(el.getAttribute("data-z")) || 0;
   const [rx, ry] = dz3dRot(el);
@@ -6909,6 +6935,7 @@ function dz3dActivate(i) {
   if (zh) zh.hidden = false;
   if (rh) rh.hidden = false;
   dz3dZHandlePlace();
+  dz3dAxisBadge();
 }
 
 /* mueve el plano activo en el eje Z (slider, manejador y teclado comparten esto) */
