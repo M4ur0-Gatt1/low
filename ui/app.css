@@ -306,7 +306,7 @@ header {
 .splitter { flex: none; background: transparent; z-index: 6; transition: background .12s; }
 .splitter.col { width: 5px; cursor: col-resize; }
 .splitter.row { height: 5px; cursor: row-resize; }
-.splitter:hover, .splitter.dragging { background: var(--green); }
+.splitter:hover, .splitter.dragging { background: var(--cyan); }
 .splitter[hidden] { display: none; }
 
 /* barra viva de "trabajando": latido durante todo el turno del agente */
@@ -684,6 +684,13 @@ body.light .dz3d-rulers .rbg { fill: rgba(245,244,241,.78); }
    background:#fff) — eso hacía que cada plano/línea se viera como un rectángulo
    BLANCO opaco tapando todo en el 3D. Transparentes: solo se ve el dibujo. */
 .dz3d-card svg { display: block; cursor: crosshair; background: none !important; }
+/* al DIBUJAR, solo la superficie del plano ACTIVO recibe el trazo → el dibujo
+   cae en el plano que elegiste (piso/pared/el que sea), no en el que quedó
+   arriba (el papel blanco). Con la flecha de selección, todos son clickeables
+   para elegir plano. */
+#dz3dStage.tool-draw .dz3d-card { pointer-events: none; }
+#dz3dStage.tool-draw .dz3d-card.act { pointer-events: auto; z-index: 2; }
+#dz3dStage.tool-draw .dz3d-card:not(.act) [data-dz3d="surf"] { pointer-events: none; }
 .dz3d-tag {
   position: absolute; left: 0; top: -26px; padding: 2px 9px; white-space: nowrap;
   background: var(--panel); border: 1px solid var(--line); border-radius: 99px;

@@ -3263,6 +3263,7 @@ function dzSetTool(t) {
   // el gotero/balde/nodos trabajan SOBRE la selección o eligiendo elemento: no deseleccionar
   if (!["select", "direct", "nodes", "dropper", "bucket", "iron", "magnet"].includes(t)) dzDeselect();
   dzSbTool(); dzToolOptsRender();
+  dz3dApplyToolClass();         // 🔒 solo el plano activo recibe eventos en modo dibujo
 }
 /* los clics del lienzo hacen preventDefault (para dibujar/arrastrar), y eso
    BLOQUEA el cambio de foco: si venías de escribir en el chat del dock, el
@@ -3404,6 +3405,8 @@ function dzDrawDown(e) {
   if (DZ.spaceDown || e.button === 1 || tool === "hand") return;
   if (e.target.closest && e.target.closest("#dzCam")) return;
   if (tool === "select" || tool === "direct") return;
+  // ═══ 3D: si el clic es sobre un plano 3D, que lo maneje el handler 3D ═══
+  if (e.target.closest && e.target.closest("#dz3dStage")) return;
   const svg = $("#dzCanvas").querySelector("svg");
   if (!svg) return;
 
@@ -6646,6 +6649,14 @@ function dz3dKids(svg) {
     && !(n.classList && (n.classList.contains("dz-onion") || n.classList.contains("dz-penui"))));
 }
 
+// aplica clase al stage según la herramienta (solo en dibujo bloquea otros planos)
+function dz3dApplyToolClass() {
+  const stage = $("#dz3dStage");
+  if (!stage) return;
+  const drawing = DZ.tool === "pencil" || DZ.tool === "brush" || DZ.tool === "pen";
+  stage.classList.toggle("tool-draw", drawing);
+}
+
 function dz3dBuild() {
   const cv = $("#dzCanvas");
   const svg = cv.querySelector("svg");
@@ -6712,6 +6723,7 @@ function dz3dBuild() {
       <button class="dz3d-or" data-or="face" title="Girar el plano para que mire de frente a la cámara actual (billboard)">↺ cámara</button>
     </div>`;
   cv.appendChild(stage);
+  dz3dApplyToolClass();
 
   // ── planos: un svg por capa, con los defs (gradientes/filtros) clonados ──
   const world = $("#dz3dWorld");
@@ -6783,20 +6795,16 @@ function dz3dBuild() {
   // ── nuevo plano + presets de orientación (dibujar 2D en 3D tipo Feather) ──
   stage.querySelector(".dz3d-add").onclick = dz3dAddPlane;
   stage.querySelectorAll(".dz3d-or").forEach(b => b.onclick = () => {
-    const i = DZ.d3.act; if (i < 0) return;
-    const OR = { front: [0, 0], floor: [90, 0], left: [0, 90], right: [0, -90] };
-    // vista que muestra ese plano DE FRENTE (para dibujar cómodo, no de canto)
-    const VIEW = { front: [0, 0], floor: [-89.9, 0], left: [0, -90], right: [0, 90] };
+    // "face" (billboard) rota el plano ACTIVO para que mire a cámara
     if (b.dataset.or === "face") {
-      dz3dSetRot(i, -DZ.d3.rx, -DZ.d3.ry, true);           // billboard: ya mira a cámara
-    } else {
-      const [rx, ry] = OR[b.dataset.or]; dz3dSetRot(i, rx, ry, true);
-      const [vrx, vry] = VIEW[b.dataset.or];               // orbitar para verlo de frente
-      DZ.d3.rx = vrx; DZ.d3.ry = vry; dz3dApply();
-      stage.querySelectorAll(".dz3d-gizmo [data-v]").forEach(x => x.classList.remove("active"));
+      const i = DZ.d3.act; if (i < 0) return;
+      dz3dSetRot(i, -DZ.d3.rx, -DZ.d3.ry, true);
+      dz3dAxisBadge();
+      dzSetStatus("Plano orientado a la cámara — dibujá de frente");
+      return;
     }
-    dz3dAxisBadge();
-    dzSetStatus("Plano en «" + dz3dOrientName(DZ.d3.els[i]) + "» — dibujá de frente; orbitá con arrastre para ver la escena");
+    // Los demás presets (Piso/Pared/Frente) CREAN un nuevo plano con esa orientación
+    dz3dAddOrientedPlane(b.dataset.or);
   });
 
   // ── barra Z (slider) + manejador Z arrastrable ──
@@ -6927,6 +6935,31 @@ function dz3dAddPlane() {
   dzSetTool("pencil");
   dzSetStatus("Plano nuevo frente a la cámara — dibujá con lápiz/pincel. Orientalo con los presets o el manejador ⟲.");
 }
+/* Crea un NUEVO plano con orientación predefinida (front/floor/left/right)
+   y orbita la cámara para verlo de frente y dibujar cómodo. */
+function dz3dAddOrientedPlane(or) {
+  const svg = $("#dzCanvas").querySelector("svg");
+  if (!svg || !DZ.d3) return;
+  const OR = { front: [0, 0], floor: [90, 0], left: [0, 90], right: [0, -90] };
+  const VIEW = { front: [0, 0], floor: [-89.9, 0], left: [0, -90], right: [0, 90] };
+  const NAMES = { front: "Frente (Z)", floor: "Piso (Y)", left: "Pared izquierda (X)", right: "Pared derecha (X)" };
+  const [rx, ry] = OR[or] || [0, 0];
+  dzSnapshot();
+  const g = document.createElementNS(SVGNS, "g");
+  g.setAttribute("data-low", "plano");
+  if (rx || ry) g.setAttribute("data-rot3d", rx + "," + ry);
+  svg.appendChild(g);
+  DZ.dirty = true;
+  dz3dBuild();
+  dz3dActivate(DZ.d3.els.length - 1);
+  // orbitar para verlo de frente (dibujar cómodo)
+  const [vrx, vry] = VIEW[or] || [0, 0];
+  DZ.d3.rx = vrx; DZ.d3.ry = vry; dz3dApply();
+  const stage = $("#dz3dStage");
+  if (stage) stage.querySelectorAll(".dz3d-gizmo [data-v]").forEach(x => x.classList.remove("active"));
+  dzSetTool("pencil");
+  dzSetStatus("Plano nuevo: «" + (NAMES[or] || or) + "» — dibujá con lápiz. Orbitá con arrastre para ver la escena 3D.");
+}
 
 function dz3dApply() {
   const d3 = DZ.d3, w = $("#dz3dWorld");
@@ -6955,6 +6988,7 @@ function dz3dActivate(i) {
   if (rh) rh.hidden = false;
   dz3dZHandlePlace();
   dz3dAxisBadge();
+  dz3dApplyToolClass();         // 🔒 refresca pointer-events según tool y plano activo
 }
 
 /* mueve el plano activo en el eje Z (slider, manejador y teclado comparten esto) */
@@ -7062,7 +7096,7 @@ function dz3dWireCard(card, cs, el, i) {
     e.stopPropagation();
     const d3 = DZ.d3;
     const tool = DZ.tool || "select";
-    const drawing = (tool === "pencil" || tool === "brush");
+    const drawing = (tool === "pencil" || tool === "brush" || tool === "pen");
     // dibujar dibuja YA (activa + traza en el mismo gesto); mover/seleccionar
     // en un plano nuevo solo activa con el primer clic
     if (d3.act !== i) {
@@ -7073,10 +7107,12 @@ function dz3dWireCard(card, cs, el, i) {
     // ── dibujo 2D sobre el plano activo (lápiz / pincel), en cualquier ángulo ──
     if (drawing) {
       const pts = [[e.offsetX, e.offsetY, e.pressure || 0.5]];
+      const drawColor = DZ.drawColor || (tool === "pencil" ? "#F0450E" : tool === "pen" ? "#F0450E" : "#E93D82");
+      const drawW = DZ.drawW || (tool === "pen" ? 2 : 6);
       const live = document.createElementNS(SVGNS, "path");
       live.setAttribute("fill", "none");
-      live.setAttribute("stroke", $("#dzPStroke").value || "#1a1a1a");
-      live.setAttribute("stroke-width", +$("#dzDrawW").value || 6);
+      live.setAttribute("stroke", drawColor);
+      live.setAttribute("stroke-width", drawW);
       live.setAttribute("stroke-linecap", "round");
       live.setAttribute("opacity", "0.8");
       cs.appendChild(live);
@@ -7091,16 +7127,14 @@ function dz3dWireCard(card, cs, el, i) {
         if (pts.length < 3) return;
         dzSnapshot();
         const refined = dzRefineStroke(pts);
-        const color = $("#dzPStroke").value || "#1a1a1a";
-        const w = +$("#dzDrawW").value || 6;
         let stroke;
-        if (tool === "brush") stroke = dzBrushRibbon(refined, w, color);
+        if (tool === "brush") stroke = dzBrushRibbon(refined, drawW, drawColor);
         else {
           stroke = document.createElementNS(SVGNS, "path");
           stroke.setAttribute("d", dzSmoothPath(refined));
           stroke.setAttribute("fill", "none");
-          stroke.setAttribute("stroke", color);
-          stroke.setAttribute("stroke-width", w);
+          stroke.setAttribute("stroke", drawColor);
+          stroke.setAttribute("stroke-width", drawW);
           stroke.setAttribute("stroke-linecap", "round");
           stroke.setAttribute("stroke-linejoin", "round");
           stroke.setAttribute("data-low", "pencil");

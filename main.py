@@ -1755,6 +1755,12 @@ class Api:
         "xai": "grok-2",
         "digitalocean": "llama3.3-70b-instruct",
     }
+    # modelo de VISIÓN rápido por proveedor (multimodal: texto+imagen)
+    # usado por ask_model cuando se adjunta una imagen. Si no está listado,
+    # se usa el FAST_MODEL normal (que puede o no soportar imágenes).
+    VISION_MODEL = {
+        "digitalocean": "nemotron-nano-12b-v2-vl",
+    }
 
     def _chain(s):
         """Cadena de failover: (proveedor, modelo). El activo usa el modelo que
@@ -1806,10 +1812,13 @@ class Api:
             kw["base_url"] = d["base_url"]
         return get_provider(name, api_key=d.get("api_key", ""), **kw)
 
-    def _ask_model(s, provider, prompt, model=""):
+    def _ask_model(s, provider, prompt, model="", image=""):
         """Delegación: corre `prompt` en OTRO proveedor/modelo (one-shot, sin
-        herramientas) y devuelve su texto. Permite que el modelo activo derive
-        subtareas simples a uno barato/rápido y use el resultado."""
+        herramientas) y devuelve su texto. Opcionalmente incluye una imagen
+        (ruta en el workspace) para análisis multimodal (visión).
+        Permite que el modelo activo derive subtareas simples a uno barato/rápido
+        y use el resultado."""
+        import base64, os
         provider = (provider or "").strip().lower()
         prompt = prompt or ""
         if not provider or not prompt:
@@ -1824,13 +1833,33 @@ class Api:
         if not (d.get("api_key") or provider == "custom"):
             return f"❌ '{provider}' no tiene API key configurada (⚙ para cargarla)."
         model = (model or "").strip() or s.FAST_MODEL.get(provider) or d.get("model") or None
+        # Si hay imagen, usar modelo de visión si está configurado
+        if image and provider in s.VISION_MODEL:
+            model = s.VISION_MODEL[provider]
         try:
             p = s._mk_provider(provider, model)
-            r = p.chat([{"role": "user", "content": prompt}],
-                       temperature=0.3, max_tokens=2048)
+            # Construir mensaje: con o sin imagen
+            if image:
+                img_path = Path(s._base()) / image if not os.path.isabs(image) else Path(image)
+                if not img_path.exists():
+                    img_path = Path(image)
+                if img_path.exists():
+                    raw = img_path.read_bytes()
+                    b64 = base64.b64encode(raw).decode("utf-8")
+                    mime = "image/png" if img_path.suffix.lower() in (".png",) else "image/jpeg"
+                    content = [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}}
+                    ]
+                else:
+                    content = prompt  # imagen no encontrada, mandar solo texto
+            else:
+                content = prompt
+            messages = [{"role": "user", "content": content}]
+            r = p.chat(messages, temperature=0.3, max_tokens=2048)
             txt = re.sub(r"<think>.*?</think>", "", r.content or "", flags=re.DOTALL).strip()
             used = f"{provider}·{model or p.model}"
-            s._push("sys", f"🤝 Delegué a {used}")
+            s._push("sys", f"🤝 Delegué a {used}" + (" (con imagen)" if image else ""))
             return f"🤝 Respuesta de {used}:\n{txt[:4000]}" if txt else f"🤝 {used} no devolvió texto"
         except Exception as e:
             return (f"❌ ask_model {provider} falló: {str(e)[:200]}. "
@@ -2252,7 +2281,7 @@ class Api:
             {"type": "function", "function": {"name": "social_status", "description": "Muestra el estado del módulo de redes: cuentas conectadas, templates de Canva disponibles (con sus placeholders), identidad de marca cargada y la cola de publicaciones (pendientes/publicadas/fallidas). Usala antes de social_publish.", "parameters": {"type": "object", "properties": {}}}},
             {"type": "function", "function": {"name": "web_search", "description": "Busca en internet (DuckDuckGo, sin API key) y devuelve los primeros resultados con título, URL y resumen. Usalo para info actual, documentación, precios, noticias, etc. Después podés leer una URL con web_fetch.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}}},
             {"type": "function", "function": {"name": "web_fetch", "description": "Descarga una URL y devuelve su texto legible (quita HTML/scripts). Usalo para LEER una página, doc o API pública. Devuelve hasta ~8000 caracteres.", "parameters": {"type": "object", "properties": {"url": {"type": "string"}}, "required": ["url"]}}},
-            {"type": "function", "function": {"name": "ask_model", "description": "Delega una SUBTAREA a OTRO modelo para AHORRAR recursos: mandá lo simple/mecánico a uno barato o rápido y reservá el modelo actual (caro) para lo complejo. Devuelve la respuesta de ese modelo como texto para que la uses. 'provider' = uno de los configurados con key (ej. groq, digitalocean, siliconflow, deepseek, glm, qwen, nvidia, custom). 'model' opcional (default: el rápido del proveedor). Ideal para: resumir, traducir, reformatear, generar texto trivial, clasificar, listar ideas, boilerplate. NO delegues tareas que necesiten tus herramientas (archivos, git, imagenes). Podés hacer varias ask_model en paralelo mental para comparar respuestas.", "parameters": {"type": "object", "properties": {"provider": {"type": "string", "description": "proveedor destino (con key configurada)"}, "prompt": {"type": "string", "description": "la subtarea, autocontenida (incluí todo el contexto que el otro modelo necesita)"}, "model": {"type": "string", "description": "modelo especifico del proveedor (opcional)"}}, "required": ["provider", "prompt"]}}},
+            {"type": "function", "function": {"name": "ask_model", "description": "Delega una SUBTAREA a OTRO modelo para AHORRAR recursos: mandá lo simple/mecánico a uno barato o rápido y reservá el modelo actual (caro) para lo complejo. Devuelve la respuesta de ese modelo como texto para que la uses. 'provider' = uno de los configurados con key (ej. groq, digitalocean, siliconflow, deepseek, glm, qwen, nvidia, custom). 'model' opcional (default: el rápido del proveedor). 'image' (opcional) = ruta a una imagen en el workspace para análisis multimodal (el modelo debe soportar visión). Ideal para: resumir, traducir, reformatear, generar texto trivial, clasificar, listar ideas, boilerplate, y analizar imágenes. NO delegues tareas que necesiten tus otras herramientas (archivos, git, imágenes). Podés hacer varias ask_model en paralelo mental para comparar respuestas.", "parameters": {"type": "object", "properties": {"provider": {"type": "string", "description": "proveedor destino (con key configurada)"}, "prompt": {"type": "string", "description": "la subtarea, autocontenida (incluí todo el contexto que el otro modelo necesita)"}, "model": {"type": "string", "description": "modelo especifico del proveedor (opcional)"}, "image": {"type": "string", "description": "ruta a imagen (png/jpg) en el workspace para análisis multimodal (opcional)"}}, "required": ["provider", "prompt"]}}},
             {"type": "function", "function": {"name": "vectorize", "description": "Convierte una imagen raster del workspace (PNG/JPG) en un SVG VECTORIAL EDITABLE (la 'calca'). Usalo para NO escribir coordenadas SVG a mano (eso sale tosco): parti de una foto, boceto o imagen generada y obtene vectores limpios y editables. 'detail': low|medium|high (mas detalle = mas trazos). Guarda el .svg en el workspace y lo abre en el editor de vectores.", "parameters": {"type": "object", "properties": {"image": {"type": "string", "description": "ruta a la imagen PNG/JPG en el workspace"}, "out": {"type": "string", "description": "ruta .svg destino (opcional)"}, "detail": {"type": "string"}, "mode": {"type": "string", "description": "color (formas por color, default) | lineas (calca SOLO el trazo/tinta — ideal para line-art y bocetos) | contorno (trazos LARGOS y unificados sin puntitos — el mejor para ANIMACION, limpia los fragmentos de vector)"}, "remove_bg": {"type": "boolean", "description": "true: quita el fondo detectado por las esquinas antes de trazar (como la varita de Photoshop)"}, "bg_tol": {"type": "integer", "description": "tolerancia del fondo 4-96 (default 32)"}}, "required": ["image"]}}},
             {"type": "function", "function": {"name": "illustrate", "description": "LA MEJOR forma de crear una ILUSTRACION sofisticada como VECTOR editable: genera un raster de alta calidad con IA (diffusion) desde tu descripcion y lo VECTORIZA a SVG. Evita el SVG tosco escrito a mano — usalo en vez de dibujar paths cuando quieras algo pulido (personajes, escenas, logos con detalle). 'prompt' detallado (estilo, colores, composicion, fondo). 'detail': low|medium|high. Guarda y abre el .svg editable en el editor ✒.", "parameters": {"type": "object", "properties": {"prompt": {"type": "string"}, "out": {"type": "string", "description": "ruta .svg destino (opcional)"}, "detail": {"type": "string"}, "size": {"type": "string", "description": "ej 1024x1024"}}, "required": ["prompt"]}}},
             {"type": "function", "function": {"name": "anim", "description": "Estudio de ANIMACION 2D profesional (motor propio de LOW: timeline, rigging con huesos/IK, compositor de nodos, export MP4/GIF/Lottie). Ideal para ANIMAR los SVG que diseñás. Acciones (campo 'action') con sus 'params': 'new' {name,width,height,fps,duration} crea un proyecto en el workspace; 'add_actor' {layer,name,svg_path (ruta a un .svg del workspace) o svg (inline),x,y}; 'keyframe' {actor,frame,x,y,rotation,scale_x,scale_y,opacity} pone un cuadro clave; 'walk_cycle' {actor,start,duration} ciclo de caminata automatico; 'render' {output,format(mp4/gif/png),preset(hd/web/4k/gif)} exporta el video; 'storyboard' {script} arma un storyboard desde un guion. Flujo tipico: diseñá el personaje (generate_image/save_character), guardalo como SVG, luego anim new -> add_actor -> keyframe/walk_cycle -> render.", "parameters": {"type": "object", "properties": {"action": {"type": "string", "description": "new | add_actor | keyframe | walk_cycle | render | storyboard"}, "params": {"type": "object", "description": "campos segun la accion (ver descripcion)"}}, "required": ["action"]}}},
@@ -2702,7 +2731,8 @@ class Api:
             if name == "ask_model":
                 return s._ask_model(args.get("provider") or args.get("name") or "",
                                     args.get("prompt") or args.get("task") or "",
-                                    args.get("model") or "")
+                                    args.get("model") or "",
+                                    args.get("image") or "")
             if name == "anim":
                 return s._anim(args.get("action") or "", args.get("params") or {})
             if name == "vectorize":
