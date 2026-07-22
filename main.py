@@ -4172,13 +4172,13 @@ class Api:
                     # backstop de racha de fallos: si el agente encadena muchos
                     # errores de tool sin ningún éxito, está trabado aunque cada
                     # llamada sea distinta (el dedup no lo caza). Cortar y avisar.
-                    if fail_streak >= 5:
+                    if fail_streak >= 10:
                         stalled_out = True
                         s._push("sys", " El agente encadenó varios errores de herramienta sin avanzar — corté el turno.")
                         break
                     # ninguna tool se ejecutó (todas repetidas/vacías)  tramo perdido
                     stall = 0 if ran_any else stall + 1
-                    if stall >= 2:
+                    if stall >= 4:
                         stalled_out = True
                         s._push("sys", " El agente quedó repitiendo la misma acción sin avanzar — corté el turno.")
                         break
@@ -4193,9 +4193,9 @@ class Api:
                 else:
                     no_progress += 1
                 # Seguimos solos mientras el agente PROGRESE: solo paramos si se traba
-                # (2 tramos sin ningún avance) o si tocamos el techo de seguridad
+                # (4 tramos sin ningún avance) o si tocamos el techo de seguridad
                 # configurable (evita quemar tokens en un bucle infinito).
-                if (hit_cap and not stalled_out and no_progress < 2
+                if (hit_cap and not stalled_out and no_progress < 4
                         and continuations < MAX_AUTO_CONTINUATIONS):
                     continuations += 1
                     s._push("sys", f"↻ Sigo trabajando en la tarea (tramo {continuations})…")
@@ -4229,7 +4229,7 @@ class Api:
             elif not text and hit_cap:
                 n_esc = len(dict.fromkeys(s._written))
                 toque = f" (toqué {n_esc} archivo(s))" if n_esc else ""
-                if no_progress >= 2:
+                if no_progress >= 4:
                     text = ("⏸ Paré porque el agente dejó de avanzar (repetía sin progreso)"
                             + toque + ". Escribí «segui» para reintentar, cambiá de modelo, "
                             "o dividí un poco el pedido.")
