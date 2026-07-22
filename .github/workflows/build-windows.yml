@@ -1,0 +1,57 @@
+name: LOW 2.0 Windows Builder
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch: # Permite ejecutarlo manualmente desde la pestaña Actions
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Setup MSVC (Visual Studio)
+      uses: microsoft/setup-msbuild@v2
+      with:
+        vs-version: 'latest'
+
+    - name: Install Dependencies
+      run: |
+        npm install --legacy-peer-deps
+        # Ignoramos scripts que fallen por falta de compilador local, usaremos cmake manual si es necesario
+        
+    - name: Build C++ Modules
+      run: |
+        if (Test-Path "native") {
+          cd native
+          mkdir build -Force
+          cd build
+          cmake .. -G "Visual Studio 17 2022" -A x64
+          cmake --build . --config Release
+          cd ../..
+        } else {
+          echo "No native folder found, skipping C++ build."
+        }
+
+    - name: Build Electron App
+      run: npm run dist
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload Artifact (EXE)
+      uses: actions/upload-artifact@v4
+      with:
+        name: LOW-2.0-Installer
+        path: dist/*.exe
+        retention-days: 14
