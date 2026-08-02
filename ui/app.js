@@ -430,7 +430,7 @@ function bind() {
   };
   $("#btnModelSearch").onclick = modalModelSearch;
   $("#abDesign").onclick = designEntry;
-  $("#abL3d").onclick = () => l3dToggle();   // Lienzo 3D (WebGL, lienzo3d.js)
+  $("#abL3d").onclick = () => ($("#l3dView").hidden ? openL3d() : closeL3d());
   $("#btnKeys").onclick = modalKeys;
   $("#btnCmp").onclick = modalCompare;
   $("#btnWs").onclick = pickWs;
@@ -687,7 +687,10 @@ $("#dzDiscBtn").onclick = () => dzDiscToggle();
   });
   // <i class='fas fa-masks-theater'></i> diorama: toggle, cerrar y arrastre del panel
   $("#dzZBtn").onclick = dzZPanelToggle;
-  $("#dz3DBtn").onclick = dz3dToggle;
+  // "Espacio 3D" (dz3d*, ~1100 líneas más abajo) quedó retirado del toolbar:
+  // el dibujo/orbit 3D real ahora vive en LOW Estudio (ui/estudio3d/). El
+  // código dz3d* sigue en este archivo sin usar — no borrado por si hace
+  // falta rescatar algo (matrices de plano orientado, anchor snapping).
   $("#dzRulersBtn").onclick = dzRulersToggle;
   $("#dzGridBtn").onclick = dzGridToggle;
   $("#dzGuidesBtn").onclick = dzGuidesToggle;
@@ -918,7 +921,8 @@ $("#dzDiscBtn").onclick = () => dzDiscToggle();
       if (!$("#overlay").hidden) closeModal();         // 1º cierra modal abierto
       else if (!$("#designView").hidden) closeDesign(); // 2º cierra el entorno de diseño
       else if (!$("#artView").hidden) closeArtifacts(); // 3º cierra el visor de artefactos
-      else if (S.busy) cancelRequest();                // 4º detiene consulta en curso
+      else if (!$("#l3dView").hidden) closeL3d();       // 4º cierra LOW Estudio (3D)
+      else if (S.busy) cancelRequest();                // 5º detiene consulta en curso
     }
   });
   $("#overlay").onclick = e => { if (e.target === $("#overlay")) closeModal(); };
@@ -2089,6 +2093,18 @@ function showArtifacts() {
   paintArtifact();
 }
 function closeArtifacts() { $("#artView").hidden = true; }
+
+/* ══ LOW Estudio: dibujo 3D con guías estilo Feather (bundle propio, ui/estudio3d/) ══ */
+function openL3d() {
+  const frame = $("#l3dFrame");
+  if (!frame.getAttribute("src")) frame.src = "estudio3d/index.html";
+  $("#l3dView").hidden = false;
+  $("#abL3d").classList.add("active");
+}
+function closeL3d() {
+  $("#l3dView").hidden = true;
+  $("#abL3d").classList.remove("active");
+}
 
 /* ══ Entorno de diseño: SVG vivo + inspector por elemento ══ */
 const DZ = { path: null, sel: null, zoom: 1 };
@@ -5408,11 +5424,23 @@ function dzCamView(svgText, cam) {
     if (n.classList && n.classList.contains("dz-onion")) return;
     const z = Math.max(-60, Math.min(400, parseFloat(n.getAttribute && n.getAttribute("data-z")) || 0));
     if (z) {
-      // multiplano: lo lejano acompaña a la cámara (se mueve menos en pantalla)
+      // multiplano real (paneo Y dolly/zoom), como una cámara multiplano física:
+      // p = cuánto acompaña esta capa el movimiento de la cámara (1 = igual que
+      // el plano de acción; <1 = lejos, se mueve/escala menos; >1 = cerca, más)
       const p = 100 / (100 + z);
       const dx = (cam.cx - vbcx) * (1 - p), dy = (cam.cy - vbcy) * (1 - p);
+      // dolly: el viewBox de salida ya escala TODO por (vb[2]/cam.w) al hacer
+      // zoom. Para que la profundidad se sienta (lo cercano crece más rápido,
+      // lo lejano casi no cambia de tamaño al acercar la cámara) hay que
+      // contrarrestar ese escalado uniforme en proporción a 1-p.
+      const zoomRatio = cam.w / vb[2]; // <1 = cámara acercada (dolly in)
+      const extraScale = zoomRatio + (1 - zoomRatio) * p;
       const w = document.createElementNS(NS, "g");
-      w.setAttribute("transform", `translate(${dx.toFixed(1)} ${dy.toFixed(1)})`);
+      let tf = `translate(${dx.toFixed(1)} ${dy.toFixed(1)})`;
+      if (Math.abs(extraScale - 1) > 1e-4) {
+        tf += ` translate(${cam.cx.toFixed(1)} ${cam.cy.toFixed(1)}) scale(${extraScale.toFixed(4)}) translate(${(-cam.cx).toFixed(1)} ${(-cam.cy).toFixed(1)})`;
+      }
+      w.setAttribute("transform", tf);
       w.appendChild(n.cloneNode(true));
       g.appendChild(w);
     } else g.appendChild(n.cloneNode(true));
@@ -6364,6 +6392,8 @@ function dzXsToggle() {
    marcas (<i class='fas fa-key'></i> clave · <i class='fas fa-camera-movie'></i> cámara) y NOTAS editables. Las notas se guardan en la
    escena (<base>_escena.json) junto a las claves y la cámara. */
 function dzXsRender() {
+  return dzOpenToonzXsRender();
+  /* Implementación histórica conservada temporalmente para compatibilidad. */
   const box = $("#dzXsRows");
   if (!box || $("#dzXsheet").hidden || !DZ.anim) return;
   const keys = (DZ.scene && DZ.scene.keys) || [];
@@ -6402,6 +6432,69 @@ function dzXsRender() {
       dzSceneSave();
     };
     row.append(n, thumb, badge, note);
+    box.appendChild(row);
+  });
+}
+
+/** X-sheet principal estilo OpenToonz: tiempo vertical y una columna por nivel.
+ * Las celdas sólidas inician una exposición y la línea vertical indica hold. */
+async function dzOpenToonzXsRender() {
+  const box = $("#dzXsRows");
+  if (!box || $("#dzXsheet").hidden || !DZ.anim) return;
+  const keys = (DZ.scene && DZ.scene.keys) || [];
+  const cams = (DZ.scene && DZ.scene.cam) || {};
+  const notes = (DZ.scene && DZ.scene.notes) || {};
+  const svgs = await dzTlFrameSvgs();
+  if (!box.isConnected || !DZ.anim) return;
+  const perFrame = svgs.map(dzTlKeysOf);
+  const levels = [];
+  perFrame.forEach(set => set.forEach(name => { if (!levels.includes(name)) levels.push(name); }));
+  levels.reverse();
+  const shownLevels = levels.length ? levels : ['(vacío)'];
+  const cols = `42px 32px repeat(${shownLevels.length}, minmax(74px, 1fr)) minmax(150px, 1.4fr)`;
+  box.innerHTML = '';
+  const head = document.createElement('div');
+  head.className = 'dz-xs-head';
+  head.style.gridTemplateColumns = cols;
+  head.innerHTML = '<span>F</span><span>CAM</span>' +
+    shownLevels.map(name => `<span title="${name}">${name.replace(/^#/, '')}</span>`).join('') +
+    '<span>Notas</span>';
+  box.appendChild(head);
+  DZ.anim.frames.forEach((f, i) => {
+    const num = dzFrameNum(f);
+    const current = perFrame[i] || new Set();
+    const previous = i > 0 ? perFrame[i - 1] : new Set();
+    const row = document.createElement('div');
+    row.className = 'dz-xs-row' + (i === DZ.anim.idx ? ' cur' : '') + (keys.includes(num) ? ' key' : '');
+    row.style.gridTemplateColumns = cols;
+    const frame = document.createElement('span');
+    frame.className = 'dz-xs-n'; frame.textContent = String(i + 1);
+    frame.onclick = () => { dzAnimStopIf(); dzGoFrame(i); };
+    const camera = document.createElement('span');
+    camera.className = 'dz-xs-cam' + (cams[num] ? ' on' : '');
+    camera.textContent = cams[num] ? '◆' : '';
+    camera.onclick = () => { dzAnimStopIf(); dzGoFrame(i); };
+    row.append(frame, camera);
+    shownLevels.forEach(level => {
+      const present = current.has(level);
+      const start = present && !previous.has(level);
+      const cell = document.createElement('button');
+      cell.className = 'dz-xs-cell' + (present ? ' exposed' : '') + (start ? ' start' : ' hold');
+      cell.textContent = start ? String(i + 1) : '';
+      cell.title = present ? `${level} · ${start ? 'inicio' : 'exposición sostenida'}` : `${level} · vacío`;
+      cell.onclick = () => { dzAnimStopIf(); dzGoFrame(i); };
+      row.appendChild(cell);
+    });
+    const note = document.createElement('input');
+    note.className = 'dz-xs-note'; note.type = 'text'; note.placeholder = 'Nota…';
+    note.value = notes[num] || '';
+    note.onchange = () => {
+      DZ.scene = DZ.scene || {}; DZ.scene.notes = DZ.scene.notes || {};
+      const value = note.value.trim();
+      if (value) DZ.scene.notes[num] = value; else delete DZ.scene.notes[num];
+      dzSceneSave();
+    };
+    row.appendChild(note);
     box.appendChild(row);
   });
 }

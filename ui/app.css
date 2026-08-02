@@ -1026,12 +1026,12 @@ body:not(.light) .dz3d-coords { color: #F4F4F2; }
 .dz-split:hover { background: var(--red); opacity: .5; }
 /* X-sheet flotante: planilla de exposición vertical */
 .dz-xsheet {
-  position: absolute; left: 60px; top: 56px; z-index: 8; width: 268px; max-height: 72%;
+  position: absolute; left: 56px; right: 18px; bottom: 96px; top: auto; z-index: 8; max-height: 58%;
   background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
   box-shadow: 0 8px 30px rgba(0,0,0,.45); overflow: hidden; display: flex; flex-direction: column;
 }
 .dz-xsheet[hidden] { display: none; }
-.dz-xs-rows { overflow-y: auto; padding: 4px; }
+.dz-xs-rows { overflow: auto; padding: 0; }
 .dz-xs-head {
   display: grid; grid-template-columns: 22px 46px 22px 1fr; gap: 6px; align-items: center;
   padding: 2px 8px 4px; font: 600 8.5px 'JetBrains Mono', monospace; color: var(--faint);
@@ -1058,6 +1058,26 @@ body:not(.light) .dz3d-coords { color: #F4F4F2; }
 }
 .dz-xs-note:hover { border-color: var(--line); }
 .dz-xs-note:focus { border-color: var(--cyan); background: var(--panel2); }
+
+/* X-sheet OpenToonz: tiempo vertical, niveles en columnas y holds continuos. */
+.dz-xs-head {
+  gap: 0; position: sticky; top: 0; z-index: 3; padding: 0; margin: 0;
+  background: var(--panel2); align-items: stretch;
+}
+.dz-xs-head > span {
+  padding: 7px 6px; border-right: 1px solid var(--line); overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; text-align: center;
+}
+.dz-xs-row { gap: 0; padding: 0; border-radius: 0; min-height: 25px; align-items: stretch; border-bottom: 1px solid var(--line2); }
+.dz-xs-n { padding: 6px 7px 4px 3px; border-right: 1px solid var(--line); }
+.dz-xs-row.key .dz-xs-n::before { content: '◆ '; font-size: 7px; color: var(--orange); }
+.dz-xs-cam { text-align: center; padding: 5px 0; border-right: 1px solid var(--line); color: var(--cyan); cursor: pointer; }
+.dz-xs-cell { position: relative; border: 0; border-right: 1px solid var(--line); background: transparent; color: var(--txt); font: 600 10px 'JetBrains Mono', monospace; cursor: pointer; }
+.dz-xs-cell:hover { background: var(--panel2); }
+.dz-xs-cell.exposed { background: rgba(49, 190, 205, .09); }
+.dz-xs-cell.start { box-shadow: inset 0 2px 0 var(--cyan); }
+.dz-xs-cell.hold.exposed::after { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; border-left: 1px solid rgba(49, 190, 205, .5); }
+.dz-xs-note { border-radius: 0; border-left: 0; border-top: 0; border-bottom: 0; padding: 3px 7px; }
 
 /* timeline por CAPAS × cuadros (Toon Boom) */
 .dz-tlgrid {
@@ -1623,7 +1643,7 @@ footer #ver {
 /* ══ Lienzo 3D (WebGL / Three.js) — dibujo con mallas reales ══ */
 #l3dView { position: fixed; inset: 0; z-index: 62; background: #D9D9D6; }
 #l3dView[hidden] { display: none; }
-.l3d-host { position: absolute; inset: 0; }
+.l3d-host { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 .l3d-host canvas { display: block; }
 /* toolbar flotante minimalista (mismo lenguaje que el gizmo del Espacio 3D) */
 .l3d-tools {

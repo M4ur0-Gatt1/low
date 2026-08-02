@@ -1,106 +1,89 @@
-# LOW 2.0 - Motor de Dibujo 3D Procedural
+# LOW
 
-**Low Poly Observer Workshop** - Nueva generación de software de ilustración técnica 3D para Windows.
+LOW es un estudio creativo generalista y modular para Windows. Reúne dibujo,
+ilustración, animación 2D, construcción de entornos 3D, composición y asistencia
+mediante modelos de lenguaje dentro de un flujo de trabajo común.
 
-## Visión
+La aplicación combina en una interfaz directa ideas de herramientas profesionales
+de dibujo, animación, rigging, composición y creación tridimensional.
 
-LOW 2.0 no es un clon de Feather. Es una reinterpretación optimizada para:
-- **Mouse** (precisión pixel-perfect)
-- **Tableta Wacom** (presión, inclinación)
-- **SpaceMouse** (navegación 6DOF)
-- **Windows 10/11** (nativo, sin capas de abstracción)
+## Autoría
 
-## Arquitectura
+LOW es una obra de **Mauro Gatti y Tropa Circa**.
 
-Basada en **motores independientes** que se comunican mediante interfaces:
+Los modelos y servicios externos compatibles con LOW son integraciones técnicas
+opcionales. No son autores, coautores ni propietarios del software.
 
-```
-┌─────────────┐     ┌──────────────┐     ┌─────────────┐
-│ Input Engine│────▶│ Surface Engine│────▶│Stroke Engine│
-└─────────────┘     └──────────────┘     └─────────────┘
-                           │                    │
-                           ▼                    ▼
-                    ┌──────────────┐     ┌─────────────┐
-                    │ Scene Engine │◀────│Render Engine│
-                    └──────────────┘     └─────────────┘
-```
+## Módulos
 
-### Principio Fundamental
+### Dibujo y diseño
 
-> **El lápiz NUNCA calcula profundidad (Z).**  
-> Siempre dibuja SOBRE una superficie definida por contexto.
+- Herramientas vectoriales y dibujo con tableta.
+- Capas, grupos, selección, color y edición de nodos.
+- Papel cebolla y flujo cuadro a cuadro.
 
-Esto elimina el problema del "slider Z" y hace que el dibujo 3D sea tan intuitivo como el 2D.
+### Animación
 
-## Stack Tecnológico
+- X-sheet vertical por niveles y exposiciones.
+- Timeline, claves de dibujo y cámara.
+- Rigging, interpolación, cámara multiplano y exportación audiovisual.
 
-| Componente | Tecnología |
-|------------|-----------|
-| Lenguaje | C++20 |
-| Compilador | MSVC / GCC |
-| Gráficos | OpenGL 4.6 + GLAD |
-| Math | GLM (o implementación propia) |
-| UI | Dear ImGui |
-| Build | CMake 3.20+ |
+### Estudio 3D
 
-## Estructura del Proyecto
+- Dibujo tridimensional apoyado sobre guías y superficies.
+- Superficies editables y guías construidas a partir de trazos.
+- Presión, estabilización, edición de puntos, capas y simetría X/Y/Z.
+- Cámaras perspectiva y ortográficas.
+- Proyectos editables en formato `.low3d`.
+- Uso autónomo para crear fondos, escenarios, referencias y entornos.
 
-```
-LOW/
-├── src/
-│   ├── Core/          # Tipos base, Logger, UUID
-│   ├── Math/          # Vec3, Mat4, Ray, AABB
-│   ├── Scene/         # SceneGraph, SceneObject
-│   ├── Surface/       # ISurface, SurfaceEngine
-│   ├── Stroke/        # StrokeEngine, Spline
-│   ├── Render/        # OpenGL, Shaders
-│   ├── Input/         # Mouse, Wacom, SpaceMouse
-│   └── App/           # Main loop
-├── include/Low/
-│   ├── Core/
-│   ├── Math/
-│   ├── Scene/
-│   ├── Surface/
-│   └── ...
-├── shaders/           # GLSL
-├── tests/             # Unit tests
-└── ARCHITECTURE.md    # Decisiones de diseño
+### Asistencia por modelos
+
+- Proveedores locales o remotos configurables por el usuario.
+- Memoria asociada al proyecto.
+- Acciones revisables y reversibles.
+- Funciones creativas utilizables sin modelos externos.
+
+## Arquitectura actual
+
+- La aplicación generalista usa Python, pywebview y una interfaz web para dibujo,
+  animación, asistencia y administración de proyectos.
+- El estudio 3D usa Electron, React, TypeScript y Three.js.
+
+Los módulos pueden funcionar de manera independiente y compartir archivos y
+recursos. El editor 3D no depende de la animación para producir escenarios.
+
+## Desarrollo
+
+Aplicación generalista:
+
+```powershell
+python main.py
 ```
 
-## Estado Actual
+Estudio 3D:
 
-### ✅ Fase 1 Completada: Núcleo
-
-- [x] Sistema de build CMake
-- [x] Matemáticas básicas (Vec3, Mat4, Ray, AABB)
-- [x] Sistema de UUID y Logger
-- [x] SceneObject y Scene
-- [x] **Surface Engine completo** (ISurface, PlaneSurface, SphereSurface)
-
-### 🚧 Próximamente: Fase 2
-
-- [ ] Stroke Engine (Spline Catmull-Rom, Parallel Transport Frames)
-- [ ] Ribbon Builder (generación de geometría procedural)
-- [ ] Input Engine (mouse picking, ray casting desde cámara)
-- [ ] Render Engine (OpenGL 4.6, geometry shaders)
-
-## Compilación
-
-```bash
-mkdir build && cd build
-cmake ..
-cmake --build .
+```powershell
+cd low2-hybrid
+npm install
+npm run dev:app
 ```
 
-## Documentación
+Comprobación y build:
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) - Decisiones de diseño (ADR)
-- Comentarios en código - Cada clase y método está documentado
+```powershell
+npx tsc --noEmit
+npm run build:renderer
+```
+
+## Estado
+
+LOW está en desarrollo activo. Algunas carpetas históricas son prototipos o rutas
+de migración. La implementación 3D usada actualmente está en
+`low2-hybrid/modules/design/engine/webgl-design3d.ts`.
 
 ## Licencia
 
-En desarrollo. Todos los derechos reservados.
+MIT. Consultar `LICENSE`.
 
----
-
-*"Programar motores, no herramientas."*
+Copyright © 2026 Mauro Gatti y Tropa Circa.
