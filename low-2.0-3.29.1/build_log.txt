@@ -1,0 +1,161 @@
+114 DEPRECATION: Running PyInstaller as admin is not necessary nor sensible. Run PyInstaller from a non-administrator terminal. PyInstaller 7.0 will block this.
+337 INFO: PyInstaller: 6.21.0, contrib hooks: 2026.6
+338 INFO: Python: 3.13.7
+367 INFO: Platform: Windows-10-10.0.19045-SP0
+368 INFO: Python environment: C:\Users\Mauro\AppData\Local\Programs\Python\Python313
+388 INFO: Module search paths (PYTHONPATH):
+['Z:\\LOW\\low-3.18.1',
+ 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\python313.zip',
+ 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\DLLs',
+ 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib',
+ 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313',
+ 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages',
+ 'Z:\\LOW\\low-3.18.1']
+C:\Users\Mauro\AppData\Local\Programs\Python\Python313\Lib\site-packages\pygame\pkgdata.py:25: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import resource_stream, resource_exists
+pygame 2.6.1 (SDL 2.28.4, Python 3.13.7)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+1956 INFO: Appending 'datas' from .spec
+2009 INFO: checking Analysis
+2067 INFO: Building because excludes changed
+2068 INFO: Looking for Python shared library...
+2068 INFO: Using Python shared library: C:\Users\Mauro\AppData\Local\Programs\Python\Python313\python313.dll
+2069 INFO: Running Analysis Analysis-00.toc
+2070 INFO: Target bytecode optimization level: 0
+2071 INFO: Initializing module dependency graph...
+2073 INFO: Initializing module graph hook caches...
+2094 INFO: Analyzing modules for base_library.zip ...
+4655 INFO: Processing standard module hook 'hook-encodings.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+5488 INFO: Processing standard module hook 'hook-math.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+5858 INFO: Processing standard module hook 'hook-heapq.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+7687 INFO: Processing standard module hook 'hook-pickle.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+9775 INFO: Caching module dependency graph...
+9853 INFO: Analyzing Z:\LOW\low-3.18.1\main.py
+10477 INFO: Processing standard module hook 'hook-difflib.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+10918 INFO: Processing standard module hook 'hook-webbrowser.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+10988 INFO: Processing standard module hook 'hook-_ctypes.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+11031 INFO: Processing standard module hook 'hook-urllib3.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+11258 INFO: Processing standard module hook 'hook-platform.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+11446 INFO: Processing pre-safe-import-module hook 'hook-typing_extensions.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+11448 INFO: SetuptoolsInfo: initializing cached setuptools info...
+19435 INFO: Processing standard module hook 'hook-charset_normalizer.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+19672 INFO: Processing standard module hook 'hook-cryptography.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+22331 INFO: hook-cryptography: cryptography does not seem to be using dynamically linked OpenSSL.
+22913 INFO: Processing standard module hook 'hook-bcrypt.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+22972 INFO: Processing standard module hook 'hook-certifi.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+23269 INFO: Processing standard module hook 'hook-webview.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\webview\\__pyinstaller'
+24423 INFO: Processing standard module hook 'hook-multiprocessing.util.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+24578 INFO: Processing standard module hook 'hook-xml.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+25773 INFO: Processing standard module hook 'hook-jinja2.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+26926 INFO: Processing pre-safe-import-module hook 'hook-gi.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+27246 INFO: Processing standard module hook 'hook-clr.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pythonnet\\_pyinstaller'
+27363 INFO: Processing standard module hook 'hook-clr_loader.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+27608 INFO: Processing standard module hook 'hook-xml.etree.cElementTree.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+28226 INFO: Processing standard module hook 'hook-PIL.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+28419 INFO: Processing standard module hook 'hook-PIL.Image.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+29260 INFO: Processing standard module hook 'hook-xml.dom.domreg.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+30021 INFO: Processing standard module hook 'hook-PIL.ImageFilter.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+30929 INFO: Processing pre-safe-import-module hook 'hook-packaging.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+31181 INFO: Analyzing hidden import 'animation_engine'
+31366 INFO: Analyzing hidden import 'animation_engine.nodes'
+31428 INFO: Processing module hooks (post-graph stage)...
+31934 INFO: Processing standard module hook 'hook-PIL.SpiderImagePlugin.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks'
+32022 INFO: Performing binary vs. data reclassification (212 entries)
+32899 INFO: Looking for ctypes DLLs
+32970 INFO: Analyzing run-time hooks ...
+32974 INFO: Including run-time hook 'pyi_rth_inspect.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+32981 INFO: Including run-time hook 'pyi_rth_pkgutil.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+32992 INFO: Including run-time hook 'pyi_rth_multiprocessing.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+32998 INFO: Including run-time hook 'pyi_rth_cryptography_openssl.py' from 'C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\rthooks'
+33024 INFO: Creating base_library.zip...
+33804 INFO: Looking for dynamic libraries
+35548 INFO: Extra DLL search directories (AddDllDirectory): ['C:\\Users\\Mauro\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy.libs']
+35549 INFO: Extra DLL search directories (PATH): []
+36799 INFO: Warnings written to Z:\LOW\low-3.18.1\build\LOW_fast\warn-LOW_fast.txt
+37063 INFO: Graph cross-reference written to Z:\LOW\low-3.18.1\build\LOW_fast\xref-LOW_fast.html
+37197 INFO: checking PYZ
+37339 INFO: checking PKG
+37390 INFO: Building because toc changed
+37391 INFO: Building PKG (CArchive) LOW.pkg
+51896 INFO: Building PKG (CArchive) LOW.pkg completed successfully.
+51933 INFO: Bootloader C:\Users\Mauro\AppData\Local\Programs\Python\Python313\Lib\site-packages\PyInstaller\bootloader\Windows-64bit-intel\runw.exe
+51934 INFO: checking EXE
+51986 INFO: Building because toc changed
+51989 INFO: Building EXE from EXE-00.toc
+51999 INFO: Copying bootloader EXE to Z:\LOW\low-3.18.1\dist\LOW.exe
+52660 INFO: Copying icon to EXE
+53213 INFO: Copying 0 resources to EXE
+53214 INFO: Embedding manifest in EXE
+53776 INFO: Appending PKG archive to EXE
+59025 INFO: Fixing EXE headers
+70202 INFO: Building EXE from EXE-00.toc completed successfully.
+70233 INFO: checking COLLECT
+70270 INFO: Removing dir Z:\LOW\low-3.18.1\dist\LOW
+71932 INFO: Building COLLECT COLLECT-00.toc
+95843 INFO: Building COLLECT COLLECT-00.toc completed successfully.
+95867 INFO: Build complete! The results are available in: Z:\LOW\low-3.18.1\dist
+Inno Setup 6 Command-Line Compiler
+Copyright (C) 1997-2026 Jordan Russell. All rights reserved.
+Portions Copyright (C) 2000-2026 Martijn Laan. All rights reserved.
+Portions Copyright (C) 2001-2004 Alex Yackimoff. All rights reserved.
+https://www.innosetup.com
+
+Compiler engine version: Inno Setup 6.7.3
+Non-commercial use only
+
+Preprocessing
+   Reading file: C:\Users\Mauro\AppData\Local\Programs\Inno Setup 6\ISPPBuiltins.iss
+Parsing [Setup] section, line 14
+Parsing [Setup] section, line 15
+Parsing [Setup] section, line 16
+Parsing [Setup] section, line 17
+Parsing [Setup] section, line 18
+Parsing [Setup] section, line 19
+Parsing [Setup] section, line 20
+Parsing [Setup] section, line 22
+Parsing [Setup] section, line 23
+Parsing [Setup] section, line 24
+Parsing [Setup] section, line 25
+Parsing [Setup] section, line 26
+Parsing [Setup] section, line 27
+Parsing [Setup] section, line 28
+Parsing [Setup] section, line 29
+Reading file (WizardImageFile)
+Reading file (WizardSmallImageFile)
+Preparing Setup program executable
+   Verification successful
+   Updating icons (Setup.e32)
+   Updating version info (Setup.e32)
+Determining language code pages
+Parsing [Languages] section, line 32
+   Reading file: C:\Users\Mauro\AppData\Local\Programs\Inno Setup 6\Languages\Spanish.isl
+   Messages in script file
+Reading default messages from Default.isl
+Parsing [Languages] section, line 32
+   Reading file: C:\Users\Mauro\AppData\Local\Programs\Inno Setup 6\Languages\Spanish.isl
+Parsing [LangOptions], [Messages], and [CustomMessages] sections
+   Messages in script file
+Reading [Code] section
+Parsing [Tasks] section, line 35
+Parsing [Icons] section, line 41
+Parsing [Icons] section, line 42
+Parsing [UninstallDelete] section, line 50
+Parsing [Run] section, line 45
+Parsing [Files] section, line 38
+Deleting LOWSetup-3.18.2.exe from output directory
+Creating setup files
+   Verification successful
+   Updating icons (Setup.exe)
+   Compressing: Z:\LOW\low-3.18.1\dist\LOW.exe
+   Compressing Setup program executable
+   Updating version info (Setup.exe)
+   Updating manifest (Setup.exe)
+
+
+Successful compile (19,062 sec). Resulting Setup program filename is:
+Z:\LOW\low-3.18.1\Output\LOWSetup-3.18.2.exe
+[FAST] Modo FAST: --onedir, sin comprimir (30-60s)
+
+[OK] dist/LOW.exe (modo=fast)
+
+[OK] Output/LOWSetup-*.exe

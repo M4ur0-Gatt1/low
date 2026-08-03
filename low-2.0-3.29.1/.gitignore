@@ -1,0 +1,39 @@
+```
+# Batch files
+*.bat
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Logs and temp files
+*.log
+*.tmp
+
+# Editors
+.vscode/
+.idea/
+
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build artifacts
+dist/
+build/
+*.exe
+*.dll
+*.so
+*.a
+*.o
+*.obj
+*.out
+
+# System files
+.DS_Store
+Thumbs.db
+```

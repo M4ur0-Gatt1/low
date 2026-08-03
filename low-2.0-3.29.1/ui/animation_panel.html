@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LOW · Animación</title>
+<style>
+:root{--bg:#151514;--panel:#1b1a19;--panel2:#232220;--hover:#302f2c;--line:rgba(255,248,235,.075);--txt:#eeeae2;--mut:#aaa59c;--orange:#df6c48;--cyan:#67aeb6;--cell:28px}
+*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:"Segoe UI Variable","Segoe UI",Arial,sans-serif;font-size:13px}
+body{display:flex;flex-direction:column}.top{height:54px;flex:none;display:flex;align-items:center;gap:6px;padding:9px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
+.brand{font-weight:800;letter-spacing:.08em}.mode{color:var(--mut);font-size:11px;font-weight:650;letter-spacing:.06em}.spacer{flex:1}button{height:36px;min-width:36px;border:0;border-radius:10px;background:transparent;color:var(--mut);cursor:pointer;font-size:14px}button:hover{background:var(--hover);color:var(--txt)}button.primary{padding:0 12px;background:rgba(223,108,72,.14);color:var(--orange)}.fps{font-size:11px;color:var(--mut)}
+.viewport{flex:1;overflow:auto;position:relative}.timeline{min-width:max-content}.head,.row{display:flex;min-height:var(--cell)}.head{position:sticky;top:0;z-index:4;background:var(--panel2)}
+.label{position:sticky;left:0;z-index:3;width:190px;flex:none;padding:6px 10px;background:var(--panel);border-right:1px solid var(--line);border-bottom:1px solid var(--line);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.head .label{z-index:6;background:var(--panel2);font-weight:700}
+.cell{width:var(--cell);height:var(--cell);flex:none;border-right:1px solid #24242a;border-bottom:1px solid #24242a;position:relative;text-align:center;font:10px/26px Consolas,monospace;color:var(--mut);cursor:pointer}.cell:hover{background:#26262c}.cell.current{box-shadow:inset 1px 0 var(--orange),inset -1px 0 var(--orange);background:#311911;color:#fff}.cell.start{background:var(--cyan);color:#071014}.cell.hold::after{content:"";position:absolute;left:50%;top:0;bottom:0;border-left:2px solid rgba(51,181,232,.55)}.cell.future{opacity:.42}.cell.key::before{content:"◆";color:#ffad32;font-size:7px}.cell.camera::after{content:"●";color:var(--cyan);font-size:7px;position:absolute;bottom:-7px;left:10px}
+.xsheet .row{min-height:30px}.xsheet .cell{width:92px;height:30px;line-height:30px}.xsheet .label{width:64px;text-align:right;font-family:Consolas,monospace}.empty{padding:30px;color:var(--mut)}
+</style>
+</head>
+<body>
+<div class="top">
+  <span class="brand">LOW</span><span class="mode" id="mode"></span>
+  <button id="prev" title="Anterior">◀</button><button id="play" title="Reproducir">▶</button><button id="next" title="Siguiente">▶|</button><button id="add" title="Duplicar frame">＋</button><button id="blank" title="Agregar frame vacío">□＋</button>
+  <span class="spacer"></span><span class="fps" id="fps"></span>
+  <button class="primary" id="dock" title="Volver a acoplar este panel en LOW">Acoplar</button>
+</div>
+<div class="viewport"><div id="content" class="timeline"><div class="empty">Conectando con el editor…</div></div></div>
+<script>
+const kind=new URLSearchParams(location.search).get('kind')==='xsheet'?'xsheet':'timeline';
+document.getElementById('mode').textContent=kind==='xsheet'?'X-SHEET':'TIMELINE';
+let api=null,last='';
+const command=(action,payload={})=>api&&api.animation_panel_command(action,payload);
+document.getElementById('prev').onclick=()=>command('previous');
+document.getElementById('play').onclick=()=>command('play');
+document.getElementById('next').onclick=()=>command('next');
+document.getElementById('add').onclick=()=>command('add');
+document.getElementById('blank').onclick=()=>command('add-blank');
+document.getElementById('dock').onclick=async()=>{
+ if(api){await command('dock',{kind});await api.animation_panel_closed(kind)}
+ window.close();
+};
+function cell(frame,classes='',text=''){
+ const c=document.createElement('div');c.className='cell '+classes;c.textContent=text;
+ c.onclick=()=>command('frame',{index:frame.index});c.ondblclick=()=>{if(!frame.exists)command('create-frame',{index:frame.index})};return c;
+}
+function renderTimeline(s){
+ const root=document.createElement('div');root.className='timeline';
+ const head=document.createElement('div');head.className='head';head.innerHTML='<div class="label">Niveles ↓ · Fotogramas →</div>';
+ s.frames.forEach(f=>head.appendChild(cell(f,(f.index===s.current?'current ':'')+(f.exists?'':'future'),f.number%5===0||f.index===s.current?f.number:'')));root.appendChild(head);
+ (s.levels||[]).forEach((level,li)=>{const row=document.createElement('div');row.className='row';const label=document.createElement('div');label.className='label';label.textContent=level;row.appendChild(label);let prev=false;s.frames.forEach((f,i)=>{const on=!!(s.exposures[li]&&s.exposures[li][i]);row.appendChild(cell(f,(i===s.current?'current ':'')+(on?(prev?'hold':'start'):'')+(f.exists?'':' future')));prev=on});root.appendChild(row)});
+ const cam=document.createElement('div');cam.className='row';cam.innerHTML='<div class="label">Cámara</div>';s.frames.forEach(f=>cam.appendChild(cell(f,(f.index===s.current?'current ':'')+(f.camera?'camera ':'')+(f.exists?'':'future'))));root.appendChild(cam);return root;
+}
+function renderXsheet(s){
+ const root=document.createElement('div');root.className='timeline xsheet';const head=document.createElement('div');head.className='head';head.innerHTML='<div class="label">F</div>'+(s.levels||[]).map(x=>'<div class="cell">'+x.replace(/^#/,'')+'</div>').join('');root.appendChild(head);
+ s.frames.filter(f=>f.exists).forEach((f,i)=>{const row=document.createElement('div');row.className='row';const label=document.createElement('div');label.className='label';label.textContent=f.number;row.appendChild(label);(s.levels||[]).forEach((level,li)=>{const on=s.exposures[li]&&s.exposures[li][i],prev=i&&s.exposures[li]&&s.exposures[li][i-1];row.appendChild(cell(f,(i===s.current?'current ':'')+(on?(prev?'hold':'start'):''),on&&!prev?f.number:''))});root.appendChild(row)});return root;
+}
+async function refresh(){if(!api)return;try{const s=await api.animation_panel_state();const key=JSON.stringify(s);if(key===last)return;last=key;document.getElementById('fps').textContent=(s.fps||12)+' FPS · '+(s.frames?s.frames.filter(f=>f.exists).length:0)+' frames';document.getElementById('play').textContent=s.playing?'Ⅱ':'▶';const content=document.getElementById('content');content.replaceWith(kind==='xsheet'?renderXsheet(s):renderTimeline(s));(kind==='xsheet'?document.querySelector('.xsheet'):document.querySelector('.timeline')).id='content'}catch(e){}}
+window.addEventListener('pywebviewready',()=>{api=window.pywebview.api;refresh();setInterval(refresh,350)});
+</script>
+</body>
+</html>
