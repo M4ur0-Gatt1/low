@@ -1,8 +1,8 @@
 {
   "name": "low2-hybrid",
   "version": "2.0.0-alpha",
-  "description": "LOW 2.0 - Arquitectura híbrida con motores nativos de alto rendimiento",
-  "main": "src/main/index.js",
+  "description": "LOW - estudio creativo generalista y modular para dibujo, animación, composición y entornos 3D",
+  "main": "electron/main.cjs",
   "scripts": {
     "build:native": "cmake -B build/native -S native && cmake --build build/native --config Release",
     "build:app": "tsc && npm run build:renderer",
@@ -14,7 +14,8 @@
     "test": "jest",
     "test:native": "ctest --test-dir build/native",
     "package": "electron-builder",
-    "installer": "node scripts/create-installer.js"
+    "installer": "node scripts/create-installer.js",
+    "dist:win": "vite build && electron-builder --win portable --publish never"
   },
   "keywords": [
     "3d",
@@ -25,7 +26,8 @@
     "native",
     "performance"
   ],
-  "author": "LOW Team",
+  "author": "Mauro Gatti y Tropa Circa",
+  "copyright": "Copyright © 2026 Mauro Gatti y Tropa Circa",
   "license": "MIT",
   "dependencies": {
     "react": "^18.2.0",
@@ -72,33 +74,26 @@
     ]
   },
   "build": {
-    "appId": "com.low.app",
-    "productName": "LOW 2.0",
+    "appId": "com.low.app3d",
+    "productName": "LOW 3D",
     "directories": {
-      "output": "dist",
-      "buildResources": "assets"
+      "output": "release"
     },
     "files": [
-      "dist/**/*",
-      "modules/**/*",
-      "native/build/**/*.node",
-      "assets/**/*"
+      "electron/**/*",
+      "dist/renderer/**/*"
     ],
     "win": {
+      "publisherName": "Mauro Gatti y Tropa Circa",
       "target": [
         {
-          "target": "nsis",
+          "target": "portable",
           "arch": ["x64"]
         }
-      ],
-      "artifactName": "LOW-2.0-Setup.${ext}"
+      ]
     },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "LOW 2.0"
+    "portable": {
+      "artifactName": "LOW-3D-${version}.${ext}"
     }
   }
 }
