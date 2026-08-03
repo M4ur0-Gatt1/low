@@ -14,6 +14,9 @@ from providers.ltx_provider import LTXProvider
 from providers.fal_provider import FALProvider
 from providers.aimlapi_provider import AIMLAPIProvider
 from providers.agnes_provider import AgnesProvider
+from providers.kimi_provider import KimiProvider
+from providers.grok_provider import GrokProvider
+from providers.perplexity_provider import PerplexityProvider
 
 PROVIDERS = {
     "groq": GroqProvider, "openai": OpenAIProvider, "anthropic": AnthropicProvider,
@@ -21,6 +24,7 @@ PROVIDERS = {
     "xai": XAIProvider, "nvidia": NVIDIAProvider, "siliconflow": SiliconFlowProvider,
     "digitalocean": DigitalOceanProvider, "ltx": LTXProvider, "fal": FALProvider,
     "aimlapi": AIMLAPIProvider, "agnes": AgnesProvider, "custom": CustomProvider,
+    "kimi": KimiProvider, "grok": GrokProvider, "perplexity": PerplexityProvider,
 }
 
 def get_provider(name, api_key=None, **kwargs):

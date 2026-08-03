@@ -35,8 +35,8 @@ DEFAULT_CONFIG = {
     # Solo se usan los que tienen API key cargada. Si no se configura, usa el orden
     # por defecto (deepseek  siliconflow  nvidia  groq  openai  ...  custom).
     "failover_order": ["deepseek", "siliconflow", "nvidia", "groq", "openai",
-                       "anthropic", "qwen", "glm", "xai", "digitalocean", "agnes",
-                       "aimlapi", "custom"],
+                       "anthropic", "qwen", "glm", "xai", "kimi", "perplexity",
+                       "digitalocean", "agnes", "aimlapi", "custom"],
     # límites del agente — ajustables desde . La idea de LOW es NO ponerle
     # techos al trabajo salvo los que impone la API/costo. Subilos si querés
     # que insista más en tareas grandes; el único freno duro es que deje de
@@ -69,7 +69,13 @@ DEFAULT_CONFIG = {
         "custom": {"api_key": "", "model": "llama3", "base_url": "http://localhost:11434/v1"},
         "qwen": {"api_key": "", "model": "qwen-plus", "base_url": ""},
         "glm": {"api_key": "", "model": "glm-4", "base_url": ""},
-        "xai": {"api_key": "", "model": "grok-2", "base_url": ""},
+        "xai": {"api_key": "", "model": "grok-4.5", "base_url": ""},
+        # Kimi (Moonshot AI) — OpenAI-compatible con 1M contexto y razonamiento
+        # Key: https://platform.kimi.ai/console/api-keys
+        "kimi": {"api_key": "", "model": "kimi-k3", "base_url": ""},
+        # Perplexity — multi-provider con búsqueda web integrada y citas
+        # Key: https://console.perplexity.ai/group/keys
+        "perplexity": {"api_key": "", "model": "sonar-medium-online", "base_url": ""},
         # Agnes AI — OpenAI-compatible (https://platform.agnes-ai.com)
         # Key: https://platform.agnes-ai.com/settings/apiKeys
         "agnes": {"api_key": "", "model": "gpt-4o", "base_url": "https://api.agnes-ai.com/api/v1"},
